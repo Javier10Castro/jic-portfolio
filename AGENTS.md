@@ -78,9 +78,10 @@ Lead generation and client onboarding through contact forms, AI-powered brief co
 │   ├── scaffold/              # Scaffold Engine v1 (filesystem generator)
 │   ├── decision/              # Decision Layer v1 (architectural log)
 │   ├── orchestrator/          # Orchestrator Engine v1 (central controller)
-│   └── db/                    # Database modules (Neon PostgreSQL)
-│       ├── index.js           # Pool + query + connection management
-│       └── formResponses.js   # Form Persistence Layer v1
+│   ├── db/                    # Database modules (Neon PostgreSQL)
+│   │   ├── index.js           # Pool + query + connection management
+│   │   └── formResponses.js   # Form Persistence Layer v1
+│   └── loader/                # Project Loader Engine v1 (read-only)
 ├── data/                      # Runtime storage (not committed)
 │   ├── decisions.json         # Architectural decision records
 │   ├── deployments.json       # Deployment records
@@ -677,6 +678,44 @@ Cada campo del formulario se asigna automáticamente a una sección según su pr
 - Fallo en DB **no bloquea** el flujo de email — los errores solo se loggean
 - Arrays (checkboxes, tags) se convierten a comma-separated string
 - No requiere ORM — SQL directo con `pg`
+
+---
+
+## Project Loader Engine (v1)
+
+El módulo `lib/loader/` reconstruye proyectos desde PostgreSQL y archivos del sistema.
+
+Es un módulo **read-only** — no modifica datos, solo los consulta y reconstruye.
+
+```
+/lib/loader/
+  index.js            → entry point (queries + data reconstruction)
+```
+
+**API**:
+
+| Función | Input | Output | Descripción |
+|---|---|---|---|
+| `loadProject(project_id)` | string | `{ meta, responses, grouped }` | Carga proyecto completo desde DB |
+| `rebuildPromptMaestro(project_id, lang?)` | string, string | string | Reconstruye Prompt Maestro desde respuestas |
+| `getProjectState(project_id)` | string | `{ project, form_responses, execution_history, decisions }` | Estado completo del proyecto |
+| `listProjects()` | — | Array | Lista todos los proyectos con metadata |
+
+### Fuentes de datos
+
+| Fuente | Tipo | Propósito |
+|---|---|---|
+| `form_responses` (PostgreSQL) | Tabla existente | Respuestas del formulario agrupadas por sección |
+| `projects` (PostgreSQL) | Tabla opcional | Metadata del proyecto (auto-creación) |
+| `executions` (PostgreSQL) | Tabla opcional | Historial de ejecuciones del pipeline |
+| `data/decisions.json` | Archivo local | Decisiones arquitectónicas del sistema |
+
+### Reglas
+
+- Solo lectura de datos, nunca escribe
+- Tablas opcionales (`projects`, `executions`) no bloquean si no existen
+- Reconstrucción determinística: misma DB = mismo output
+- Sin dependencias externas
 
 ---
 

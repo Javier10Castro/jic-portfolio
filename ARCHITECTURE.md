@@ -625,3 +625,43 @@ In `api/sendBrief.js`, form persistence runs after validation but before any pip
 - DB failure **does not block** email delivery — errors are logged to `console.error`
 - Arrays (checkboxes, tags) are converted to comma-separated strings for storage
 - No ORM — raw SQL with `pg`
+
+---
+
+## Project Loader Engine
+
+The `lib/loader/` module reconstructs projects from PostgreSQL and local filesystem data.
+
+It is a **read-only** module — it queries and reconstructs without modifying any data.
+
+### Module structure
+
+```
+/lib/loader/
+  index.js            → entry point (queries + data reconstruction)
+```
+
+### API
+
+| Method | Input | Returns | Description |
+|---|---|---|---|
+| `loadProject(project_id)` | `string` | `{ meta, responses, grouped }` | Full project data from DB |
+| `rebuildPromptMaestro(project_id, lang?)` | `string, string` | `string` | Rebuild Prompt Maestro text from stored responses |
+| `getProjectState(project_id)` | `string` | `{ project, form_responses, execution_history, decisions }` | Complete pipeline state |
+| `listProjects()` | — | `Array` | All projects with metadata |
+
+### Data sources
+
+| Source | Type | Purpose |
+|---|---|---|
+| `form_responses` (PostgreSQL) | Existing table | Form responses grouped by section |
+| `projects` (PostgreSQL) | Optional table | Project metadata |
+| `executions` (PostgreSQL) | Optional table | Pipeline execution history |
+| `data/decisions.json` | Local file | Architectural decisions |
+
+### Constraints
+
+- Read-only — never writes to any data source
+- Optional tables (`projects`, `executions`) don't block if absent
+- Deterministic reconstruction: same DB state = same output
+- Zero external dependencies

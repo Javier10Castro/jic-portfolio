@@ -1,5 +1,23 @@
 # Changelog
 
+## [v1.5.0] - 2026-06-08
+
+### Added
+- Project Loader Engine v1 (lib/loader/index.js) — read-only project reconstruction from PostgreSQL
+- loadProject() — full project data with section-grouped form responses
+- rebuildPromptMaestro() — reconstructs Prompt Maestro string from stored data
+- getProjectState() — complete pipeline state combining DB + filesystem sources
+- listProjects() — enumerates all projects in the database
+- SQL migration (data/migrations/002_create_projects_executions.sql) — optional
+- Multi-source data reconstruction: form_responses + decisions.json + optional tables
+- Spanish/English bilingual Prompt Maestro reconstruction
+- 65+ field labels for human-readable key mapping
+
+### Notes
+This version adds the final read layer, completing the full CRUD cycle: Compiler → Plan → Scaffold → Persist → Load.
+
+---
+
 ## [v1.4.0] - 2026-06-08
 
 ### Added
