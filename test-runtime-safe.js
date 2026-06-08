@@ -227,4 +227,53 @@ test('design-system engine is untouched', () => {
   if (typeof ds.buildDesignSystem !== 'function') throw new Error('ds.buildDesignSystem not a function');
 });
 
+// === RESOLVER SAFE TESTS ===
+
+const resolver = require('./lib/resolver');
+
+test('resolver exports all functions', () => {
+  const expected = ['resolveWorkspace', 'resolveUser', 'resolveContext', 'clearCache'];
+  const missing = expected.filter(n => typeof resolver[n] !== 'function');
+  if (missing.length) throw new Error('Missing: ' + missing.join(', '));
+});
+
+test('resolveWorkspace throws with no args', async () => {
+  let threw = false;
+  try { await resolver.resolveWorkspace({}); }
+  catch (e) { threw = true; if (e.code !== 'INVALID_INPUT') throw new Error('Wrong code: ' + e.code); }
+  if (!threw) throw new Error('Should have thrown');
+});
+
+test('resolveWorkspace throws on invalid UUID format for workspace_id', async () => {
+  let threw = false;
+  try { await resolver.resolveWorkspace({ workspace_id: 'not-a-uuid' }); }
+  catch (e) { threw = true; if (e.code !== 'INVALID_INPUT') throw new Error('Wrong code: ' + e.code); if (e.field !== 'workspace_id') throw new Error('Wrong field: ' + e.field); }
+  if (!threw) throw new Error('Should have thrown');
+});
+
+test('resolveUser throws with no user_id', async () => {
+  let threw = false;
+  try { await resolver.resolveUser({ workspace_id: '550e8400-e29b-41d4-a716-446655440000' }); }
+  catch (e) { threw = true; if (e.code !== 'INVALID_INPUT') throw new Error('Wrong code: ' + e.code); if (e.field !== 'user_id') throw new Error('Wrong field: ' + e.field); }
+  if (!threw) throw new Error('Should have thrown');
+});
+
+test('resolveUser throws with no workspace_id', async () => {
+  let threw = false;
+  try { await resolver.resolveUser({ user_id: '550e8400-e29b-41d4-a716-446655440000' }); }
+  catch (e) { threw = true; if (e.code !== 'INVALID_INPUT') throw new Error('Wrong code: ' + e.code); if (e.field !== 'workspace_id') throw new Error('Wrong field: ' + e.field); }
+  if (!threw) throw new Error('Should have thrown');
+});
+
+test('resolveContext throws on missing workspace (no slug, no id)', async () => {
+  let threw = false;
+  try { await resolver.resolveContext({ user_id: '550e8400-e29b-41d4-a716-446655440000' }); }
+  catch (e) { threw = true; if (e.code !== 'INVALID_INPUT') throw new Error('Wrong code: ' + e.code); if (e.field !== 'workspace_id') throw new Error('Wrong field: ' + e.field); }
+  if (!threw) throw new Error('Should have thrown');
+});
+
+test('clearCache resets without error', () => {
+  resolver.clearCache();
+});
+
 runTests();
