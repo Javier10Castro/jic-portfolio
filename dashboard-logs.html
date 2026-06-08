@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Decision Logs — JIC Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0B0F19;--surface:#131829;--surface-2:#1a2035;--border:#1e2640;--text:#d1d5db;--text-strong:#f3f4f6;--muted:#6b7280;--accent:#00D4FF;--accent-2:#00FFC8;--red:#ef4444;--yellow:#f59e0b;--green:#10b981;--radius:8px;--font-sans:'Inter',-apple-system,BlinkMacSystemFont,sans-serif}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--bg);color:var(--text);font-family:var(--font-sans);min-height:100vh}
+header{background:var(--surface);border-bottom:1px solid var(--border);padding:16px 32px;display:flex;align-items:center;justify-content:space-between}
+header h1{font-family:'Space Grotesk',sans-serif;font-size:18px;color:var(--text-strong)}
+header h1 span{color:var(--accent)}
+header nav a{color:var(--muted);text-decoration:none;font-size:13px;margin-left:20px;transition:color .2s}
+header nav a:hover{color:var(--accent)}
+header nav a.active{color:var(--accent);font-weight:600}
+.container{max-width:1200px;margin:0 auto;padding:32px}
+.page-title{font-size:24px;font-weight:700;color:var(--text-strong);margin-bottom:4px}
+.page-sub{font-size:13px;color:var(--muted);margin-bottom:24px}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:24px}
+.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px}
+.stat-card .num{font-size:28px;font-weight:700;color:var(--accent)}
+.stat-card .label{font-size:11px;color:var(--muted);margin-top:2px}
+.log-entry{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:12px;transition:border-color .2s}
+.log-entry:hover{border-color:var(--accent)}
+.log-entry .meta{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+.log-entry .id{font-family:monospace;font-size:11px;color:var(--accent)}
+.log-entry .date{font-size:11px;color:var(--muted)}
+.log-entry .title{font-size:14px;font-weight:600;color:var(--text-strong);margin-bottom:4px}
+.log-entry .reason{font-size:12px;color:var(--text);margin-bottom:8px;line-height:1.5}
+.log-entry .tags{display:flex;gap:6px;flex-wrap:wrap}
+.tag{display:inline-block;padding:2px 8px;border-radius:4px;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.5px}
+.tag-impact-high{background:rgba(239,68,68,.15);color:var(--red)}
+.tag-impact-medium{background:rgba(245,158,11,.15);color:var(--yellow)}
+.tag-impact-low{background:rgba(16,185,129,.15);color:var(--green)}
+.tag-module{background:rgba(0,212,255,.1);color:var(--accent);font-family:monospace}
+.loading{text-align:center;padding:48px;color:var(--muted)}
+.empty{background:var(--surface);border:1px dashed var(--border);border-radius:var(--radius);padding:48px;text-align:center;color:var(--muted);font-size:14px}
+.error-banner{background:rgba(239,68,68,.1);border:1px solid var(--red);border-radius:var(--radius);padding:12px 16px;margin-bottom:16px;font-size:13px;color:var(--red)}
+footer{margin-top:48px;padding:24px 32px;border-top:1px solid var(--border);font-size:11px;color:var(--muted);text-align:center}
+@media(max-width:600px){header{padding:12px 16px;flex-direction:column;gap:8px}
+.container{padding:16px}}
+</style>
+</head>
+<body>
+<header>
+  <h1>JIC <span>Dashboard</span></h1>
+  <nav>
+    <a href="/dashboard.html">Projects</a>
+    <a href="/dashboard-project.html" id="projectLink">Detail</a>
+    <a href="/">Portfolio</a>
+  </nav>
+</header>
+<div class="container" id="app">
+  <div class="page-title">Decision Logs</div>
+  <div class="page-sub">Architectural decisions recorded by the system</div>
+  <div class="stats" id="stats"></div>
+  <div class="loading" id="loading">Loading logs...</div>
+  <div id="logs"></div>
+</div>
+<footer>Agent Pack v1.5.0 — JIC Dashboard</footer>
+<script>
+function escapeHTML(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
+
+async function load(){
+  const projectId=new URLSearchParams(location.search).get('id');
+  const link=document.getElementById('projectLink');
+  if(projectId){link.href='/dashboard-project.html?id='+encodeURIComponent(projectId);link.style.display='inline'}
+  else{link.style.display='none'}
+  const logsDiv=document.getElementById('logs');
+  const statsDiv=document.getElementById('stats');
+  const loading=document.getElementById('loading');
+  try{
+    const url=projectId?'/api/projects/logs?id='+encodeURIComponent(projectId):'/api/projects/logs';
+    const r=await fetch(url);
+    if(!r.ok)throw new Error(await r.text());
+    const data=await r.json();
+    const decisions=data.decisions||[];
+    loading.style.display='none';
+    if(decisions.length===0){
+      logsDiv.innerHTML='<div class="empty">No decisions recorded yet.</div>';
+      statsDiv.innerHTML='<div class="stat-card"><div class="num">0</div><div class="label">Decisions</div></div>';
+      return;
+    }
+    const high=decisions.filter(d=>d.impact==='high').length;
+    const med=decisions.filter(d=>d.impact==='medium').length;
+    const low=decisions.filter(d=>d.impact==='low').length;
+    statsDiv.innerHTML=`
+      <div class="stat-card"><div class="num">${decisions.length}</div><div class="label">Total decisions</div></div>
+      <div class="stat-card"><div class="num">${high}</div><div class="label">High impact</div></div>
+      <div class="stat-card"><div class="num">${med}</div><div class="label">Medium impact</div></div>
+      <div class="stat-card"><div class="num">${low}</div><div class="label">Low impact</div></div>
+    `;
+    logsDiv.innerHTML=decisions.map(d=>`
+      <div class="log-entry">
+        <div class="meta">
+          <span class="id">${escapeHTML(d.id)}</span>
+          <span class="date">${new Date(d.timestamp).toLocaleString()}</span>
+        </div>
+        <div class="title">${escapeHTML(d.title)}</div>
+        <div class="reason">${escapeHTML(d.reason)}</div>
+        <div class="tags">
+          <span class="tag tag-impact-${d.impact}">${d.impact}</span>
+          ${(d.modules_affected||[]).map(m=>`<span class="tag tag-module">${escapeHTML(m)}</span>`).join('')}
+          ${d.version?`<span class="tag tag-module">v${escapeHTML(d.version)}</span>`:''}
+        </div>
+      </div>
+    `).join('');
+  }catch(e){
+    loading.style.display='none';
+    logsDiv.innerHTML='<div class="error-banner">Failed to load logs: '+e.message+'</div>';
+  }
+}
+load();
+</script>
+</body>
+</html>
