@@ -46,6 +46,13 @@ Lead generation and client onboarding through contact forms, AI-powered brief co
 │   └── sendContact.js        # Vercel Function: contact form (2 emails)
 ├── .vercel/                   # Vercel cache (auto-generated, ignore)
 ├── node_modules/              # Dependencies (npm install)
+├── lib/                       # Internal system modules
+│   ├── compiler/              # Unified Brief Compiler v1
+│   ├── plan/                  # Plan Engine v1 (semantic compiler)
+│   ├── scaffold/              # Scaffold Engine v1 (filesystem generator)
+│   └── decision/              # Decision Layer v1 (architectural log)
+├── data/                      # Runtime storage (not committed)
+│   └── decisions.json         # Architectural decision records
 ├── index.html                 # Portfolio landing page
 ├── brief-maestro.html         # Brief Maestro tool (14 sections)
 ├── test-data.json             # Test fixture (Salmos Café)
@@ -53,7 +60,10 @@ Lead generation and client onboarding through contact forms, AI-powered brief co
 ├── package.json               # Project metadata + dependencies
 ├── package-lock.json          # npm lockfile
 ├── AGENTS.md                  # This file
-└── .gitignore                 # Ignores .vercel
+├── ARCHITECTURE.md            # System architecture
+├── CHANGELOG.md               # Version history
+├── .gitignore                 # Ignores .vercel, node_modules, data/
+└── .gitattributes             # Line ending normalization
 ```
 
 ---
@@ -263,6 +273,34 @@ When receiving a task:
 
 ---
 
+## Versioning System
+
+The Agent Pack follows semantic versioning:
+
+- `v1.0.0` — Initial stable system
+- `v1.1.0` — Improvements without breaking changes
+- `v2.0.0` — Architecture changes or new agent system
+
+---
+
+## Agent Pack v1.1.0 — Intelligence Layer
+
+### New Internal Agents (Simulated)
+
+- **🧠 Validator Agent**
+  Detects missing or weak fields in the brief before generation.
+
+- **🧭 UX Flow Agent**
+  Builds optimal user journey and page hierarchy dynamically.
+
+- **🔍 SEO Layer Agent**
+  Automatically enriches structure with SEO optimization (headings, metadata, keywords).
+
+- **✍️ Copy Booster Agent**
+  Improves clarity, conversion strength, and tone consistency of all generated copy.
+
+---
+
 ## Architecture Reference
 
 Este proyecto tiene un archivo `ARCHITECTURE.md` que describe:
@@ -318,6 +356,120 @@ America/Tijuana
 ### 2026-06 — PDF Generation
 
 Brief PDFs are generated server-side using PDFKit and attached to the admin notification email.
+
+---
+
+## Project Bootstrap System (v1.0)
+
+El sistema ahora genera **proyectos completos**, no solo sitios web. Cada output es un producto deployable inmediatamente con estructura estándar, Git-ready y documentación auto-generada.
+
+### Estructura de output estándar
+
+```
+/
+├── index.html
+├── assets/
+├── api/ (si aplica)
+├── README.md
+├── AGENTS.md
+├── ARCHITECTURE.md
+├── CHANGELOG.md
+├── .gitignore
+```
+
+### Git & GitHub readiness
+
+Cada proyecto generado es compatible con:
+
+- `git init`
+- `git add .`
+- `git commit -m "feat: initial site generation"`
+- `gh repo create <project-name> --public --source=. --push`
+
+### Principio central
+
+> "The system generates deployable products, not static websites"
+
+---
+
+## Project Scaffold Engine (v1)
+
+El módulo `lib/scaffold/` implementa físicamente el Project Bootstrap System.
+
+Convierte un Project Definition en una estructura real de archivos en disco:
+
+```
+/lib/scaffold/
+  index.js            → entry point
+  core/engine.js       → orchestration logic
+  generators/          → filesystem functions (node fs)
+  templates/registry.js → single source of truth for templates
+```
+
+**Input**: `{ project_name, project_type, prompt_maestro_final }`  
+**Output**: Carpeta con `index.html`, `assets/`, `README.md`, `AGENTS.md`, `ARCHITECTURE.md`, `CHANGELOG.md`, `.gitignore`
+
+Reglas:
+- Solo Node.js nativo (`fs`, `path`) — 0 dependencias externas
+- Determinista: misma entrada = mismo output
+- No hace deploy, no toca Git, no llama APIs
+
+---
+
+## Project Plan Engine (v1)
+
+El módulo `lib/plan/` convierte un Prompt Maestro en un **Semantic Intermediate Representation (IR)** — un JSON estructurado que sirve como blueprint para el Scaffold Engine.
+
+```
+/lib/plan/
+  index.js            → semantic compiler (section parser + mapper)
+```
+
+**Input**: `prompt_maestro_final` (string)  
+**Output**: JSON con `project.identity`, `.structure`, `.ui`, `.content`, `.seo`, `.conversion`, `.assets`, `.rules`
+
+Reglas:
+- Determinista: misma entrada = mismo JSON
+- Sin dependencias externas
+- No genera archivos, solo estructura datos
+- Mapea las 14 secciones del Prompt Maestro a 8 categorías semánticas
+
+---
+
+## Decision Layer (v1)
+
+El módulo `lib/decision/` registra decisiones arquitectónicas del sistema Agent Pack v1.
+
+No es para logs de usuarios ni proyectos generados — solo para decisiones internas de arquitectura.
+
+```
+/lib/decision/
+  index.js            → entry point (fs persistence)
+  /data/decisions.json → almacenamiento local
+```
+
+**API**:
+- `registerDecision({ id, title, reason, impact, modules_affected, version })` — registra una decisión
+- `listDecisions()` — devuelve todas en orden cronológico
+- `getDecision(id)` — devuelve una específica o `null`
+
+**Campos**:
+| Campo | Tipo | Descripción |
+|---|---|---|
+| `id` | string | Identificador único (ej: `arch-003`) |
+| `title` | string | Título descriptivo |
+| `reason` | string | Motivación de la decisión |
+| `impact` | low / medium / high | Impacto estimado |
+| `modules_affected` | string[] | Módulos involucrados |
+| `version` | string | Versión del sistema en que se tomó |
+| `timestamp` | string (ISO) | Auto-generado |
+
+Reglas:
+- `id` y `title` son obligatorios
+- `impact` válido: `low`, `medium`, `high`
+- No permite IDs duplicados
+- Sin dependencias externas — `fs` nativo
+- Persistencia en `data/decisions.json` (creación automática)
 
 ---
 

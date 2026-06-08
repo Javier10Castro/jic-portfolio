@@ -46,6 +46,30 @@ Both functions use:
 - `escapeHTML()` on all user-provided values
 - Timezone: `America/Tijuana`
 
+## Agent Pack Pipeline (v1.1.0)
+
+Conceptual prompt processing pipeline for the Agent Pack intelligence layer:
+
+```
+INPUT (Prompt Maestro)
+    ↓
+🧠 VALIDATION — detects missing or weak fields before generation
+    ↓
+🧭 UX FLOW — builds optimal user journey and page hierarchy dynamically
+    ↓
+🔍 SEO LAYER — enriches structure with headings, metadata, keywords
+    ↓
+✍️ COPY BOOST — improves clarity, conversion strength, tone consistency
+    ↓
+🎨 DESIGN SYSTEM — applies visual identity, components, spacing
+    ↓
+OUTPUT (Prompt Maestro Final Optimizado)
+```
+
+This pipeline is simulated internally during prompt refinement and does not execute as independent services. It transforms the raw Prompt Maestro into an optimized, production-ready brief for the site generator.
+
+---
+
 ## Contact Form Flow (index.html → /api/sendContact)
 
 1. User fills form on `index.html` (name, email, company, project, message)
@@ -202,3 +226,182 @@ Both functions log errors to `console.error` (visible in Vercel Dashboard → De
 7. **No CORS configuration**: Vercel Functions accept requests from any origin by default
 8. **No CI/CD**: No automated testing or deployment pipeline
 9. **Hardcoded SMTP service**: `service: 'gmail'` — switching providers would require code changes
+
+---
+
+## Project Factory Layer
+
+The system has evolved from a **Website Generator** (output: a single HTML site) to a **Production Project Factory** (output: a complete deployable project).
+
+### Evolution
+
+| Phase | Output | Description |
+|---|---|---|
+| v1.0.0 | Website | Static HTML/CSS/JS site |
+| v1.1.0 | Website + Docs | Site + AGENTS.md + ARCHITECTURE.md |
+| v1.2.0 | Full Project | Site + docs + project structure + Git readiness |
+
+### Integration
+
+The Project Bootstrap System is the final layer of the Prompt Maestro pipeline:
+
+```
+Brief (client input)
+    ↓
+Prompt Maestro (14-section structured brief)
+    ↓
+Agent Pack v1 (validation, UX, SEO, copy refinement)
+    ↓
+Website Generator (HTML/CSS/JS output)
+    ↓
+Project Bootstrap System (project structure + docs + Git)
+    ↓
+GitHub-ready deployable product
+```
+
+### Output Guarantees
+
+Every generated project includes:
+
+- **Deployable website**: functional HTML/CSS/JS, mobile-first, dark theme
+- **Project documentation**: README.md (how to run), AGENTS.md (rules), ARCHITECTURE.md (design), CHANGELOG.md (version)
+- **Git readiness**: pre-configured `.gitignore`, `.gitattributes`, and first commit instructions
+- **Deployment compatibility**: Vercel-ready by default
+
+---
+
+## Project Scaffold Engine
+
+The `lib/scaffold/` module implements the Project Bootstrap System as real files on disk.
+
+### Module structure
+
+```
+/lib/scaffold/
+  index.js            → entry point, input normalization
+  core/engine.js       → orchestration, file coordination
+  generators/          → filesystem functions (fs + path)
+  templates/registry.js → single source of truth for templates
+```
+
+### Pipeline
+
+```
+Project Definition
+  { project_name, project_type, prompt_maestro_final }
+    ↓ (index.js)
+  sanitize + normalize
+    ↓ (engine.js)
+  decide files to create
+    ↓ (generators)
+  create directories + write files
+    ↓ (templates/registry)
+  inject content from templates
+    ↓
+  Physical project on disk
+```
+
+### Constraints
+
+- Node.js native only (`fs`, `path`) — zero external dependencies
+- Deterministic: same input always produces same output
+- No deployment, no Git, no API calls
+- Always validates before overwriting existing directories
+
+---
+
+## Project Plan Engine
+
+The `lib/plan/` module converts a Prompt Maestro string into a **Semantic Intermediate Representation (IR)** — a structured JSON blueprint consumed by the Scaffold Engine.
+
+### Module structure
+
+```
+/lib/plan/
+  index.js            → semantic compiler (section parser + mapper)
+```
+
+### Pipeline
+
+```
+prompt_maestro_final (string)
+    ↓
+  Parse 14 sections (## N. NAME headers)
+    ↓
+  Extract key-value pairs (**key:** value)
+    ↓
+  Map to 8 semantic categories
+    ↓
+  JSON output
+```
+
+### Semantic mapping
+
+| IR Category | Source sections | Description |
+|---|---|---|
+| `identity` | Business, Branding, Essence, Objectives | Business name, mission, vision, values, personality |
+| `structure` | Architecture, Objectives | Sitemap, user flow, conversion goal |
+| `ui` | Branding, Visual References | Colors, typography, visual style, emotions |
+| `content` | Content, Products/Services, Audience | Existing materials, service list, buyer persona |
+| `seo` | SEO Strategy, Objectives | Keywords, locations, KPIs |
+| `conversion` | Conversion Strategy, Objectives | CTAs, funnel, lead magnet, timeline |
+| `assets` | Functionalities, Competition, Social Proof | Features, tools, testimonials, stats |
+| `rules` | Essence, Branding | Forbidden elements, constraints |
+
+### Constraints
+
+- No hallucinations: only extracts what exists in the prompt
+- No external knowledge: purely structural transformation
+- Deterministic: same Prompt Maestro = same JSON
+- Zero external dependencies
+
+---
+
+## Decision Layer
+
+The `lib/decision/` module records architectural decisions made during Agent Pack development.
+
+It is NOT for user or generated project logs — only for internal system architecture decisions.
+
+### Module structure
+
+```
+/lib/decision/
+  index.js            → entry point (fs persistence layer)
+```
+
+### API
+
+| Method | Signature | Returns | Description |
+|---|---|---|---|
+| `registerDecision` | `({ id, title, reason, impact, modules_affected, version })` | `Object` (saved entry) | Persists a new decision. Requires `id` and `title`. |
+| `listDecisions` | `()` | `Array` | Returns all decisions in chronological order. |
+| `getDecision` | `(id)` | `Object \| null` | Returns a specific decision or `null`. |
+
+### Schema
+
+```json
+{
+  "id": "arch-003",
+  "title": "Decision Layer v1",
+  "reason": "Centralized logging for architectural changes",
+  "impact": "low",
+  "modules_affected": ["lib/decision/index.js"],
+  "version": "v1.3.0",
+  "timestamp": "2026-06-08T12:00:00.000Z"
+}
+```
+
+### Storage
+
+- **File**: `data/decisions.json` (auto-created if missing)
+- **Persistence**: `fs` native — no database, no external dependencies
+- **Guarantee**: Duplicate `id` values are rejected with an error
+
+### Integration points
+
+| Consumer | When | Purpose |
+|---|---|---|
+| Agent Pack v1 workflow | On architectural changes | Record decision during `git status` → analysis → commit cycle |
+| Plan Engine | Optional future | Log when semantic mapping changes |
+| Scaffold Engine | Optional future | Log when template structure changes |
