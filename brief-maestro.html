@@ -413,6 +413,30 @@ footer{
 .success-btn:hover{border-color:var(--border2);color:var(--accent)}
 
 @keyframes spin{to{transform:rotate(360deg)}}
+
+/* COLOR PICKER COMPONENT */
+.cp-wrapper{margin-top:8px}
+.cp-palette{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:12px}
+.cp-swatch{background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:10px;display:flex;flex-direction:column;align-items:center;gap:6px;width:108px;transition:border-color .2s}
+.cp-swatch:hover{border-color:var(--border2)}
+.cp-swatch-color{width:44px;height:44px;border-radius:8px;border:2px solid rgba(255,255,255,0.08);cursor:pointer;transition:transform .2s,box-shadow .2s;flex-shrink:0}
+.cp-swatch-color:hover{transform:scale(1.08);box-shadow:0 0 16px rgba(0,212,255,0.2)}
+.cp-swatch-hex{font-family:monospace;font-size:11px;color:var(--text);letter-spacing:.3px}
+.cp-swatch-roles{display:flex;gap:3px;margin-top:2px}
+.cp-role{padding:2px 7px;border-radius:4px;font-size:10px;font-weight:700;cursor:pointer;background:var(--surface-2);color:var(--muted);border:1px solid transparent;transition:all .2s;line-height:1.2;user-select:none}
+.cp-role:hover{border-color:var(--border2);color:var(--accent)}
+.cp-role.active{background:rgba(0,212,255,0.15);color:var(--accent);border-color:var(--border2)}
+.cp-role[data-role=primary].active{background:rgba(0,212,255,0.15);color:var(--accent);border-color:var(--accent)}
+.cp-role[data-role=secondary].active{background:rgba(0,255,200,0.12);color:var(--accent2);border-color:rgba(0,255,200,0.3)}
+.cp-role[data-role=accent].active{background:rgba(245,158,11,0.12);color:#f59e0b;border-color:rgba(245,158,11,0.3)}
+.cp-swatch-remove{position:absolute;top:4px;right:4px;width:20px;height:20px;border-radius:50%;border:none;background:rgba(239,68,68,0.15);color:var(--red);font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;opacity:0;transition:opacity .2s;line-height:1;padding:0}
+.cp-swatch{position:relative}
+.cp-swatch:hover .cp-swatch-remove{opacity:1}
+.cp-add-btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;background:var(--surface-2);border:1px dashed var(--border);border-radius:6px;color:var(--muted);font-size:12px;font-weight:600;cursor:pointer;transition:all .2s;font-family:var(--font-sans)}
+.cp-add-btn:hover{border-color:var(--accent);color:var(--accent);background:rgba(0,212,255,0.06)}
+.cp-add-btn svg{width:14px;height:14px}
+.cp-add-note{font-size:11px;color:var(--muted);margin-top:8px}
+@media(max-width:600px){.cp-palette{justify-content:center}.cp-swatch{width:100%;flex-direction:row;padding:8px 12px}.cp-swatch-color{width:36px;height:36px}.cp-swatch-remove{position:static;opacity:1;margin-left:auto}}
 </style>
 </head>
 <body>
@@ -681,7 +705,7 @@ const SECTIONS=[
     goal:"Generar el brief visual completo: paleta, tipografías, estilo gráfico y directrices de imagen para el sitio.",
     questions:[
       {id:"brand_logo",label:"¿Tienes logotipo?",hint:"¿Ya tienes identidad visual? Esto define si <b>partimos de tu logo o creamos uno nuevo</b>.",type:"radio",options:["Sí, tengo logotipo definido","Tengo uno pero necesita actualización","No tengo logotipo aún"],required:true,ai:"Define si el diseño **parte de tu logo actual o lo creamos desde cero**."},
-      {id:"brand_colores",label:"Paleta de colores actual o deseada",hint:"Tus colores, si los tienes. Comparte los HEX o simplemente <b>describe los tonos que te representan</b>.",type:"textarea",required:false,ai:"Establece la **base de tu paleta de colores**. Si no tienes una, creamos una que refleje tu personalidad."},
+      {id:"brand_colores",label:"Paleta de colores actual o deseada",hint:"Agrega tus colores usando el selector. Asigna <b>Primary (P), Secondary (S) y Accent (A)</b> a cada color. Mínimo 2 colores.",type:"color-picker",required:false,ai:"Establece la **base de tu paleta de colores**. Si no tienes una, creamos una que refleje tu personalidad."},
       {id:"brand_tipografia",label:"Tipografías o preferencias",hint:"¿Tienes tipografías de marca? O dime <b>qué estilo prefieres</b>: moderno, clásico, limpio, expresivo.",type:"textarea",required:false,ai:"Define el **sistema tipográfico** de tu sitio: títulos, textos y elementos de interfaz."},
       {id:"brand_estilo",label:"Estilo visual deseado",hint:"Elige el estilo que mejor <b>refleje la esencia visual</b> que buscas para tu sitio.",type:"checkboxes",options:["Minimalista y limpio","Corporativo y formal","Moderno y tecnológico","Cálido y humano","Lujoso y premium","Colorido y vibrante","Oscuro y sofisticado","Ilustrativo y creativo","Fotográfico e inmersivo"],required:true,ai:"Define el **estilo visual maestro**: espacios, imágenes y elementos gráficos de tu sitio."},
       {id:"brand_emociones",label:"¿Qué emociones debe transmitir tu sitio?",hint:"Las emociones que debe <b>despertar tu sitio</b> en cada visitante. Guían el color, las imágenes y el tono.",type:"checkboxes",options:["Confianza y seguridad","Innovación y modernidad","Calidad y excelencia","Cercanía y calidez","Exclusividad y prestigio","Energía y motivación","Tranquilidad y bienestar","Profesionalismo y seriedad"],required:true,ai:"Guían las decisiones de **color, imágenes, espacios y animaciones** de todo el diseño."},
@@ -856,7 +880,7 @@ const EN_SECTIONS = [
     goal:"Generate the complete visual brief: palette, typography, graphic style, and image guidelines for the site.",
     questions:[
       {id:"brand_logo",label:"Do you have a logo?",hint:"Do you already have a visual identity? This defines whether <b>we start from your logo or create a new one</b>.",type:"radio",options:["Yes, I have a defined logo","I have one but it needs updating","I don't have a logo yet"],required:true,ai:"Defines whether the design **starts from your existing logo or is built from scratch**."},
-      {id:"brand_colores",label:"Current or desired color palette",hint:"Your colors, if you have them. Share HEX codes or simply <b>describe the tones that represent you</b>.",type:"textarea",required:false,ai:"Sets the **foundation for your color palette**. If you don't have one, we create one that reflects your personality."},
+      {id:"brand_colores",label:"Current or desired color palette",hint:"Add your colors using the picker. Assign <b>Primary (P), Secondary (S), and Accent (A)</b> to each. Minimum 2 colors.",type:"color-picker",required:false,ai:"Sets the **foundation for your color palette**. If you don't have one, we create one that reflects your personality."},
       {id:"brand_tipografia",label:"Typography or preferences",hint:"Do you have brand fonts? Or tell me <b>what style you prefer</b>: modern, classic, clean, expressive.",type:"textarea",required:false,ai:"Defines your site's **typography system** -- headings, body text, and UI elements."},
       {id:"brand_estilo",label:"Desired visual style",hint:"Choose the style that best <b>reflects the visual essence</b> you're looking for.",type:"checkboxes",options:["Minimalist and clean","Corporate and formal","Modern and technological","Warm and human","Luxurious and premium","Colorful and vibrant","Dark and sophisticated","Illustrative and creative","Photographic and immersive"],required:true,ai:"Defines your **master visual style** -- spacing, imagery, and graphic elements."},
       {id:"brand_emociones",label:"What emotions should your site convey?",hint:"The emotions your site should <b>awaken in every visitor</b>. They guide color, imagery, and tone.",type:"checkboxes",options:["Trust and security","Innovation and modernity","Quality and excellence","Closeness and warmth","Exclusivity and prestige","Energy and motivation","Tranquility and well-being","Professionalism and seriousness"],required:true,ai:"Guide every decision on **color, imagery, spacing, and animation**."},
@@ -1108,7 +1132,7 @@ let formData={};
 let tagInputs={};
 
 function save(){localStorage.setItem('briefMaestro',JSON.stringify(formData));localStorage.setItem('briefMaestroLang',currentLang)}
-function load(){try{const d=localStorage.getItem('briefMaestro');if(d)formData=JSON.parse(d)}catch(e){}try{const l=localStorage.getItem('briefMaestroLang');if(l&&(l==='es'||l==='en'))currentLang=l}catch(e){}}
+function load(){try{const d=localStorage.getItem('briefMaestro');if(d)formData=JSON.parse(d)}catch(e){}try{const l=localStorage.getItem('briefMaestroLang');if(l&&(l==='es'||l==='en'))currentLang=l}catch(e){}if(!formData.branding_colors)formData.branding_colors={primary:null,secondary:null,accent:null,palette:[]};}
 load();const _bl=(navigator.language||navigator.userLanguage||'').toLowerCase();setLang(localStorage.getItem('briefMaestroLang')||(_bl.startsWith('es')?'es':'en'))
 
 function startApp(){
@@ -1159,6 +1183,7 @@ function renderStep(){
   setTimeout(()=>{
     c.innerHTML=buildStepHTML(s);
     attachEvents(s);
+    if(s.questions.some(q=>q.type==='color-picker'))cpRender();
     c.style.transition='opacity 0.4s ease,transform 0.4s ease';
     c.style.opacity='1';
     c.style.transform='translateX(0)';
@@ -1232,6 +1257,18 @@ function buildInput(q){
         </div>
         ${o}
       </div>`).join('')}</div>`;
+  }
+  if(q.type==='color-picker'){
+    const bc=formData.branding_colors||{primary:null,secondary:null,accent:null,palette:[]};
+    return `<div class="cp-wrapper" id="cp-wrap-${q.id}">
+      <input type="color" id="cp-input" style="display:none">
+      <div class="cp-palette" id="cp-palette-${q.id}"></div>
+      <button type="button" class="cp-add-btn" onclick="cpAddNew()">
+        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+        ${currentLang==='es'?'Agregar color':'Add Color'}
+      </button>
+      <div class="cp-add-note" id="cp-note-${q.id}">${currentLang==='es'?'Haz clic en el círculo de color para cambiarlo. Asigna P (Primary), S (Secondary), A (Accent).':'Click a color swatch to edit it. Assign P (Primary), S (Secondary), A (Accent).'}</div>
+    </div>`;
   }
   if(q.type==='scale'){
     const sv=v||3;
@@ -1309,6 +1346,100 @@ function removeTag(id,idx){
   c.innerHTML=formData[id].map((t,i)=>`<span class="tag-pill">${t}<span class="tag-pill-remove" onclick="removeTag('${id}',${i})">×</span></span>`).join('');
 }
 
+/* COLOR PICKER */
+function cpInit(){
+  if(!formData.branding_colors)formData.branding_colors={primary:null,secondary:null,accent:null,palette:[]};
+}
+function cpRender(){
+  const palette=document.getElementById('cp-palette-brand_colores');
+  if(!palette)return;
+  cpInit();
+  const bc=formData.branding_colors;
+  const note=document.getElementById('cp-note-brand_colores');
+  if(bc.palette.length<2&&note)note.textContent=currentLang==='es'?'Agrega al menos 2 colores (Primary requerido).':'Add at least 2 colors (Primary required).';
+  else if(note)note.textContent='';
+  palette.innerHTML=bc.palette.map((hex,i)=>{
+    const isP=bc.primary===hex?'active':'';
+    const isS=bc.secondary===hex?'active':'';
+    const isA=bc.accent===hex?'active':'';
+    return `<div class="cp-swatch">
+      <div class="cp-swatch-color" style="background:${hex}" onclick="cpEditColor(${i})" title="${currentLang==='es'?'Cambiar color':'Change color'}"></div>
+      <div class="cp-swatch-hex">${hex}</div>
+      <div class="cp-swatch-roles">
+        <span class="cp-role ${isP}" data-role="primary" onclick="cpSetRole(${i},'primary')">P</span>
+        <span class="cp-role ${isS}" data-role="secondary" onclick="cpSetRole(${i},'secondary')">S</span>
+        <span class="cp-role ${isA}" data-role="accent" onclick="cpSetRole(${i},'accent')">A</span>
+      </div>
+      <button type="button" class="cp-swatch-remove" onclick="cpRemoveColor(${i})" title="${currentLang==='es'?'Eliminar':'Remove'}">×</button>
+    </div>`;
+  }).join('');
+}
+function cpSync(){
+  const bc=formData.branding_colors;
+  const parts=[];
+  if(bc.primary)parts.push('Primary: '+bc.primary);
+  if(bc.secondary)parts.push('Secondary: '+bc.secondary);
+  if(bc.accent)parts.push('Accent: '+bc.accent);
+  if(bc.palette.length)parts.push('Palette: '+bc.palette.join(', '));
+  formData.brand_colores=parts.join(' | ');
+  save();
+}
+function cpAddColor(hex){
+  cpInit();
+  hex=hex.toUpperCase();
+  const bc=formData.branding_colors;
+  if(bc.palette.includes(hex))return;
+  bc.palette.push(hex);
+  if(!bc.primary)bc.primary=hex;
+  cpRender();cpSync();
+}
+function cpAddNew(){
+  const inp=document.getElementById('cp-input');
+  inp.value='#00D4FF';
+  inp.setAttribute('data-mode','add');
+  inp.onchange=function(){cpAddColor(this.value);this.onchange=null;};
+  inp.click();
+}
+function cpEditColor(index){
+  const bc=formData.branding_colors;
+  if(!bc||!bc.palette[index])return;
+  const inp=document.getElementById('cp-input');
+  inp.value=bc.palette[index];
+  inp.setAttribute('data-edit-index',index);
+  inp.onchange=function(){
+    const idx=parseInt(this.getAttribute('data-edit-index'));
+    const hex=this.value.toUpperCase();
+    if(bc.palette.includes(hex)&&bc.palette[idx]!==hex)return;
+    const old=bc.palette[idx];
+    bc.palette[idx]=hex;
+    if(bc.primary===old)bc.primary=hex;
+    if(bc.secondary===old)bc.secondary=hex;
+    if(bc.accent===old)bc.accent=hex;
+    this.onchange=null;
+    cpRender();cpSync();
+  };
+  inp.click();
+}
+function cpRemoveColor(index){
+  cpInit();
+  const bc=formData.branding_colors;
+  const removed=bc.palette[index];
+  bc.palette.splice(index,1);
+  if(bc.primary===removed)bc.primary=bc.palette[0]||null;
+  if(bc.secondary===removed)bc.secondary=null;
+  if(bc.accent===removed)bc.accent=null;
+  cpRender();cpSync();
+  if(bc.palette.length===0)formData.brand_colores='';
+}
+function cpSetRole(index,role){
+  cpInit();
+  const bc=formData.branding_colors;
+  const hex=bc.palette[index];
+  if(bc[role]===hex){bc[role]=null;}
+  else{bc[role]=hex;}
+  cpRender();cpSync();
+}
+
 function goTo(idx){currentStep=idx;renderStep()}
 
 function nextStep(){
@@ -1331,6 +1462,7 @@ function collectCurrentInputs(){
       const el=document.getElementById('inp-'+q.id);
       if(el)formData[q.id]=el.value;
     }
+    if(q.type==='color-picker'){cpInit();cpSync();}
   });
   save();
 }
@@ -1346,6 +1478,18 @@ function generatePrompt(){
   const d=formData;
   const p=(k)=>d[k]||(Array.isArray(d[k])&&d[k].length?d[k].join(', '):'No especificado');
   const arr=(k)=>Array.isArray(d[k])&&d[k].length?d[k].join(', '):'No especificado';
+  const colors=()=>{
+    const bc=d.branding_colors;
+    if(bc&&bc.palette&&bc.palette.length){
+      const parts=[];
+      if(bc.primary)parts.push('Primary: '+bc.primary);
+      if(bc.secondary)parts.push('Secondary: '+bc.secondary);
+      if(bc.accent)parts.push('Accent: '+bc.accent);
+      parts.push('Full palette: '+bc.palette.join(', '));
+      return parts.join(' | ');
+    }
+    return p('brand_colores');
+  };
 
   return `# PROMPT MAESTRO — GENERACIÓN DE SITIO WEB PROFESIONAL
 Generado por Build a Brief | javieribrahim.dev
@@ -1402,7 +1546,7 @@ Fecha: ${new Date().toLocaleDateString('es-MX',{year:'numeric',month:'long',day:
 ## 5. BRANDING E IDENTIDAD VISUAL
 
 **Estado del logotipo:** ${p('brand_logo')}
-**Paleta de colores:** ${p('brand_colores')}
+**Paleta de colores:** ${colors()}
 **Tipografías:** ${p('brand_tipografia')}
 **Estilo visual deseado:** ${arr('brand_estilo')}
 **Emociones a transmitir:** ${arr('brand_emociones')}
