@@ -1,5 +1,8 @@
 const nodemailer = require('nodemailer');
 const PDFDocument = require('pdfkit');
+require('dotenv').config();
+
+const formResponses = require('../lib/db/formResponses');
 
 module.exports = async (req, res) => {
   if (req.method !== 'POST') {
@@ -10,6 +13,14 @@ module.exports = async (req, res) => {
 
   if (!name || !email) {
     return res.status(400).json({ error: 'Name and email are required' });
+  }
+
+  try {
+    const projectId = formResponses.generateProjectId(name, email);
+    await formResponses.saveBulkFormResponses(projectId, formData || {});
+    console.log(`[persist] saved ${projectId} — ${name} / ${email}`);
+  } catch (dbErr) {
+    console.error('[persist] failed to save form responses:', dbErr.message);
   }
 
 const GMAIL_USER = process.env.GMAIL_USER;

@@ -1,18 +1,41 @@
 # Changelog
 
+## [v1.4.0] - 2026-06-08
+
+### Added
+- Form Persistence Layer v1 (lib/db/formResponses.js) — saves all Brief Maestro responses to PostgreSQL
+- Database connection module (lib/db/index.js) — Neon PostgreSQL pool with SSL
+- SQL migration script (data/migrations/001_create_form_responses.sql)
+- form_responses table with project_id, section, field_key, value columns
+- Automatic field-to-section mapping by prefix (biz_*, obj_*, brand_*, etc.)
+- Array-to-comma-separated conversion for checkboxes and tags
+- Non-blocking persistence in api/sendBrief.js (DB failure doesn't block email)
+- generateProjectId() for unique project identification
+- getResponsesGrouped() for section-grouped queries
+
+### Notes
+This version adds the persistence layer before the Orchestrator pipeline, ensuring all user responses are stored in PostgreSQL for analysis and auditing.
+
+---
+
 ## [v1.3.0] - 2026-06-08
 
 ### Added
 - Decision Layer v1 (lib/decision/index.js) — architectural decision recording system
-- Persistent storage via data/decisions.json (auto-creating)
-- registerDecision(), listDecisions(), getDecision() API
-- Duplicate ID detection and rejection
-- impact validation (low/medium/high)
-- Auto-generated ISO timestamps
+- Deployment Engine v1 (lib/deployment/index.js) — automated Git/GitHub pipeline
+- Orchestrator Engine v1 (lib/orchestrator/index.js) — central controller for all modules
+- Persistent storage via data/deployments.json (auto-creating)
+- initRepository(), commitProject(), createGitHubRepo(), pushToRemote() API
+- deployFullPipeline() for end-to-end deployment orchestration
+- Graceful degradation when Git or GitHub CLI is unavailable
+- Deployment status tracking (deployed/failed/pending)
+- Dynamic input type detection (raw_email, structured_prompt, json_brief, existing_project)
+- Dynamic pipeline building based on input type
+- Session-based state management with step-by-step results
+- Automatic Decision Layer logging on module failure
 
 ### Notes
-This version adds a standalone decision recording system for all future architectural changes.
-All v1.3.0 decisions will be recorded via the Decision Layer itself.
+This version adds the complete deployment pipeline and central orchestrator, finalizing the Project Factory system.
 
 ---
 

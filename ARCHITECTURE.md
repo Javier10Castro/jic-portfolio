@@ -405,3 +405,223 @@ It is NOT for user or generated project logs — only for internal system archit
 | Agent Pack v1 workflow | On architectural changes | Record decision during `git status` → analysis → commit cycle |
 | Plan Engine | Optional future | Log when semantic mapping changes |
 | Scaffold Engine | Optional future | Log when template structure changes |
+
+---
+
+## Deployment Engine
+
+The `lib/deployment/` module automates the deployment of generated projects to GitHub.
+
+It connects with the **Scaffold Engine** (receives a physical project on disk), the **Decision Layer** (records deployment results), and **GitHub CLI** (optional, for automatic repo creation).
+
+### Module structure
+
+```
+/lib/deployment/
+  index.js            → entry point (child_process + fs persistence)
+```
+
+### API
+
+| Method | Signature | Returns | Description |
+|---|---|---|---|
+| `initRepository` | `(projectPath)` | `{ success, output }` | `git init` + `git branch -M main` + status check |
+| `createGitHubRepo` | `(name, projectPath)` | `{ success, instruction }` | `gh repo create` or manual instructions |
+| `commitProject` | `(projectPath)` | `{ success, output }` | `git add .` + `git commit -m "feat: initial deployment"` |
+| `pushToRemote` | `(projectPath)` | `{ success, output }` | `git push -u origin main` |
+| `registerDeployment` | `({ project_name, repo_url, status, engine_version })` | `Object` (saved entry) | Persists a new deployment record |
+| `listDeployments` | `()` | `Array` | All deployment records |
+| `deployFullPipeline` | `(projectPath, opts)` | `{ success, status, steps }` | Full pipeline: init → commit → repo → push → register |
+
+### Schema
+
+```json
+{
+  "id": "deploy-001",
+  "project_name": "salmos-cafe",
+  "repo_url": "https://github.com/user/salmos-cafe",
+  "status": "deployed",
+  "engine_version": "v1.0.0",
+  "timestamp": "2026-06-08T12:00:00.000Z"
+}
+```
+
+### Storage
+
+- **File**: `data/deployments.json` (auto-created if missing)
+- **Persistence**: `fs` native — no database, no external dependencies
+
+### Pipeline
+
+```
+Project path on disk (from Scaffold Engine)
+    ↓
+1. initRepository — git init + branch main
+    ↓
+2. commitProject — git add . + git commit
+    ↓
+3. createGitHubRepo — gh repo create (or instructions)
+    ↓
+4. pushToRemote — git push origin main
+    ↓
+5. registerDeployment — persist to deployments.json
+    ↓
+{ success, status, steps }
+```
+
+### Graceful degradation
+
+| Scenario | Behavior |
+|---|---|
+| Git not installed | Returns `{ success: false, error, instruction }` |
+| gh not installed | Returns manual instructions for GitHub creation |
+| No remote configured | Returns `{ success: false, error, instruction }` |
+| Nothing to commit | Treated as recoverable — pipeline continues |
+| Full pipeline with failures | Pipeline stops, registers as `failed` status, returns step-by-step results |
+
+---
+
+## Orchestrator Engine
+
+The `lib/orchestrator/` module is the **central controller** of the Agent Pack v1 system.
+
+It dynamically coordinates all modules (Compiler, Plan, Scaffold, Decision Layer, Deployment) based on the detected input type.
+
+### Module structure
+
+```
+/lib/orchestrator/
+  index.js            → entry point (input analyzer + pipeline builder + executor)
+```
+
+### Input type detection
+
+| Type | Detection | Pipeline |
+|---|---|---|
+| `raw_email` | Contains `Subject:`/`From:`/`To:` headers or long text (>5000 chars) | `compiler → plan → scaffold` |
+| `structured_prompt` | Contains `## N. NAME` headers (Prompt Maestro format) | `plan → scaffold` |
+| `json_brief` | Input is an object or string starting with `{`/`[` | `scaffold` |
+| `existing_project` | No build pipeline | deployment (if requested) |
+
+### API
+
+| Method | Signature | Returns | Description |
+|---|---|---|---|
+| `process` | `({ input, type?, deploy?, projectName?, projectType? })` | `{ session_id, status, steps, output }` | Full pipeline execution |
+| `detectType` | `(input)` | `'raw_email' \| 'structured_prompt' \| 'json_brief' \| 'existing_project'` | Classify input |
+| `buildPipeline` | `(inputType)` | `string[]` | Return step list per type |
+
+### Session output
+
+```json
+{
+  "session_id": "a1b2c3d4",
+  "input_type": "structured_prompt",
+  "status": "completed",
+  "pipeline": ["plan", "scaffold"],
+  "steps": [
+    { "name": "plan", "status": "completed", "result": {...} },
+    { "name": "scaffold", "status": "completed", "result": {...} }
+  ],
+  "errors": [],
+  "output": { "project_path": "salmos-cafe", "ir": {...}, "compiled": null }
+}
+```
+
+### Fallback intelligence
+
+- On module failure: auto-register in **Decision Layer** with error details
+- Pipeline continues with remaining steps (non-blocking)
+- Final status reflects overall result: `completed` / `partial` / `failed`
+- Deployment is controlled by the `deploy` option (default: true)
+
+### Constraints
+
+- Zero external dependencies
+- No existing module modification
+- Deterministic: same input + same options = same output
+- No data invention — orchestrates existing modules only
+
+---
+
+## Form Persistence Layer
+
+The `lib/db/formResponses.js` module persists all Brief Maestro form responses to PostgreSQL **before** the Orchestrator pipeline executes.
+
+```
+INPUT (Brief Maestro)
+    ↓
+FORM SAVER (saves sections → form_responses table)
+    ↓
+ORCHESTRATOR (compiler → plan → scaffold → deploy)
+```
+
+### Module structure
+
+```
+/lib/db/
+  index.js           → Pool, query helper, connection management
+  formResponses.js   → Form persistence CRUD
+```
+
+### Schema
+
+```sql
+CREATE TABLE form_responses (
+  id SERIAL PRIMARY KEY,
+  project_id VARCHAR(64) NOT NULL,
+  section VARCHAR(64) NOT NULL,
+  field_key VARCHAR(128) NOT NULL,
+  value TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+```
+
+### Field → Section mapping
+
+| Prefix | Section | Sample fields |
+|---|---|---|
+| `biz_*` | business | biz_name, biz_valores |
+| `obj_*` | goals | obj_principal, obj_kpis |
+| `comp_*` | competition | comp_directos, comp_problemas |
+| `pub_*` | audience | pub_ideal, pub_motivaciones |
+| `brand_*` | branding | brand_colores, brand_estilo |
+| `arq_*` | site | arq_paginas, arq_flujo |
+| `cont_*` | content | cont_fotos, cont_textos |
+| `serv_*` | services | serv_estrella, serv_precio |
+| `social_*` | social_proof | social_testimonios |
+| `func_*` | functionality | func_basicas, func_avanzadas |
+| `seo_*` | seo | seo_keywords, seo_geo |
+| `ref_*` | references | ref_marcas, ref_favoritos |
+| `conv_*` | conversion | conv_cta, conv_lead |
+| `ai_*` | essence | ai_diferencia, ai_metafora |
+
+### API
+
+| Method | Input | Returns | Description |
+|---|---|---|---|
+| `createTable()` | — | — | Creates form_responses table if not exists |
+| `saveFormResponse` | `(project_id, section, field_key, value)` | — | Single response insert |
+| `saveBulkFormResponses` | `(project_id, formData)` | `Number` | Batch save from formData object |
+| `getProjectFormResponses` | `(project_id)` | `Row[]` | All responses for a project |
+| `getResponsesGrouped` | `(project_id)` | `Object` | Responses grouped by section |
+| `generateProjectId` | `(name, email)` | `String` | Generates unique `proj_<hash>` |
+
+### Integration with Brief Maestro endpoint
+
+In `api/sendBrief.js`, form persistence runs after validation but before any pipeline execution:
+
+```js
+// 1. Validate input
+// 2. Save form responses to PostgreSQL (non-blocking — failures are logged, not thrown)
+// 3. Generate PDF
+// 4. Send admin email with PDF attachment
+// 5. Send client confirmation
+```
+
+### Rules
+
+- Runs **before** the Orchestrator pipeline
+- DB failure **does not block** email delivery — errors are logged to `console.error`
+- Arrays (checkboxes, tags) are converted to comma-separated strings for storage
+- No ORM — raw SQL with `pg`

@@ -52,7 +52,39 @@ Lead generation and client onboarding through contact forms, AI-powered brief co
 │   ├── scaffold/              # Scaffold Engine v1 (filesystem generator)
 │   └── decision/              # Decision Layer v1 (architectural log)
 ├── data/                      # Runtime storage (not committed)
-│   └── decisions.json         # Architectural decision records
+│   ├── decisions.json         # Architectural decision records
+│   └── deployments.json       # Deployment records
+├── index.html                 # Portfolio landing page
+├── brief-maestro.html         # Brief Maestro tool (14 sections)
+├── test-data.json             # Test fixture (Salmos Café)
+├── icon.ico                   # Favicon
+├── package.json               # Project metadata + dependencies
+├── package-lock.json          # npm lockfile
+├── AGENTS.md                  # This file
+├── ARCHITECTURE.md            # System architecture
+├── CHANGELOG.md               # Version history
+├── .gitignore                 # Ignores .vercel, node_modules, data/
+└── .gitattributes             # Line ending normalization
+```
+/
+├── api/
+│   ├── sendBrief.js          # Vercel Function: brief submission (2 emails + PDF)
+│   └── sendContact.js        # Vercel Function: contact form (2 emails)
+├── .vercel/                   # Vercel cache (auto-generated, ignore)
+├── node_modules/              # Dependencies (npm install)
+├── lib/                       # Internal system modules
+│   ├── compiler/              # Unified Brief Compiler v1
+│   ├── plan/                  # Plan Engine v1 (semantic compiler)
+│   ├── scaffold/              # Scaffold Engine v1 (filesystem generator)
+│   ├── decision/              # Decision Layer v1 (architectural log)
+│   ├── orchestrator/          # Orchestrator Engine v1 (central controller)
+│   └── db/                    # Database modules (Neon PostgreSQL)
+│       ├── index.js           # Pool + query + connection management
+│       └── formResponses.js   # Form Persistence Layer v1
+├── data/                      # Runtime storage (not committed)
+│   ├── decisions.json         # Architectural decision records
+│   ├── deployments.json       # Deployment records
+│   └── migrations/            # SQL migration scripts
 ├── index.html                 # Portfolio landing page
 ├── brief-maestro.html         # Brief Maestro tool (14 sections)
 ├── test-data.json             # Test fixture (Salmos Café)
@@ -470,6 +502,181 @@ Reglas:
 - No permite IDs duplicados
 - Sin dependencias externas — `fs` nativo
 - Persistencia en `data/decisions.json` (creación automática)
+
+---
+
+## Deployment Engine (v1)
+
+El módulo `lib/deployment/` automatiza el deployment de proyectos generados a GitHub.
+
+Conecta con:
+- **Scaffold Engine** — recibe el proyecto físico ya generado en disco
+- **Decision Layer** — registra el resultado del deployment
+- **GitHub CLI** — opcional, para creación automática de repos
+
+```
+/lib/deployment/
+  index.js            → entry point (child_process + fs persistence)
+  /data/deployments.json → registro de deploys
+```
+
+**API**:
+
+| Función | Input | Output | Descripción |
+|---|---|---|---|
+| `initRepository(path)` | projectPath | `{ success, output }` | `git init` + `git branch -M main` |
+| `commitProject(path)` | projectPath | `{ success, output }` | `git add .` + `git commit` |
+| `createGitHubRepo(name, path)` | name, projectPath | `{ success, repo_url }` | `gh repo create` o instrucciones |
+| `pushToRemote(path)` | projectPath | `{ success, output }` | `git push -u origin main` |
+| `registerDeployment(data)` | deployment object | entry object | Persiste en `deployments.json` |
+| `listDeployments()` | — | `Array` | Todos los deploys registrados |
+| `deployFullPipeline(path, opts)` | projectPath, opts | `{ success, steps }` | Pipeline completo |
+
+**Schema deployment**:
+```
+{
+  id: "deploy-001",
+  project_name: "salmos-cafe",
+  repo_url: "https://github.com/user/salmos-cafe",
+  status: "deployed" | "failed" | "pending",
+  engine_version: "v1.0.0",
+  timestamp: "ISO date"
+}
+```
+
+Reglas:
+- Solo Node.js nativo — `child_process` + `fs`
+- Sin dependencias externas
+- Si Git no está instalado: devuelve error con instrucciones
+- Si `gh` no está instalado: devuelve instrucciones para crear repo manualmente
+- Determinista: misma entrada = mismo resultado (o fallo esperado)
+
+---
+
+## Orchestrator Engine (v1)
+
+El módulo `lib/orchestrator/` es el **controlador central** del sistema Agent Pack v1.
+
+Coordina dinámicamente todos los módulos (Compiler, Plan, Scaffold, Decision Layer, Deployment) según el tipo de input detectado.
+
+```
+/lib/orchestrator/
+  index.js            → entry point (input analyzer + pipeline builder + executor)
+```
+
+### Input types
+
+| Tipo | Detección | Pipeline |
+|---|---|---|
+| `raw_email` | Contiene cabeceras (Subject:/From:/To:) o texto largo (>5000 chars) | `compiler → plan → scaffold` |
+| `structured_prompt` | Contiene `## N. NOMBRE` (Prompt Maestro format) | `plan → scaffold` |
+| `json_brief` | Input es objeto JSON o string que empieza con `{`/`[` | `scaffold` |
+| `existing_project` | No tiene pipeline de build | `deployment` (si se solicita) |
+
+**API** pública:
+
+| Función | Input | Output | Descripción |
+|---|---|---|---|
+| `process(opts)` | `{ input, type?, deploy?, projectName?, projectType? }` | `{ session_id, status, steps, output }` | Ejecuta pipeline completo según tipo de input |
+| `detectType(input)` | string/object | `'raw_email' \| 'structured_prompt' \| 'json_brief' \| 'existing_project'` | Analiza y clasifica el input |
+| `buildPipeline(inputType)` | string | `string[]` | Devuelve lista de pasos para el tipo |
+
+### Session output
+
+```json
+{
+  "session_id": "a1b2c3d4",
+  "input_type": "structured_prompt",
+  "status": "completed",
+  "pipeline": ["plan", "scaffold"],
+  "steps": [
+    { "name": "plan", "status": "completed", "result": { "project": {...} } },
+    { "name": "scaffold", "status": "completed", "result": { "path": "...", "files": [...] } }
+  ],
+  "errors": [],
+  "output": { "project_path": "...", "ir": {...}, "compiled": {...} }
+}
+```
+
+### Fallback intelligence
+
+- Si un paso falla, se registra automáticamente en **Decision Layer**
+- El pipeline continúa con los pasos restantes
+- El estado final refleja el resultado: `completed` / `partial` / `failed`
+- Deployment es opcional (controlado por flag `deploy`)
+
+### Reglas
+
+- Sin dependencias externas
+- No modifica módulos existentes
+- Determinístico: mismo input + mismas opciones = mismo resultado
+- No inventa datos — solo orquesta módulos existentes
+
+---
+
+## Form Persistence Layer (v1)
+
+El módulo `lib/db/formResponses.js` persiste **todas las respuestas del formulario Brief Maestro** en PostgreSQL antes de que el Orchestrator ejecute cualquier pipeline.
+
+```
+INPUT (Brief Maestro)
+    ↓
+FORM SAVER (guarda secciones → form_responses)
+    ↓
+ORCHESTRATOR (compiler → plan → scaffold → deploy)
+```
+
+### Schema PostgreSQL
+
+```sql
+CREATE TABLE form_responses (
+  id SERIAL PRIMARY KEY,
+  project_id VARCHAR(64) NOT NULL,
+  section VARCHAR(64) NOT NULL,
+  field_key VARCHAR(128) NOT NULL,
+  value TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+```
+
+### Field → Section mapping
+
+Cada campo del formulario se asigna automáticamente a una sección según su prefijo:
+
+| Prefijo | Sección | Ejemplos |
+|---|---|---|
+| `biz_*` | business | biz_name, biz_valores, biz_personalidad |
+| `obj_*` | goals | obj_principal, obj_kpis, obj_conversion |
+| `comp_*` | competition | comp_directos, comp_problemas |
+| `pub_*` | audience | pub_ideal, pub_motivaciones |
+| `brand_*` | branding | brand_colores, brand_estilo, brand_nivel |
+| `arq_*` | site | arq_paginas, arq_flujo |
+| `cont_*` | content | cont_fotos, cont_textos |
+| `serv_*` | services | serv_estrella, serv_precio |
+| `social_*` | social_proof | social_testimonios, social_clientes |
+| `func_*` | functionality | func_basicas, func_avanzadas |
+| `seo_*` | seo | seo_keywords, seo_geo |
+| `ref_*` | references | ref_marcas, ref_favoritos |
+| `conv_*` | conversion | conv_cta, conv_lead |
+| `ai_*` | essence | ai_diferencia, ai_metafora |
+
+### API del módulo
+
+| Función | Input | Output | Descripción |
+|---|---|---|---|
+| `createTable()` | — | — | Crea la tabla form_responses si no existe |
+| `saveFormResponse(project_id, section, field_key, value)` | — | — | Guarda una respuesta individual |
+| `saveBulkFormResponses(project_id, formData)` | project_id, formData object | count | Guarda todo el formData en lotes |
+| `getProjectFormResponses(project_id)` | string | Row[] | Recupera todas las respuestas de un proyecto |
+| `getResponsesGrouped(project_id)` | string | Object | Respuestas agrupadas por sección |
+| `generateProjectId(name, email)` | name, email | `proj_<hash>` | Genera ID único por proyecto |
+
+### Reglas
+
+- Se ejecuta **antes** del pipeline del Orchestrator
+- Fallo en DB **no bloquea** el flujo de email — los errores solo se loggean
+- Arrays (checkboxes, tags) se convierten a comma-separated string
+- No requiere ORM — SQL directo con `pg`
 
 ---
 
