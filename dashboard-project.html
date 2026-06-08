@@ -119,6 +119,11 @@ header nav a:hover{color:var(--accent)}
 .output-box.success{border-left:3px solid var(--green)}
 .output-box.error{border-left:3px solid var(--red)}
 .output-placeholder{background:var(--surface-2);border:1px dashed var(--border);border-radius:var(--radius);padding:24px;text-align:center;color:var(--muted);font-size:12px;margin-top:8px}
+@keyframes fadeSlideIn{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:translateY(0)}}
+.pipe-step{transition:all .3s ease}
+.pipe-step.done{box-shadow:0 0 8px rgba(16,185,129,.2)}
+.pipe-step.active{box-shadow:0 0 8px rgba(0,212,255,.3)}
+.pipe-step.fail{box-shadow:0 0 8px rgba(239,68,68,.2)}
 @media(max-width:600px){header{padding:12px 16px}
 .container{padding:16px}
 .controls{flex-direction:column}
@@ -150,9 +155,9 @@ function escapeHTML(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'
 function ago(d){if(!d)return'';const s=Math.floor((Date.now()-new Date(d))/1000);if(s<60)return s+'s ago';if(s<3600)return Math.floor(s/60)+'m ago';if(s<86400)return Math.floor(s/3600)+'h ago';return Math.floor(s/86400)+'d ago'}
 function statusBadge(s){return `<span class="status-badge ${s}">${escapeHTML(s)}</span>`}
 
-function pipeStep(name, icon, status, time){
+function pipeStep(name, icon, status, time, key){
   const cls = status === 'completed' ? 'done' : status === 'running' ? 'active' : status === 'failed' ? 'fail' : status === 'skipped' ? 'skip' : '';
-  return `<div class="pipe-step ${cls}"><span class="icon">${icon}</span><span class="label">${name}</span>${time ? `<span class="time">${time}</span>` : ''}</div>`;
+  return `<div class="pipe-step ${cls}" id="step-${key}"><span class="icon">${icon}</span><span class="label">${name}</span><span class="time">${time || ''}</span></div>`;
 }
 
 const PIPELINE_STEPS = [
@@ -255,7 +260,68 @@ function toggleSection(el){
 }
 
 let pollStop = null;
+let eventSubId = null;
 let currentData = null;
+let liveTimer = null;
+
+function startLiveEvents(){
+  if (eventSubId) api.unsubscribe(eventSubId);
+  eventSubId = api.subscribeToProjectEvents(id, {
+    onPipelineStep(step, data) {
+      const el = document.getElementById('step-' + step);
+      if (el) { el.className = 'pipe-step active'; el.querySelector('.time').textContent = 'running'; }
+      if (step === 'scoring') {
+        const m = document.querySelector('.pipe-step.done .time');
+        if (m) m.textContent = '✓';
+      }
+    },
+    onScoring(payload) {
+      if (payload.score !== undefined) {
+        const scoreArea = document.getElementById('scoreArea');
+        if (scoreArea && currentData) {
+          const metrics = payload.metrics || {};
+          const passed = payload.passed;
+          const score = payload.score;
+          scoreArea.innerHTML = renderScoring(metrics, score, passed);
+          const badge = document.querySelector('.card h3 .badge');
+          if (badge) { badge.textContent = score; badge.className = 'badge status-badge ' + (passed ? 'deployed' : 'failed'); }
+        }
+        const decisionsArea = document.getElementById('decisionsArea');
+        if (decisionsArea && payload.decision_id) {
+          const card = document.createElement('div');
+          card.className = 'decision-card';
+          card.style.animation = 'fadeSlideIn .3s ease-out';
+          const p = payload;
+          card.innerHTML = `<div class="meta"><span>scoring</span><span>just now</span></div>
+            <div class="title">Score: ${p.score} ${p.passed ? '✓' : '✗'}</div>
+            ${p.metrics ? `<div style="font-size:11px;color:var(--muted);margin-top:2px">${Object.entries(p.metrics).map(([k,v])=>`${k}: ${v.score||v}`).join(' · ')}</div>` : ''}
+            ${p.feedback ? `<div class="feedback">${escapeHTML(p.feedback)}</div>` : ''}
+            ${p.warnings_count ? `<div style="margin-top:6px"><span style="font-size:10px;color:var(--yellow)">⚠ ${p.warnings_count} warnings</span></div>` : ''}`;
+          decisionsArea.prepend(card);
+        }
+      }
+    },
+    onDeployment(data) {
+      if (pollStop) { pollStop(); pollStop = null; }
+      pollStop = api.pollProject(id, (d) => { render(d); currentData = d; }, 3000);
+    },
+    onError(data) {
+      const box = document.getElementById('resultBox');
+      if (box) box.innerHTML = '<div class="output-box error">' + escapeHTML((data.payload && data.payload.error) || data.event) + '</div>';
+    },
+    onEvent(data) {
+      if (data.event === 'pipeline.started') {
+        PIPELINE_STEPS.forEach(s => { const el = document.getElementById('step-' + s.key); if (el) el.className = 'pipe-step'; });
+        const box = document.getElementById('resultBox');
+        if (box) box.innerHTML = '<div class="output-box" style="border-left-color:var(--accent)">Pipeline running...</div>';
+      }
+      if (data.event === 'pipeline.failed') {
+        const target = data.payload && data.payload.step;
+        if (target) { const el = document.getElementById('step-' + target); if (el) el.className = 'pipe-step fail'; }
+      }
+    },
+  });
+}
 
 async function load(){
   if (!api.isReady() || !id) return;
@@ -269,8 +335,10 @@ async function load(){
     if (p.status === 'processing' || p.status === 'deploying') {
       if (pollStop) pollStop();
       pollStop = api.pollProject(id, (d) => { render(d); currentData = d; }, 3000);
+      startLiveEvents();
     } else {
       if (pollStop) { pollStop(); pollStop = null; }
+      if (!eventSubId) startLiveEvents();
     }
   } catch(e) {
     content.innerHTML = '<div class="error-banner">Failed: ' + escapeHTML(e.message) + '</div>';
@@ -291,9 +359,9 @@ function render(data){
     const status = execSteps.length ? stepStatus(execSteps, s.key) : 'pending';
     if (s.key === 'scaffold' || s.key === 'deploy') {
       const ds = p.status === 'deployed' || p.status === 'deploying' || p.status === 'approved' ? 'completed' : p.status === 'failed' ? 'failed' : 'pending';
-      return pipeStep(s.name, s.icon, ds, null);
+      return pipeStep(s.name, s.icon, ds, null, s.key);
     }
-    return pipeStep(s.name, s.icon, status, null);
+    return pipeStep(s.name, s.icon, status, null, s.key);
   }).join('');
 
   const lastDecision = data.decisions && data.decisions.length ? data.decisions[0] : null;
@@ -378,11 +446,10 @@ async function doRun(){
   const btn = document.getElementById('btnRun');
   btn.classList.add('loading'); btn.disabled = true;
   const box = document.getElementById('resultBox');
+  startLiveEvents();
   try {
     const r = await api.runPipeline(id, null);
     box.innerHTML = '<div class="output-box success">Pipeline triggered: ' + escapeHTML(r.execution_id || '') + '</div>';
-    if (pollStop) pollStop();
-    pollStop = api.pollProject(id, (d) => { render(d); currentData = d; }, 3000);
   } catch(e) {
     box.innerHTML = '<div class="output-box error">' + escapeHTML(e.message) + '</div>';
     btn.classList.remove('loading'); btn.disabled = false;
@@ -393,11 +460,10 @@ async function doApprove(){
   const btn = document.getElementById('btnApprove');
   btn.classList.add('loading'); btn.disabled = true;
   const box = document.getElementById('resultBox');
+  startLiveEvents();
   try {
     const r = await api.approveProject(id);
     box.innerHTML = '<div class="output-box success">Approved. Status: ' + escapeHTML(r.status) + '</div>';
-    if (pollStop) pollStop();
-    pollStop = api.pollProject(id, (d) => { render(d); currentData = d; }, 3000);
   } catch(e) {
     box.innerHTML = '<div class="output-box error">' + escapeHTML(e.message) + '</div>';
     btn.classList.remove('loading'); btn.disabled = false;
@@ -408,11 +474,10 @@ async function doRegen(){
   const btn = document.getElementById('btnRegen');
   btn.classList.add('loading'); btn.disabled = true;
   const box = document.getElementById('resultBox');
+  startLiveEvents();
   try {
     const r = await api.runPipeline(id, null);
     box.innerHTML = '<div class="output-box success">Regeneration triggered: ' + escapeHTML(r.execution_id || '') + '</div>';
-    if (pollStop) pollStop();
-    pollStop = api.pollProject(id, (d) => { render(d); currentData = d; }, 3000);
   } catch(e) {
     box.innerHTML = '<div class="output-box error">' + escapeHTML(e.message) + '</div>';
     btn.classList.remove('loading'); btn.disabled = false;

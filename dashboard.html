@@ -186,21 +186,52 @@ async function load(){
     ).join('') || '<div class="stat-card"><div class="num">0</div><div class="label">No projects</div></div>';
     if (!projects.length) { empty.style.display = 'block'; return; }
     table.style.display = '';
-    tbody.innerHTML = projects.map(p => `<tr onclick="location.href='/dashboard-project.html?id=${p.id}'">
+    tbody.innerHTML = projects.map(p => `<tr onclick="location.href='/dashboard-project.html?id=${p.id}'" data-project-id="${p.id}">
       <td><div class="mono id-cell">${escapeHTML(p.name)}</div></td>
-      <td>${statusBadge(p.status)}</td>
+      <td class="status-cell">${statusBadge(p.status)}</td>
       <td style="font-size:12px">${escapeHTML(p.project_type||'—')}</td>
       <td>v${p.version||1}</td>
       <td style="font-size:12px;color:var(--muted)">${ago(p.updated_at)}</td>
       <td style="font-size:12px;color:var(--muted)">${p.deployed_at ? ago(p.deployed_at) : '—'}</td>
     </tr>`).join('');
-    if (projects.some(p => p.status === 'processing')) {
-      pollStop = api.pollProject(projects.filter(p=>p.status==='processing')[0].id, () => {}, 5000);
+    projectsInView = projects;
+    if (projects.some(p => p.status === 'processing' || p.status === 'deploying')) {
+      if (pollStop) pollStop();
+      pollStop = api.poll(5000, () => load());
+    } else {
+      startWorkspaceEvents();
     }
   } catch(e) {
     loading.style.display = 'none';
     sub.innerHTML = '<span class="error-banner">Failed: '+escapeHTML(e.message)+'</span>';
   }
+}
+
+let projectsInView = [];
+let wsSubId = null;
+
+function startWorkspaceEvents(){
+  if (!api.isReady()) return;
+  if (wsSubId) api.unsubscribe(wsSubId);
+  wsSubId = api.subscribeToWorkspaceEvents(api.getContext().workspace_id, (data) => {
+    if (!data || !data.project_id) return;
+    const row = document.querySelector(`tr[data-project-id="${data.project_id}"]`);
+    if (!row) { load(); return; }
+    const cell = row.querySelector('.status-cell');
+    if (!cell) return;
+    if (data.event === 'pipeline.started') {
+      cell.innerHTML = statusBadge('processing');
+    } else if (data.event === 'scoring.completed' || data.event === 'preview.generated') {
+      cell.innerHTML = statusBadge('preview');
+    } else if (data.event === 'deployment.started') {
+      cell.innerHTML = statusBadge('deploying');
+    } else if (data.event === 'deployment.completed') {
+      cell.innerHTML = statusBadge('deployed');
+      row.querySelectorAll('td')[5].textContent = 'just now';
+    } else if (data.event === 'pipeline.failed') {
+      cell.innerHTML = statusBadge('failed');
+    }
+  });
 }
 
 function openCreate(){
@@ -230,6 +261,9 @@ async function doCreate(){
   } catch(e) { err.textContent = e.message; err.style.display = 'block'; }
   btn.disabled = false; btn.textContent = 'Create';
 }
+
+let projectsInView = [];
+let wsSubId = null;
 
 if (api.isReady()) { document.getElementById('btnCreate').disabled = false; }
 </script>

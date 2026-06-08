@@ -7,6 +7,13 @@ window.DASHBOARD_API = (() => {
 
   function ctx() { return { workspace_id: CTX.workspace_id, user_id: CTX.user_id }; }
 
+  function qs(params) {
+    return Object.entries({ ...params }).filter(([, v]) => v != null).map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v)}`).join('&');
+  }
+
+  const _subscriptions = {};
+  let _subIdCounter = 0;
+
   const api = {
     setContext(w, u) { CTX.workspace_id = w; CTX.user_id = u; saveCtx(); return api; },
     getContext() { return { ...CTX }; },
@@ -14,8 +21,7 @@ window.DASHBOARD_API = (() => {
 
     async get(endpoint, params = {}) {
       const p = { ...params, ...ctx() };
-      const qs = Object.entries(p).filter(([, v]) => v != null).map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v)}`).join('&');
-      const r = await fetch(`/api/v1${endpoint}${qs ? '?' + qs : ''}`);
+      const r = await fetch(`/api/v1${endpoint}${qs(p) ? '?' + qs(p) : ''}`);
       const data = await r.json();
       if (!r.ok) throw new Error(data.error || `HTTP ${r.status}`);
       return data;
@@ -69,6 +75,148 @@ window.DASHBOARD_API = (() => {
       };
       const stop = () => { stopped = true; };
       poll();
+      return stop;
+    },
+
+    subscribeToProjectEvents(projectId, callbacks) {
+      const subId = ++_subIdCounter;
+      const merged = typeof callbacks === 'function' ? { onEvent: callbacks } : callbacks;
+      const { onEvent, onPipelineStep, onScoring, onDeployment, onError } = merged;
+
+      let active = true;
+      let es = null;
+      let pollStop = null;
+      let lastKnownState = null;
+
+      function handleEvent(eventData) {
+        if (!active) return;
+        if (onEvent) onEvent(eventData);
+        const evt = eventData.event || eventData.type;
+        if (evt === 'plan.completed' && onPipelineStep) onPipelineStep('plan', eventData);
+        if (evt === 'design.completed' && onPipelineStep) onPipelineStep('design_system', eventData);
+        if (evt === 'preview.generated' && onPipelineStep) onPipelineStep('preview', eventData);
+        if (evt === 'scoring.completed') {
+          if (onPipelineStep) onPipelineStep('scoring', eventData);
+          if (onScoring) onScoring(eventData.payload || eventData);
+        }
+        if ((evt === 'deployment.completed' || evt === 'deployment.started') && onDeployment) onDeployment(eventData);
+        if (evt === 'pipeline.failed' && onError) onError(eventData);
+        if (evt === 'project.created' && onPipelineStep) onPipelineStep('created', eventData);
+      }
+
+      function startSSE() {
+        const p = { ...ctx(), project_id: projectId };
+        const url = `/api/v1/events/stream?${qs(p)}`;
+        try {
+          es = new EventSource(url);
+          es.onmessage = (e) => {
+            try { handleEvent(JSON.parse(e.data)); } catch {}
+          };
+          es.addEventListener('error', () => {
+            es.close();
+            es = null;
+            if (active) fallbackToPolling();
+          });
+          es.onopen = () => {
+            if (pollStop) { pollStop(); pollStop = null; }
+          };
+        } catch {
+          if (active) fallbackToPolling();
+        }
+      }
+
+      function startPollEvents() {
+        let lastTs = new Date(0).toISOString();
+        pollStop = api.poll(15000, async () => {
+          if (!active) return;
+          try {
+            const p = { ...ctx(), project_id: projectId, since: lastTs, poll: '1' };
+            const r = await fetch(`/api/v1/events/stream?${qs(p)}`);
+            const d = await r.json();
+            if (d.events && d.events.length) {
+              for (const evt of d.events) {
+                lastTs = evt.created_at;
+                const payload = typeof evt.payload === 'string' ? JSON.parse(evt.payload) : evt.payload;
+                handleEvent({ event: evt.event_type, project_id: evt.project_id, execution_id: evt.execution_id, timestamp: evt.created_at, payload });
+              }
+            }
+          } catch {}
+        });
+      }
+
+      function fallbackToPolling() {
+        if (pollStop) return;
+        if (lastKnownState !== 'processing' && lastKnownState !== 'deploying') {
+          pollStop = api.pollProject(projectId, (data) => {
+            lastKnownState = data.project.status;
+            handleEvent({ event: 'poll.update', project_id: projectId, payload: data });
+            return false;
+          }, 3000);
+        }
+      }
+
+      startSSE();
+      setTimeout(() => {
+        if (active && !es && !pollStop) startPollEvents();
+      }, 3000);
+
+      _subscriptions[subId] = { projectId, active: () => active, stop: () => {
+        active = false;
+        if (es) { es.close(); es = null; }
+        if (pollStop) { pollStop(); pollStop = null; }
+        delete _subscriptions[subId];
+      }};
+      return subId;
+    },
+
+    subscribeToWorkspaceEvents(workspaceId, onEvent) {
+      const subId = ++_subIdCounter;
+      let active = true;
+      let es = null;
+
+      function startSSE() {
+        const p = { ...ctx(), workspace_id: workspaceId };
+        const url = `/api/v1/events/stream?${qs(p)}`;
+        try {
+          es = new EventSource(url);
+          es.onmessage = (e) => {
+            try { if (active) onEvent(JSON.parse(e.data)); } catch {}
+          };
+          es.addEventListener('error', () => { es.close(); if (active) setTimeout(startSSE, 5000); });
+        } catch { setTimeout(startSSE, 5000); }
+      }
+
+      startSSE();
+
+      _subscriptions[subId] = { workspaceId, active: () => active, stop: () => {
+        active = false;
+        if (es) { es.close(); es = null; }
+        delete _subscriptions[subId];
+      }};
+      return subId;
+    },
+
+    unsubscribe(subId) {
+      const sub = _subscriptions[subId];
+      if (sub) sub.stop();
+    },
+
+    unsubscribeAll() {
+      for (const id of Object.keys(_subscriptions)) {
+        _subscriptions[id].stop();
+      }
+    },
+
+    poll(interval, fn) {
+      let stopped = false;
+      const loop = async () => {
+        while (!stopped) {
+          await fn();
+          await new Promise(r => setTimeout(r, interval));
+        }
+      };
+      const stop = () => { stopped = true; };
+      loop();
       return stop;
     },
   };
