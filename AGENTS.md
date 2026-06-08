@@ -263,6 +263,20 @@ When receiving a task:
 
 ---
 
+## Architecture Reference
+
+Este proyecto tiene un archivo `ARCHITECTURE.md` que describe:
+
+- Flujo del sistema
+- APIs
+- Email system
+- PDF generation
+- Variables de entorno
+
+En caso de duda técnica, consultar `ARCHITECTURE.md` antes de modificar código.
+
+---
+
 ## Historical Decisions
 
 ### 2026-06 — Netlify → Vercel
