@@ -50,10 +50,22 @@ Lead generation and client onboarding through contact forms, AI-powered brief co
 │   ├── compiler/              # Unified Brief Compiler v1
 │   ├── plan/                  # Plan Engine v1 (semantic compiler)
 │   ├── scaffold/              # Scaffold Engine v1 (filesystem generator)
-│   └── decision/              # Decision Layer v1 (architectural log)
+│   ├── decision/              # Decision Layer v1 (architectural log)
+│   ├── orchestrator/          # Orchestrator Engine v1 (central controller)
+│   ├── db/                    # Database modules (Neon PostgreSQL)
+│   ├── loader/                # Project Loader Engine v1 (read-only)
+│   ├── design-system/         # Design System Engine v1 (CSS vars + tokens)
+│   ├── preview/               # Visual Preview Engine v1 (simulation)
+│   └── runtime/               # SaaS Runtime Layer v1 (pipeline orchestrator)
 ├── data/                      # Runtime storage (not committed)
 │   ├── decisions.json         # Architectural decision records
-│   └── deployments.json       # Deployment records
+│   ├── deployments.json       # Deployment records
+│   └── migrations/            # SQL migration scripts
+├── api/                       # Vercel Serverless Functions
+│   ├── sendBrief.js           # Brief submission (2 emails + PDF)
+│   ├── sendContact.js         # Contact form (2 emails)
+│   ├── projects/              # Dashboard API (legacy)
+│   └── v1/                    # SaaS API v1 (tenant-safe)
 ├── index.html                 # Portfolio landing page
 ├── brief-maestro.html         # Brief Maestro tool (14 sections)
 ├── test-data.json             # Test fixture (Salmos Café)
@@ -85,6 +97,7 @@ Lead generation and client onboarding through contact forms, AI-powered brief co
 │   ├── loader/                # Project Loader Engine v1 (read-only)
 │   ├── design-system/         # Design System Engine v1 (CSS vars + tokens)
 │   ├── preview/               # Visual Preview Engine v1 (simulation)
+│   ├── runtime/               # SaaS Runtime Layer v1 (pipeline orchestrator)
 │   ├── scoring/               # (planned) Decision Scoring Engine v2
 │   ├── queue/                 # (planned) Bull/Redis job queue adapter
 │   ├── storage/               # (planned) Blob storage adapter
@@ -322,6 +335,7 @@ The Agent Pack follows semantic versioning:
 - `v1.0.0` — Initial stable system
 - `v1.1.0` — Improvements without breaking changes
 - `v1.6.0` — SaaS multi-tenant architecture design (design phase)
+- `v1.7.0` — SaaS Runtime Layer v1 + API v1 implementation
 - `v2.0.0` — Architecture changes or new agent system
 
 ---
@@ -751,6 +765,7 @@ The system has been extended with a full multi-tenant SaaS architecture design. 
 - Legacy `form_responses` table preserved — `project_inputs` is the new standard
 - Existing `data/decisions.json` remains for architectural decisions; `decisions` table is for AI governance
 - Dashboard API routes (`/api/projects/*`) remain for backward compat — new SaaS API at `/api/v1/*`
+- `lib/runtime/index.js` is a new module that orchestrates all engines — it does not replace `lib/orchestrator/`
 
 ### SaaS Architecture Reference
 
@@ -758,6 +773,8 @@ The system has been extended with a full multi-tenant SaaS architecture design. 
 |---|---|
 | `ARCHITECTURE-SAAS.md` | Full architecture: layers, DB schema, lifecycle, GitHub/Vercel, preview, scoring, scalability |
 | `data/migrations/003_saas_schema.sql` | PostgreSQL schema: 14 tables, RLS, triggers, plan enforcement |
+| `lib/runtime/index.js` | SaaS Runtime Layer v1 — full pipeline orchestrator with DB persistence |
+| `api/v1/` | 7 REST endpoints: projects CRUD, pipeline trigger, approve, preview, executions |
 | `lib/scoring/` (planned) | Decision Scoring Engine v2 |
 | `lib/deployment/vercel.js` (planned) | Vercel API client |
 | `lib/queue/` (planned) | Bull/Redis job queue adapter |

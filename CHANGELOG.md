@@ -1,5 +1,36 @@
 # Changelog
 
+## [v1.7.0] - 2026-06-08
+
+### Added
+- SaaS Runtime Layer v1 (lib/runtime/index.js) — central runtime orchestrator
+- Full pipeline execution: Plan → Design System → Preview → Scoring → Scaffold → Deploy
+- State machine enforcement with valid transition checks (draft→processing→preview→approved→deploying→deployed)
+- PostgreSQL persistence at every step (executions, project_states, decisions, previews)
+- Retry logic with exponential backoff (up to 3 attempts per step)
+- Step timeout protection (120s per step)
+- Project state rollback on pipeline failure
+- 5-dimension scoring engine inline: contrast, UX, conversion, clarity, SEO
+- Automatic preview record creation with version tracking
+- Decision records with full metrics and warnings
+- API v1 (api/v1/) — 7 clean REST endpoints:
+  - POST /api/v1/projects/create — create project + trigger pipeline
+  - GET /api/v1/projects — list projects per workspace (tenant-safe)
+  - GET /api/v1/projects/:id — full project state with ?include=inputs,previews,states,decisions
+  - POST /api/v1/projects/:id/run — manually trigger pipeline execution
+  - POST /api/v1/projects/:id/approve — approve preview → scaffold → deploy
+  - GET /api/v1/projects/:id/preview — preview output (JSON, HTML, or CSS format)
+  - GET /api/v1/executions/:id — pipeline logs with AI decisions
+- Tenant safety on every API route: workspace_id isolation + user membership validation
+- Form data extraction and persistence to project_inputs table on project creation
+- Branding color extraction from formData (supports branding_colors object and brand_colores string)
+- extractRuntimeState() — unified project state with previews, states, decisions, inputs
+
+### Notes
+This is the first runtime release (v1.7.0) that converts the architectural design from v1.6.0 into executable code. Existing engines remain unchanged — the runtime orchestrates them through a unified pipeline.
+
+---
+
 ## [v1.6.0] - 2026-06-08
 
 ### Added
