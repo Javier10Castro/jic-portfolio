@@ -1,0 +1,10 @@
+{
+  "name": "build-a-brief",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Javier Ibrahim — Portfolio & Build a Brief",
+  "dependencies": {
+    "nodemailer": "^8.0.10",
+    "pdfkit": "^0.18.0"
+  }
+}

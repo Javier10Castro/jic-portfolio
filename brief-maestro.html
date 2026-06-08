@@ -1,0 +1,1575 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" id="page-desc" content="Build a Brief — Herramienta de Descubrimiento Web para desarrollo profesional de sitios web por Javier Ibrahim">
+<title id="page-title">Build a Brief — Javier Ibrahim</title>
+<link rel="icon" href="icon.ico" type="image/x-icon">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Space+Grotesk:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0B0F19;
+  --bg2:#0F1422;
+  --bg3:#131829;
+  --accent:#00D4FF;
+  --accent2:#00FFC8;
+  --text:#FFFFFF;
+  --muted:#B0B7C3;
+  --border:rgba(255,255,255,0.07);
+  --border2:rgba(0,212,255,0.2);
+  --font-sans:'Inter',sans-serif;
+  --font-display:'Space Grotesk',sans-serif;
+  --ease:cubic-bezier(0.4,0,0.2,1);
+}
+html{scroll-behavior:smooth;font-size:16px}
+body{
+  background:var(--bg);
+  color:var(--text);
+  font-family:var(--font-sans);
+  line-height:1.6;
+  overflow-x:hidden;
+  cursor:none;
+  min-height:100vh;
+}
+::selection{background:rgba(0,212,255,0.25);color:#fff}
+::-webkit-scrollbar{width:4px}
+::-webkit-scrollbar-track{background:var(--bg)}
+::-webkit-scrollbar-thumb{background:rgba(0,212,255,0.3);border-radius:2px}
+
+/* CURSOR */
+#cursor{position:fixed;width:10px;height:10px;background:var(--accent);border-radius:50%;pointer-events:none;z-index:99999;transform:translate(-50%,-50%);transition:width 0.2s,height 0.2s,background 0.2s}
+#cursor-ring{position:fixed;width:36px;height:36px;border:1px solid rgba(0,212,255,0.5);border-radius:50%;pointer-events:none;z-index:99998;transform:translate(-50%,-50%);transition:all 0.12s var(--ease)}
+
+/* CANVAS */
+#bg-canvas{position:fixed;inset:0;z-index:0;opacity:0.3;pointer-events:none}
+
+/* NAV */
+nav{
+  position:fixed;top:0;left:0;right:0;z-index:100;
+  padding:1.25rem 3rem;
+  display:flex;align-items:center;justify-content:space-between;
+  transition:background 0.4s,backdrop-filter 0.4s,padding 0.3s;
+}
+nav.scrolled{background:rgba(11,15,25,0.92);backdrop-filter:blur(20px);padding:1rem 3rem;border-bottom:1px solid var(--border)}
+.nav-logo{font-family:var(--font-display);font-size:1.1rem;font-weight:600;letter-spacing:0.02em;color:var(--text);text-decoration:none;display:flex;align-items:center;gap:0.75rem}
+.logo-mark{
+  width:38px;height:38px;background:linear-gradient(135deg,var(--accent),var(--accent2));
+  border-radius:8px;display:flex;align-items:center;justify-content:center;
+  font-family:var(--font-display);font-weight:700;font-size:0.9rem;color:#0B0F19;letter-spacing:-0.03em;flex-shrink:0;
+}
+.nav-badge{display:inline-flex;align-items:center;gap:0.4rem;padding:0.3rem 0.75rem;background:rgba(0,212,255,0.08);border:1px solid var(--border2);border-radius:20px;font-size:0.75rem;font-weight:600;color:var(--accent);letter-spacing:0.04em}
+.nav-badge-dot{width:6px;height:6px;border-radius:50%;background:var(--accent2);animation:pulse 2s infinite}
+.nav-back{display:inline-flex;align-items:center;gap:0.5rem;font-size:0.82rem;font-weight:500;color:var(--muted);text-decoration:none;transition:color 0.2s;letter-spacing:0.02em}
+.nav-back:hover{color:var(--accent)}
+.nav-back svg{width:16px;height:16px}
+
+/* HERO */
+.hero{
+  min-height:100vh;display:flex;align-items:center;justify-content:center;
+  padding:8rem 3rem 4rem;text-align:center;position:relative;z-index:1;
+}
+.hero-inner{max-width:780px;margin:0 auto}
+.hero-eyebrow{display:inline-flex;align-items:center;gap:0.625rem;font-size:0.78rem;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:var(--accent);margin-bottom:2rem;opacity:0;animation:fadeUp 0.8s 0.2s forwards}
+.hero-eyebrow span:not(#hero-eyebrow-text){width:24px;height:1px;background:var(--accent)}
+.hero-title{font-family:var(--font-display);font-size:clamp(2.6rem,6vw,4.8rem);font-weight:700;line-height:1.1;letter-spacing:-0.03em;margin-bottom:1.75rem;opacity:0;animation:fadeUp 0.8s 0.4s forwards}
+.hero-title .accent-word{color:var(--accent)}
+.hero-sub{font-size:clamp(1rem,2vw,1.15rem);color:var(--muted);line-height:1.75;max-width:560px;margin:0 auto 2.5rem;opacity:0;animation:fadeUp 0.8s 0.6s forwards}
+.hero-sub{font-size:clamp(1rem,2vw,1.15rem);color:var(--muted);line-height:1.75;max-width:560px;margin:0 auto 2.5rem;opacity:0;animation:fadeUp 0.8s 0.6s forwards}
+.hero-cta{opacity:0;animation:fadeUp 0.8s 0.8s forwards}
+.btn-primary{
+  display:inline-flex;align-items:center;gap:0.625rem;
+  padding:0.875rem 2rem;background:var(--accent);color:#0B0F19;
+  border-radius:6px;font-weight:700;font-size:0.9rem;
+  transition:all 0.25s;letter-spacing:0.02em;border:none;cursor:pointer;font-family:var(--font-sans);text-decoration:none;
+}
+.btn-primary:hover{background:var(--accent2);transform:translateY(-2px);box-shadow:0 16px 40px rgba(0,212,255,0.25)}
+.btn-primary svg{width:18px;height:18px;flex-shrink:0;transition:transform 0.2s}
+.btn-primary:hover svg{transform:translateX(3px)}
+.hero-features{display:flex;justify-content:center;gap:2.5rem;margin-top:4rem;padding-top:3rem;border-top:1px solid var(--border);opacity:0;animation:fadeUp 0.8s 1s forwards;flex-wrap:wrap}
+.feature-item{display:flex;align-items:center;gap:0.625rem;font-size:0.82rem;color:var(--muted);font-weight:500}
+.feature-item svg{width:16px;height:16px;color:var(--accent2);flex-shrink:0}
+
+/* APP SHELL */
+.app{display:none;position:relative;z-index:1;min-height:100vh;padding:80px 0 4rem}
+.app.active{display:block}
+
+/* PROGRESS */
+.progress-wrapper{
+  position:sticky;top:72px;z-index:50;
+  background:rgba(11,15,25,0.96);backdrop-filter:blur(20px);
+  border-bottom:1px solid var(--border);
+  padding:1.25rem 3rem;
+}
+.progress-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:0.875rem}
+.progress-info{font-size:0.8rem;color:var(--muted)}
+.progress-step{font-family:var(--font-display);font-size:0.95rem;font-weight:600}
+.progress-pct{font-size:0.8rem;color:var(--accent);font-weight:600}
+.progress-bar{height:3px;background:rgba(255,255,255,0.07);border-radius:2px;overflow:hidden}
+.progress-fill{height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2));border-radius:2px;transition:width 0.6s var(--ease)}
+
+/* STEP DOTS */
+.step-dots{display:flex;align-items:center;gap:0.35rem;margin-top:0.875rem;flex-wrap:wrap}
+.step-dot{width:20px;height:4px;border-radius:2px;background:rgba(255,255,255,0.1);transition:all 0.3s;cursor:pointer}
+.step-dot.done{background:rgba(0,212,255,0.4)}
+.step-dot.active{background:var(--accent);width:28px}
+
+/* FORM CONTAINER */
+.form-container{max-width:760px;margin:0 auto;padding:3rem 3rem 2rem}
+
+/* SECTION HEADER */
+.section-eyebrow{display:flex;align-items:center;gap:0.75rem;font-size:0.75rem;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:var(--accent);margin-bottom:1.25rem}
+.section-eyebrow::after{content:'';flex:1;max-width:40px;height:1px;background:var(--accent)}
+.section-title{font-family:var(--font-display);font-size:clamp(1.6rem,3.5vw,2.4rem);font-weight:700;line-height:1.2;letter-spacing:-0.02em;margin-bottom:1rem}
+.section-desc{color:var(--muted);font-size:0.95rem;line-height:1.75;margin-bottom:2.5rem;padding-bottom:2rem;border-bottom:1px solid var(--border)}
+.section-goal{display:flex;align-items:flex-start;gap:0.875rem;padding:1.25rem;background:rgba(0,212,255,0.04);border:1px solid var(--border2);border-radius:10px;margin-bottom:2rem;font-size:0.88rem;color:var(--muted);line-height:1.6}
+.section-goal svg{width:18px;height:18px;color:var(--accent);flex-shrink:0;margin-top:0.1em}
+
+/* QUESTIONS */
+.question-block{margin-bottom:1.75rem}
+.question-label{display:flex;align-items:center;gap:0.625rem;font-size:0.8rem;font-weight:600;letter-spacing:0.05em;text-transform:uppercase;color:var(--muted);margin-bottom:0.5rem}
+.q-required{display:inline-block;padding:0.15rem 0.5rem;background:rgba(0,212,255,0.1);border:1px solid rgba(0,212,255,0.2);color:var(--accent);font-size:0.68rem;font-weight:700;letter-spacing:0.06em;border-radius:3px;text-transform:uppercase}
+.q-optional{display:inline-block;padding:0.15rem 0.5rem;background:rgba(255,255,255,0.04);border:1px solid var(--border);color:var(--muted);font-size:0.68rem;font-weight:600;letter-spacing:0.06em;border-radius:3px;text-transform:uppercase}
+.question-hint{font-size:0.83rem;color:rgba(176,183,195,0.7);margin-bottom:0.75rem;line-height:1.55}
+.question-ai{display:flex;align-items:flex-start;gap:0.5rem;font-size:0.78rem;color:rgba(0,212,255,0.55);margin-top:0.625rem;line-height:1.5;padding-top:0.625rem;border-top:1px solid var(--border)}
+.question-ai svg{width:13px;height:13px;flex-shrink:0;margin-top:0.15em}
+
+/* INPUTS */
+input[type=text],input[type=url],input[type=email],textarea,select{
+  width:100%;
+  background:rgba(255,255,255,0.03);
+  border:1px solid var(--border);
+  border-radius:8px;
+  padding:0.875rem 1rem;
+  color:var(--text);
+  font-family:var(--font-sans);
+  font-size:0.93rem;
+  transition:all 0.2s;
+  outline:none;
+  resize:vertical;
+}
+input:focus,textarea:focus,select:focus{border-color:var(--accent);background:rgba(0,212,255,0.03);box-shadow:0 0 0 3px rgba(0,212,255,0.08)}
+input::placeholder,textarea::placeholder{color:rgba(176,183,195,0.4)}
+textarea{min-height:90px;line-height:1.6}
+select{background-color:var(--bg2);color:var(--text);cursor:pointer}
+select option{background-color:var(--bg2);color:var(--text)}
+
+/* RADIO / CHECKBOX */
+.options-grid{display:grid;gap:0.5rem}
+.options-grid.cols2{grid-template-columns:1fr 1fr}
+.options-grid.cols3{grid-template-columns:1fr 1fr 1fr}
+.option-item{
+  display:flex;align-items:center;gap:0.75rem;
+  padding:0.75rem 1rem;
+  background:rgba(255,255,255,0.02);
+  border:1px solid var(--border);
+  border-radius:8px;
+  cursor:pointer;
+  transition:all 0.2s;
+  font-size:0.88rem;
+  color:var(--muted);
+  user-select:none;
+}
+.option-item:hover{border-color:var(--border2);background:rgba(0,212,255,0.04);color:var(--text)}
+.option-item.selected{border-color:var(--accent);background:rgba(0,212,255,0.06);color:var(--text)}
+.option-check{
+  width:18px;height:18px;border-radius:50%;border:1.5px solid var(--border2);
+  display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all 0.2s;
+}
+.option-check.square{border-radius:4px}
+.option-item.selected .option-check{background:var(--accent);border-color:var(--accent)}
+.option-check svg{width:10px;height:10px;color:#0B0F19;opacity:0;transition:opacity 0.15s}
+.option-item.selected .option-check svg{opacity:1}
+
+/* TAG INPUT */
+.tags-container{display:flex;flex-wrap:wrap;gap:0.5rem;margin-bottom:0.5rem}
+.tag-pill{
+  display:inline-flex;align-items:center;gap:0.4rem;
+  padding:0.3rem 0.75rem;
+  background:rgba(0,212,255,0.08);border:1px solid var(--border2);
+  border-radius:20px;font-size:0.82rem;color:var(--accent);font-weight:500;
+}
+.tag-pill-remove{cursor:pointer;font-size:1.1rem;line-height:1;color:rgba(0,212,255,0.6);transition:color 0.15s}
+.tag-pill-remove:hover{color:var(--accent)}
+.tag-input-row{display:flex;gap:0.5rem}
+.tag-input-row input{flex:1}
+.btn-tag-add{
+  padding:0.875rem 1.25rem;
+  background:rgba(0,212,255,0.08);
+  border:1px solid var(--border2);
+  border-radius:8px;
+  color:var(--accent);
+  font-size:0.85rem;font-weight:600;
+  cursor:pointer;font-family:var(--font-sans);
+  transition:all 0.2s;white-space:nowrap;
+}
+.btn-tag-add:hover{background:rgba(0,212,255,0.15)}
+
+/* SCALE */
+.scale-wrap{display:flex;align-items:center;gap:1rem}
+.scale-wrap label{font-size:0.8rem;color:var(--muted);white-space:nowrap}
+input[type=range]{
+  flex:1;-webkit-appearance:none;height:3px;
+  background:rgba(255,255,255,0.1);border-radius:2px;outline:none;border:none;padding:0;
+}
+input[type=range]::-webkit-slider-thumb{
+  -webkit-appearance:none;width:18px;height:18px;border-radius:50%;
+  background:var(--accent);cursor:pointer;border:2px solid var(--bg);
+  box-shadow:0 0 10px rgba(0,212,255,0.4);
+}
+input[type=range]:focus{box-shadow:none}
+.scale-value{font-size:1.1rem;font-weight:700;color:var(--accent);min-width:2rem;text-align:center;font-family:var(--font-display)}
+
+/* NAV BUTTONS */
+.nav-btns{
+  display:flex;justify-content:space-between;align-items:center;
+  margin-top:2.5rem;padding-top:2rem;border-top:1px solid var(--border);
+}
+.btn-nav-back{
+  display:inline-flex;align-items:center;gap:0.5rem;
+  padding:0.75rem 1.5rem;
+  background:transparent;border:1px solid var(--border);
+  border-radius:6px;color:var(--muted);font-size:0.88rem;font-weight:600;
+  cursor:pointer;font-family:var(--font-sans);transition:all 0.2s;letter-spacing:0.02em;
+}
+.btn-nav-back:hover{border-color:var(--border2);color:var(--text)}
+.btn-nav-back svg{width:16px;height:16px}
+.btn-nav-next{
+  display:inline-flex;align-items:center;gap:0.625rem;
+  padding:0.875rem 2rem;background:var(--accent);color:#0B0F19;
+  border-radius:6px;font-weight:700;font-size:0.9rem;
+  transition:all 0.25s;border:none;cursor:pointer;font-family:var(--font-sans);letter-spacing:0.02em;
+}
+.btn-nav-next:hover{background:var(--accent2);transform:translateY(-2px);box-shadow:0 12px 32px rgba(0,212,255,0.25)}
+.btn-nav-next svg{width:18px;height:18px;flex-shrink:0;transition:transform 0.2s}
+.btn-nav-next:hover svg{transform:translateX(3px)}
+.btn-nav-next.final-btn{background:linear-gradient(135deg,var(--accent),var(--accent2))}
+
+/* RESULT PAGE */
+.result-page{display:none;position:relative;z-index:1;padding:80px 0 4rem}
+.result-page.active{display:block}
+.result-container{max-width:900px;margin:0 auto;padding:3rem}
+.result-header{text-align:center;margin-bottom:3rem;padding-bottom:2rem;border-bottom:1px solid var(--border)}
+.result-icon{
+  width:72px;height:72px;border-radius:16px;
+  background:linear-gradient(135deg,rgba(0,212,255,0.2),rgba(0,255,200,0.1));
+  border:1px solid var(--border2);
+  display:flex;align-items:center;justify-content:center;
+  margin:0 auto 1.5rem;
+}
+.result-icon svg{width:36px;height:36px;color:var(--accent)}
+.result-title{font-family:var(--font-display);font-size:clamp(2rem,4vw,3rem);font-weight:700;letter-spacing:-0.02em;margin-bottom:0.75rem}
+.result-sub{color:var(--muted);font-size:1rem;line-height:1.7;max-width:500px;margin:0 auto}
+.coverage-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;margin-bottom:2.5rem}
+.coverage-card{
+  background:var(--bg2);border:1px solid var(--border);border-radius:12px;
+  padding:1.25rem;text-align:center;transition:all 0.3s;
+}
+.coverage-card:hover{border-color:var(--border2);transform:translateY(-2px)}
+.coverage-icon{width:36px;height:36px;border-radius:8px;background:rgba(0,212,255,0.08);display:flex;align-items:center;justify-content:center;margin:0 auto 0.75rem}
+.coverage-icon svg{width:18px;height:18px;color:var(--accent)}
+.coverage-label{font-size:0.78rem;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:var(--muted);margin-bottom:0.4rem}
+.coverage-status{font-size:0.82rem;color:var(--accent2);font-weight:500}
+.prompt-card{
+  background:var(--bg2);border:1px solid var(--border);border-radius:16px;
+  overflow:hidden;margin-bottom:1.5rem;position:relative;
+}
+.prompt-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--accent),var(--accent2))}
+.prompt-toolbar{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:1rem 1.5rem;border-bottom:1px solid var(--border);
+  background:rgba(0,0,0,0.2);
+}
+.prompt-toolbar-label{font-size:0.78rem;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:var(--muted);display:flex;align-items:center;gap:0.5rem}
+.prompt-toolbar-label svg{width:15px;height:15px;color:var(--accent)}
+.prompt-actions{display:flex;gap:0.5rem}
+.btn-action{
+  display:inline-flex;align-items:center;gap:0.4rem;
+  padding:0.45rem 0.875rem;
+  background:rgba(255,255,255,0.04);border:1px solid var(--border);
+  border-radius:5px;color:var(--muted);font-size:0.78rem;font-weight:600;
+  cursor:pointer;font-family:var(--font-sans);transition:all 0.2s;
+  letter-spacing:0.03em;white-space:nowrap;
+}
+.btn-action:hover{border-color:var(--border2);color:var(--text);background:rgba(0,212,255,0.06)}
+.btn-action svg{width:14px;height:14px;flex-shrink:0}
+.btn-action.primary-action{background:var(--accent);color:#0B0F19;border-color:var(--accent)}
+.btn-action.primary-action:hover{background:var(--accent2);border-color:var(--accent2)}
+.prompt-body{
+  padding:2rem;
+  font-family:var(--font-sans);font-size:0.83rem;line-height:1.75;
+  color:var(--muted);max-height:480px;overflow-y:auto;
+  white-space:pre-wrap;word-break:break-word;
+}
+.prompt-body::-webkit-scrollbar{width:3px}
+.prompt-body::-webkit-scrollbar-track{background:transparent}
+.prompt-body::-webkit-scrollbar-thumb{background:rgba(0,212,255,0.2);border-radius:2px}
+.result-actions{display:flex;gap:1rem;flex-wrap:wrap}
+.btn-result{
+  display:inline-flex;align-items:center;gap:0.625rem;
+  padding:0.875rem 1.75rem;
+  border-radius:6px;font-weight:600;font-size:0.88rem;
+  cursor:pointer;font-family:var(--font-sans);transition:all 0.25s;letter-spacing:0.02em;
+}
+.btn-result.primary{background:var(--accent);color:#0B0F19;border:none}
+.btn-result.primary:hover{background:var(--accent2);transform:translateY(-2px);box-shadow:0 12px 30px rgba(0,212,255,0.25)}
+.btn-result.secondary{background:transparent;color:var(--text);border:1px solid var(--border2)}
+.btn-result.secondary:hover{background:rgba(0,212,255,0.05);border-color:var(--accent);color:var(--accent)}
+.btn-result svg{width:16px;height:16px;flex-shrink:0}
+.toast{
+  position:fixed;bottom:2rem;right:2rem;z-index:999;
+  background:rgba(0,212,255,0.12);border:1px solid var(--border2);backdrop-filter:blur(12px);
+  border-radius:10px;padding:0.875rem 1.25rem;
+  display:flex;align-items:center;gap:0.75rem;
+  font-size:0.88rem;font-weight:500;color:var(--text);
+  transform:translateY(100px);opacity:0;transition:all 0.3s var(--ease);
+}
+.toast.visible{transform:translateY(0);opacity:1}
+.toast svg{width:18px;height:18px;color:var(--accent2);flex-shrink:0}
+.toast.error{background:rgba(255,80,80,0.1);border-color:rgba(255,80,80,0.5)}
+.toast.error svg{color:#ff5050}
+
+/* FOOTER */
+footer{
+  background:var(--bg);border-top:1px solid var(--border);
+  padding:2rem 3rem;display:flex;align-items:center;justify-content:space-between;
+  position:relative;z-index:1;margin-top:2rem;
+}
+.footer-logo{display:flex;align-items:center;gap:0.75rem;font-family:var(--font-display);font-size:0.9rem;font-weight:600;color:var(--muted)}
+.footer-copy{font-size:0.78rem;color:rgba(176,183,195,0.5)}
+.footer-link{font-size:0.78rem;color:var(--muted);text-decoration:none;transition:color 0.2s}
+.footer-link:hover{color:var(--accent)}
+
+/* ANIMATIONS */
+@keyframes fadeUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+@keyframes pulse{0%,100%{opacity:0.4}50%{opacity:1}}
+@keyframes slideIn{from{opacity:0;transform:translateX(20px)}to{opacity:1;transform:translateX(0)}}
+
+/* MOBILE */
+@media(max-width:900px){
+  nav{padding:1.25rem 1.5rem}
+  nav.scrolled{padding:0.875rem 1.5rem}
+  .hero{padding:6rem 1.5rem 3rem}
+  .progress-wrapper{padding:1rem 1.5rem}
+  .form-container{padding:2rem 1.5rem 1.5rem}
+  .options-grid.cols2,.options-grid.cols3{grid-template-columns:1fr}
+  .result-container{padding:2rem 1.5rem}
+  .coverage-grid{grid-template-columns:1fr 1fr}
+  .result-actions{flex-direction:column}
+  .btn-result{justify-content:center}
+  .nav-btns{gap:1rem}
+  footer{flex-direction:column;gap:0.75rem;text-align:center;padding:1.5rem}
+}
+@media(max-width:480px){
+  .hero-features{gap:1.25rem;flex-direction:column;align-items:center}
+  .coverage-grid{grid-template-columns:1fr}
+}
+
+/* LANGUAGE SELECTOR */
+.lang-selector{display:flex;align-items:center;gap:0.25rem;background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:6px;padding:0.15rem}
+.lang-btn{padding:0.3rem 0.6rem;border:none;background:transparent;color:var(--muted);font-size:0.72rem;font-weight:600;cursor:pointer;border-radius:4px;font-family:var(--font-sans);transition:all 0.2s;letter-spacing:0.02em}
+.lang-btn:hover{color:var(--text)}
+.lang-btn.active{background:rgba(0,212,255,0.1);color:var(--accent)}
+
+/* CONTACT FORM */
+.contact-page{display:none;position:relative;z-index:1;min-height:100vh;padding:80px 0 4rem}
+.contact-page.active{display:block}
+.contact-container{max-width:640px;margin:0 auto;padding:3rem 3rem 2rem;text-align:center}
+.contact-icon{width:64px;height:64px;border-radius:16px;background:linear-gradient(135deg,rgba(0,212,255,0.15),rgba(0,255,200,0.08));border:1px solid var(--border2);display:flex;align-items:center;justify-content:center;margin:0 auto 1.5rem}
+.contact-icon svg{width:32px;height:32px;color:var(--accent2)}
+.contact-title{font-family:var(--font-display);font-size:clamp(1.6rem,3.5vw,2.4rem);font-weight:700;letter-spacing:-0.02em;margin-bottom:1rem}
+.contact-desc{color:var(--muted);font-size:0.95rem;line-height:1.75;margin-bottom:2.5rem;max-width:500px;margin-left:auto;margin-right:auto}
+.contact-form{text-align:left;max-width:480px;margin:0 auto}
+.contact-field{margin-bottom:1.25rem}
+.contact-field label{display:block;font-size:0.8rem;font-weight:600;letter-spacing:0.05em;color:var(--muted);margin-bottom:0.4rem}
+.contact-field input{width:100%;background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:8px;padding:0.875rem 1rem;color:var(--text);font-family:var(--font-sans);font-size:0.93rem;transition:all 0.2s;outline:none}
+.contact-field input:focus{border-color:var(--accent);background:rgba(0,212,255,0.03);box-shadow:0 0 0 3px rgba(0,212,255,0.08)}
+.contact-field input::placeholder{color:rgba(176,183,195,0.4)}
+.contact-field .field-error{font-size:0.78rem;color:#ff6b6b;margin-top:0.3rem;display:none}
+.contact-field .field-error.show{display:block}
+.contact-field.error input{border-color:#ff6b6b;background:rgba(255,107,107,0.05)}
+.btn-submit{width:100%;display:inline-flex;align-items:center;justify-content:center;gap:0.625rem;padding:0.875rem 2rem;background:linear-gradient(135deg,var(--accent),var(--accent2));color:#0B0F19;border-radius:6px;font-weight:700;font-size:0.9rem;transition:all 0.25s;border:none;cursor:pointer;font-family:var(--font-sans);letter-spacing:0.02em;margin-top:0.5rem}
+.btn-submit:hover{transform:translateY(-2px);box-shadow:0 16px 40px rgba(0,212,255,0.25)}
+.btn-submit:disabled{opacity:0.5;cursor:not-allowed;transform:none;box-shadow:none}
+.btn-submit .spinner{display:none;width:18px;height:18px;border:2px solid rgba(11,15,25,0.2);border-top-color:#0B0F19;border-radius:50%;animation:spin 0.7s linear infinite}
+.btn-submit.loading .spinner{display:inline-block}
+.btn-submit.loading .btn-text{opacity:0.7}
+
+/* SUCCESS OVERLAY */
+.success-overlay{display:none;position:fixed;inset:0;z-index:9999;background:rgba(11,15,25,0.97);backdrop-filter:blur(24px);align-items:center;justify-content:center;flex-direction:column;padding:2rem}
+.success-overlay.active{display:flex}
+.success-check{width:80px;height:80px;border-radius:50%;background:rgba(0,255,200,0.1);border:2px solid var(--accent2);display:flex;align-items:center;justify-content:center;margin-bottom:2rem;position:relative}
+.success-check svg{width:40px;height:40px;color:var(--accent2);stroke-dasharray:48;stroke-dashoffset:48;animation:drawCheck 0.6s 0.3s ease forwards}
+@keyframes drawCheck{to{stroke-dashoffset:0}}
+.success-check::before{content:'';position:absolute;inset:-4px;border-radius:50%;border:2px solid transparent;border-top-color:var(--accent2);animation:rotateRing 1s ease forwards}
+@keyframes rotateRing{0%{transform:rotate(0deg)}100%{transform:rotate(360deg);opacity:0}}
+.success-title{font-family:var(--font-display);font-size:clamp(1.3rem,3vw,1.8rem);font-weight:700;color:var(--accent2);margin-bottom:1rem;text-align:center}
+.success-text{color:var(--muted);font-size:0.95rem;line-height:1.75;text-align:center;max-width:440px;margin-bottom:2.5rem}
+.success-btn{display:inline-flex;align-items:center;gap:0.625rem;padding:0.875rem 2rem;background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:0.88rem;font-weight:600;cursor:pointer;font-family:var(--font-sans);transition:all 0.2s;text-decoration:none}
+.success-btn:hover{border-color:var(--border2);color:var(--accent)}
+
+@keyframes spin{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+
+<div id="cursor"></div>
+<div id="cursor-ring"></div>
+<canvas id="bg-canvas"></canvas>
+
+<!-- NAV -->
+<nav id="navbar">
+  <a class="nav-logo" href="#">
+    <div class="logo-mark">JIC</div>
+    <span id="nav-logo-text">Build a Brief</span>
+  </a>
+  <div style="display:flex;align-items:center;gap:1rem">
+    <div class="lang-selector">
+      <button class="lang-btn active" onclick="setLang('en')" id="lang-en">EN</button>
+      <button class="lang-btn" onclick="setLang('es')" id="lang-es">ES</button>
+    </div>
+    <div class="nav-badge">
+      <span class="nav-badge-dot"></span>
+      <span id="nav-badge-text">Herramienta Premium</span>
+    </div>
+    <a class="nav-back" href="https://javieribrahim.netlify.app/" target="_blank">
+      <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+      javieribrahim.dev
+    </a>
+  </div>
+</nav>
+
+<!-- HERO -->
+<section class="hero" id="hero">
+  <div class="hero-inner">
+    <div class="hero-eyebrow">
+      <span></span>
+      <span id="hero-eyebrow-text">Aquí empieza tu sitio web</span>
+      <span></span>
+    </div>
+    <h1 class="hero-title" id="hero-title">
+      De idea a <span class="accent-word">sitio web</span>,<br>sin perderte en el camino
+    </h1>
+    <p class="hero-sub" id="hero-sub">
+      Convierte lo que tienes en mente en una estructura clara, lista para diseño, contenido y desarrollo. Un brief bien hecho es la diferencia entre una web que existe… y una que funciona.
+    </p>
+    <div class="hero-cta">
+      <button class="btn-primary" onclick="startApp()">
+        <span id="hero-cta-text">Empezar mi brief</span>
+        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg>
+      </button>
+    </div>
+    <div class="hero-features">
+      <div class="feature-item">
+        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+        <span id="hf-1">14 secciones estratégicas</span>
+      </div>
+      <div class="feature-item">
+        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+        <span id="hf-2">Guardado automático</span>
+      </div>
+      <div class="feature-item">
+        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+        <span id="hf-3">Prompt maestro para Claude</span>
+      </div>
+      <div class="feature-item">
+        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+        <span id="hf-4">Exportar PDF y Markdown</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- APP -->
+<div class="app" id="app">
+
+  <!-- PROGRESS BAR -->
+  <div class="progress-wrapper">
+    <div class="progress-header">
+      <div>
+        <div class="progress-info"><span id="prog-sec-label">Sección</span> <span id="cur-step">1</span> <span id="prog-of-label">de</span> 14</div>
+        <div class="progress-step" id="cur-step-name">Información General del Negocio</div>
+      </div>
+      <div class="progress-pct" id="cur-pct">0%</div>
+    </div>
+    <div class="progress-bar"><div class="progress-fill" id="progress-fill" style="width:7%"></div></div>
+    <div class="step-dots" id="step-dots"></div>
+  </div>
+
+  <!-- FORM -->
+  <div class="form-container" id="form-container"></div>
+
+</div>
+
+
+<!-- CONTACT PAGE -->
+<div class="contact-page" id="contact-page">
+  <div class="progress-wrapper" style="position:relative;top:0">
+    <div class="progress-header">
+      <div>
+        <div class="progress-info" id="cp-info">Proceso completado</div>
+        <div class="progress-step" id="cp-step">Discovery Web finalizado</div>
+      </div>
+      <div class="progress-pct">100%</div>
+    </div>
+    <div class="progress-bar"><div class="progress-fill" style="width:100%"></div></div>
+  </div>
+
+  <div class="contact-container">
+    <div class="contact-icon">
+      <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+    </div>
+    <h2 class="contact-title" id="contact-title">Gracias por completar tu Discovery Web</h2>
+    <p class="contact-desc" id="contact-desc">Hemos recibido toda la información necesaria para analizar tu proyecto. Nuestro equipo revisará tus respuestas y se pondrá en contacto contigo para los siguientes pasos. Gracias por confiar en nosotros.</p>
+
+    <div class="contact-form" id="contact-form">
+      <div class="contact-field" id="field-name">
+        <label id="label-name">Nombre completo <span style="color:var(--accent)">*</span></label>
+        <input type="text" id="inp-name" placeholder="" autocomplete="name">
+        <div class="field-error" id="err-name">Este campo es obligatorio</div>
+      </div>
+      <div class="contact-field" id="field-email">
+        <label id="label-email">Correo electrónico <span style="color:var(--accent)">*</span></label>
+        <input type="email" id="inp-email" placeholder="correo@ejemplo.com" autocomplete="email">
+        <div class="field-error" id="err-email">Ingresa un correo válido</div>
+      </div>
+      <div class="contact-field" id="field-company">
+        <label id="label-company">Nombre de la empresa</label>
+        <input type="text" id="inp-company" placeholder="" autocomplete="organization">
+      </div>
+      <div class="contact-field" id="field-phone">
+        <label id="label-phone">Teléfono</label>
+        <input type="text" id="inp-phone" placeholder="+52 55 1234 5678" autocomplete="tel">
+      </div>
+      <button class="btn-submit" id="btn-submit" onclick="submitContact()">
+        <span class="spinner"></span>
+        <span class="btn-text" id="btn-submit-text">Enviar información</span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- SUCCESS OVERLAY -->
+<div class="success-overlay" id="success-overlay">
+  <div class="success-check">
+    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+  </div>
+  <h2 class="success-title" id="success-title">¡Información enviada correctamente!</h2>
+  <p class="success-text" id="success-text">Gracias. Hemos recibido tu proyecto y comenzaremos a revisarlo. Pronto recibirás una confirmación por correo electrónico.</p>
+  <button class="success-btn" onclick="resetForm()">
+    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+    <span id="success-btn-text">Comenzar nuevo cuestionario</span>
+  </button>
+</div>
+
+<!-- FOOTER -->
+<footer id="footer">
+    <div class="footer-logo">
+    <div class="logo-mark" style="width:30px;height:30px;font-size:0.75rem">JIC</div>
+    <span id="footer-logo-text">Discovery Web</span></div>
+  <div class="footer-copy">© 2026 Javier Ibrahim — Construye la base de tu sitio web</div>
+  <a class="footer-link" href="https://javieribrahim.netlify.app/" target="_blank">javieribrahim.dev →</a>
+</footer>
+
+<div class="toast" id="toast">
+  <svg id="toast-icon-success" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+  <svg id="toast-icon-error" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="display:none"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 6l12 12M6 18L18 6"/></svg>
+  <span id="toast-msg">Copiado al portapapeles</span>
+</div>
+
+<script>
+// CURSOR
+const cursor=document.getElementById('cursor'),ring=document.getElementById('cursor-ring');
+let mx=0,my=0,rx=0,ry=0;
+document.addEventListener('mousemove',e=>{mx=e.clientX;my=e.clientY;cursor.style.left=mx+'px';cursor.style.top=my+'px'});
+setInterval(()=>{rx+=(mx-rx)*0.15;ry+=(my-ry)*0.15;ring.style.left=rx+'px';ring.style.top=ry+'px'},16);
+document.querySelectorAll('button,a,input,textarea,select,[onclick]').forEach(el=>{
+  el.addEventListener('mouseenter',()=>{cursor.style.width='16px';cursor.style.height='16px';cursor.style.background='var(--accent2)'});
+  el.addEventListener('mouseleave',()=>{cursor.style.width='10px';cursor.style.height='10px';cursor.style.background='var(--accent)'});
+});
+
+// CANVAS BG
+const canvas=document.getElementById('bg-canvas'),ctx=canvas.getContext('2d');
+let W,H,particles=[];
+function resizeCanvas(){W=canvas.width=window.innerWidth;H=canvas.height=window.innerHeight}
+resizeCanvas();window.addEventListener('resize',resizeCanvas);
+for(let i=0;i<60;i++)particles.push({x:Math.random()*2000,y:Math.random()*2000,vx:(Math.random()-0.5)*0.3,vy:(Math.random()-0.5)*0.3,r:Math.random()*1.5+0.5,a:Math.random()});
+function drawCanvas(){
+  ctx.clearRect(0,0,W,H);
+  particles.forEach(p=>{
+    p.x+=p.vx;p.y+=p.vy;
+    if(p.x<0)p.x=W;if(p.x>W)p.x=0;if(p.y<0)p.y=H;if(p.y>H)p.y=0;
+    ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,Math.PI*2);
+    ctx.fillStyle=`rgba(0,212,255,${p.a*0.4})`;ctx.fill();
+  });
+  particles.forEach((a,i)=>{
+    particles.slice(i+1).forEach(b=>{
+      const d=Math.hypot(a.x-b.x,a.y-b.y);
+      if(d<120){ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.strokeStyle=`rgba(0,212,255,${0.06*(1-d/120)})`;ctx.lineWidth=0.5;ctx.stroke()}
+    });
+  });
+  requestAnimationFrame(drawCanvas);
+}
+drawCanvas();
+
+// NAV SCROLL
+window.addEventListener('scroll',()=>document.getElementById('navbar').classList.toggle('scrolled',window.scrollY>50));
+
+// DATA
+const SECTIONS=[
+  {
+    id:1,title:"Información General del Negocio",
+    desc:"Recopilamos la esencia de tu empresa: quién eres, qué haces y por qué existes. Esta información es la base de toda la arquitectura de contenido y el tono de voz del sitio.",
+    goal:"Construir la identidad narrativa del sitio web, definir el tono de voz y el copywriting de las secciones principales.",
+    questions:[
+      {id:"biz_name",label:"Nombre del negocio",hint:"El nombre con el que tus clientes te buscan. Sé exacto: de aquí saldrá <b>tu dominio y el título principal del sitio</b>.",type:"text",required:true,ai:"Definimos el <b>dominio, el título principal y la base estructural</b> de tu sitio."},
+      {id:"biz_tagline",label:"Eslogan o tagline",hint:"Si no tienes uno, no te preocupes. Podemos <b>crear opciones</b> basadas en lo que nos cuentes.",type:"text",required:false,ai:"Resume en una frase <b>qué haces y por qué es relevante</b> para quien llega por primera vez."},
+      {id:"biz_history",label:"Historia del negocio",hint:"Comparte cómo empezaste, los años de trayectoria y ese <b>momento clave</b> que definió tu negocio.",type:"textarea",required:true,ai:"Da forma a tu <b>historia de marca</b> y aporta autenticidad a todo tu sitio."},
+      {id:"biz_mision",label:"Misión",hint:"¿Por qué existe tu empresa más allá de ganar dinero? El <b>propósito real</b> conecta con tu audiencia.",type:"textarea",required:true,ai:"Define el <b>propósito de tu marca</b> y guía cómo te comunicas con tus clientes."},
+      {id:"biz_vision",label:"Visión",hint:"Visualiza el futuro. ¿Dónde quieres estar en 5-10 años? Eso <b>inspira el rumbo del proyecto</b>.",type:"textarea",required:false,ai:"Refuerza tu <b>credibilidad</b> y proyecta una visión clara a largo plazo."},
+      {id:"biz_valores",label:"Valores corporativos",hint:"Los principios que <b>guían tus decisiones</b>. Entre 3 y 6 valores que definen cómo haces negocio.",type:"tags",required:true,ai:"Definen el **tono de tu contenido** y pueden destacarse visualmente en el diseño."},
+      {id:"biz_diferenciadores",label:"¿Qué te hace diferente?",hint:"Tu ventaja real. Sé <b>específico y honesto</b>: eso construirás en tu propuesta de valor.",type:"textarea",required:true,ai:"Detecta tu <b>ventaja real</b>: lo que te hace diferente y se convertirá en tu propuesta de valor."},
+      {id:"biz_personalidad",label:"Personalidad de marca",hint:"Elige las opciones que mejor <b>reflejen la personalidad</b> de tu marca. Define cómo te comunicarás.",type:"checkboxes",options:["Profesional y seria","Cercana y amigable","Innovadora y disruptiva","Tradicional y confiable","Lujosa y exclusiva","Divertida y energética","Minimalista y elegante","Técnica y especializada"],required:true,ai:"Define el <b>tono, estilo visual y nivel de formalidad</b> de todo tu sitio."},
+      {id:"biz_contacto",label:"Información de contacto principal",hint:"Los datos clave para que <b>tus clientes te encuentren</b>. Teléfono, email, dirección y horarios.",type:"textarea",required:true,ai:"Completa tu <b>información de contacto</b> en todo el sitio y mejora tu presencia local."},
+      {id:"biz_redes",label:"Redes sociales activas",hint:"Los enlaces directos a <b>tus perfiles activos</b>. Cada URL completa, sin atajos.",type:"textarea",required:false,ai:"Se integran en <b>header, footer y secciones sociales</b> para mantener tu presencia conectada."},
+    ]
+  },
+  {
+    id:2,title:"Objetivos del Proyecto Web",
+    desc:"Sin objetivos claros, un sitio web es solo una tarjeta de presentación digital. Aquí definimos el propósito estratégico para que cada decisión de diseño esté orientada a resultados.",
+    goal:"Diseñar la arquitectura de conversión, el flujo de usuario y las métricas de éxito que guiarán el diseño.",
+    questions:[
+      {id:"obj_principal",label:"Objetivo principal del sitio",hint:"El <b>objetivo central</b> del proyecto. Todo el diseño girará en torno a esto.",type:"radio",options:["Generar leads calificados","Vender productos/servicios online","Informar y educar a clientes","Fortalecer imagen de marca","Captar talento/reclutamiento","Soporte a clientes existentes","Otro"],required:true,ai:"Define tu **CTA principal, el diseño de portada y cómo navegarán los usuarios**."},
+      {id:"obj_secundarios",label:"Objetivos secundarios",hint:"Metas adicionales que <b>complementan el objetivo principal</b>. Marca todas las que aplican.",type:"checkboxes",options:["Posicionamiento SEO","Construcción de comunidad","Educación del mercado","Reducir carga de soporte","Expandirse a nuevos mercados","Generar alianzas comerciales"],required:false,ai:"Estos objetivos se integran como **secciones y funcionalidades adicionales** en tu sitio."},
+      {id:"obj_kpis",label:"KPIs de éxito",hint:"Define cómo <b>sabrás si el sitio está funcionando</b>. Ej: leads al mes, tasa de conversión, tráfico orgánico.",type:"textarea",required:true,ai:"Determina qué **métricas, formularios y CTAs** reciben prioridad en el diseño."},
+      {id:"obj_conversion",label:"Conversión principal deseada",hint:"La <b>acción más importante</b> que esperas de cada visitante. El diseño priorizará esto por encima de todo.",type:"radio",options:["Llenar formulario de contacto","Hacer una llamada telefónica","Comprar un producto","Agendar una cita/reunión","Suscribirse al newsletter","Descargar un recurso","Chatear por WhatsApp"],required:true,ai:"Define tu **CTA principal y la jerarquía visual** de toda la portada."},
+      {id:"obj_plazo",label:"Plazo para ver resultados",hint:"¿Cuándo esperas ver resultados? Esto <b>define la urgencia y estrategia</b> del proyecto.",type:"radio",options:["1–3 meses","3–6 meses","6–12 meses","Largo plazo +1 año"],required:false,ai:"Define la **urgencia visual, la estrategia de conversión y el alcance SEO**."},
+    ]
+  },
+  {
+    id:3,title:"Situación Actual y Competencia",
+    desc:"Analizamos el punto de partida y el panorama competitivo para identificar oportunidades de diferenciación y áreas de mejora.",
+    goal:"Detectar oportunidades de posicionamiento y definir la estrategia de diferenciación visual y de contenido.",
+    questions:[
+      {id:"comp_sitio",label:"URL de tu sitio web actual (si existe)",hint:"Tu sitio actual, si existe. Si no, solo dinos <b>\"No tengo\"</b> y seguimos desde cero.",type:"url",required:false,ai:"Analizamos tu sitio actual para decidir **qué conservar y qué mejorar**."},
+      {id:"comp_problemas",label:"Problemas del sitio actual",hint:"Señala lo que <b>no funciona</b> en tu sitio actual. Así sabemos exactamente qué evitar o mejorar.",type:"checkboxes",options:["Diseño desactualizado","No genera leads","Lento o con problemas técnicos","No adaptado a móvil","Difícil de actualizar","No posiciona en Google","No refleja la calidad de mi empresa","No tengo sitio web actualmente"],required:false,ai:"Nos ayuda a priorizar **soluciones concretas** en la arquitectura y el diseño."},
+      {id:"comp_directos",label:"Competidores directos (URLs)",hint:"Los sitios de <b>tus competidores directos</b>. Los analizamos para encontrar tu diferenciación.",type:"textarea",required:true,ai:"Estudiamos a tus competidores para encontrar **oportunidades de diferenciación real**."},
+      {id:"comp_aspiracionales",label:"Empresas aspiracionales",hint:"Las marcas que <b>admiras aunque no compitan contigo</b>. Definen el nivel al que aspiramos.",type:"textarea",required:false,ai:"Definen el **nivel de aspiración visual** y el tono de comunicación al que apuntamos."},
+      {id:"comp_oportunidades",label:"Oportunidades en el mercado",hint:"Tu ventaja oculta. ¿Qué puedes hacer <b>mejor que nadie</b> en tu mercado?",type:"textarea",required:false,ai:"Esto se traduce en **propuestas de valor únicas** que diferencian tu sitio."},
+    ]
+  },
+  {
+    id:4,title:"Público Objetivo",
+    desc:"Conocer profundamente a tu cliente ideal permite diseñar cada mensaje y cada llamado a la acción para que resuene emocionalmente con quienes toman la decisión de compra.",
+    goal:"Construir los buyer personas que guiarán el copywriting, el diseño visual y la estrategia de contenido.",
+    questions:[
+      {id:"pub_ideal",label:"Describe a tu cliente ideal",hint:"Describe a tu cliente ideal con detalle: edad, ocupación, ubicación. Esto <b>personaliza cada mensaje</b> del sitio.",type:"textarea",required:true,ai:"Construimos el **perfil de tu cliente ideal** para adaptar cada mensaje del sitio."},
+      {id:"pub_problemas",label:"¿Qué problemas tiene tu cliente que tú resuelves?",hint:"Los <b>problemas reales</b> de tus clientes. Sé específico: de aquí salen los argumentos de venta más potentes.",type:"textarea",required:true,ai:"Estos problemas se convierten en **argumentos de venta auténticos** en tu portada y servicios."},
+      {id:"pub_motivaciones",label:"¿Qué motiva a tu cliente a buscarte?",hint:"¿Qué <b>los llevó a buscarte</b>? Identifica el dolor o deseo que activa la decisión de compra.",type:"textarea",required:true,ai:"Inspiran **titulares de impacto** y definen el tono emocional de tu contenido."},
+      {id:"pub_objeciones",label:"Objeciones más comunes",hint:"Las razones por las que <b>alguien duda en comprarte</b>. Anticiparlas es la mejor forma de responderlas.",type:"textarea",required:true,ai:"Anticipamos estas objeciones para **responderlas con claridad** en FAQs, testimonios y tu propuesta de valor."},
+      {id:"pub_decision",label:"¿Cómo toma decisiones tu cliente?",hint:"¿Cómo decide tu cliente? Esto <b>define cuánta información</b> necesita cada página del sitio.",type:"radio",options:["Decide rápido, sin mucha investigación","Investiga y compara varias opciones","Necesita hablar con alguien antes de decidir","Depende de recomendaciones de terceros","Requiere múltiples puntos de contacto"],required:true,ai:"Define **cómo convertir visitantes en clientes** y cuánta información mostrar en cada página."},
+      {id:"pub_canales",label:"¿Por qué canales te encuentra tu cliente?",hint:"Los canales donde <b>tus clientes te encuentran</b>. Esto orienta la estrategia de tráfico y captación.",type:"checkboxes",options:["Google búsqueda orgánica","Google Ads","Instagram","Facebook","LinkedIn","YouTube","TikTok","Referidos/boca en boca","Ferias y eventos","Directorios online"],required:true,ai:"Orienta la **estrategia SEO, los CTAs y las integraciones sociales** de tu sitio."},
+    ]
+  },
+  {
+    id:5,title:"Branding e Identidad Visual",
+    desc:"El diseño visual no es decoración, es comunicación estratégica. Aquí definimos el lenguaje visual que transmitirá los valores y la personalidad de tu marca.",
+    goal:"Generar el brief visual completo: paleta, tipografías, estilo gráfico y directrices de imagen para el sitio.",
+    questions:[
+      {id:"brand_logo",label:"¿Tienes logotipo?",hint:"¿Ya tienes identidad visual? Esto define si <b>partimos de tu logo o creamos uno nuevo</b>.",type:"radio",options:["Sí, tengo logotipo definido","Tengo uno pero necesita actualización","No tengo logotipo aún"],required:true,ai:"Define si el diseño **parte de tu logo actual o lo creamos desde cero**."},
+      {id:"brand_colores",label:"Paleta de colores actual o deseada",hint:"Tus colores, si los tienes. Comparte los HEX o simplemente <b>describe los tonos que te representan</b>.",type:"textarea",required:false,ai:"Establece la **base de tu paleta de colores**. Si no tienes una, creamos una que refleje tu personalidad."},
+      {id:"brand_tipografia",label:"Tipografías o preferencias",hint:"¿Tienes tipografías de marca? O dime <b>qué estilo prefieres</b>: moderno, clásico, limpio, expresivo.",type:"textarea",required:false,ai:"Define el **sistema tipográfico** de tu sitio: títulos, textos y elementos de interfaz."},
+      {id:"brand_estilo",label:"Estilo visual deseado",hint:"Elige el estilo que mejor <b>refleje la esencia visual</b> que buscas para tu sitio.",type:"checkboxes",options:["Minimalista y limpio","Corporativo y formal","Moderno y tecnológico","Cálido y humano","Lujoso y premium","Colorido y vibrante","Oscuro y sofisticado","Ilustrativo y creativo","Fotográfico e inmersivo"],required:true,ai:"Define el **estilo visual maestro**: espacios, imágenes y elementos gráficos de tu sitio."},
+      {id:"brand_emociones",label:"¿Qué emociones debe transmitir tu sitio?",hint:"Las emociones que debe <b>despertar tu sitio</b> en cada visitante. Guían el color, las imágenes y el tono.",type:"checkboxes",options:["Confianza y seguridad","Innovación y modernidad","Calidad y excelencia","Cercanía y calidez","Exclusividad y prestigio","Energía y motivación","Tranquilidad y bienestar","Profesionalismo y seriedad"],required:true,ai:"Guían las decisiones de **color, imágenes, espacios y animaciones** de todo el diseño."},
+      {id:"brand_prohibido",label:"Elementos visuales que JAMÁS deben aparecer",hint:"Todo lo que <b>NO quieres ver</b> en tu sitio. Colores, estilos o referencias que simplemente no van contigo.",type:"textarea",required:false,ai:"Lo registramos como **restricciones de diseño** para asegurarnos de evitarlo por completo."},
+      {id:"brand_nivel",label:"Nivel de sofisticación visual deseado",hint:"¿Qué tan <b>sofisticado visualmente</b> quieres tu sitio? Si no lo sabes, el 3 suele ser un buen punto de partida.",type:"scale",min:1,max:5,required:true,ai:"Define el **nivel de complejidad visual**: animaciones, efectos y detalles del diseño."},
+    ]
+  },
+  {
+    id:6,title:"Arquitectura del Sitio",
+    desc:"La estructura del sitio determina cómo fluye la información y cómo los usuarios navegan hacia la conversión. Aquí definimos las páginas, la jerarquía y el flujo.",
+    goal:"Generar el sitemap completo, la jerarquía de navegación y el flujo de usuario óptimo para la conversión.",
+    questions:[
+      {id:"arq_paginas",label:"Páginas que necesitas en el sitio",hint:"Las páginas que <b>necesita tu sitio</b>. Marca todas las que aplican, podemos ajustar después.",type:"checkboxes",options:["Portada/Inicio","Quiénes somos","Servicios (general)","Páginas individuales por servicio","Portafolio/Casos de éxito","Testimonios","Blog/Recursos","Preguntas frecuentes","Precios/Tarifas","Contacto","Página de gracias (Thank you)","Política de privacidad","Términos y condiciones"],required:true,ai:"Construimos el **mapa completo del sitio** y su estructura de navegación."},
+      {id:"arq_extras",label:"¿Necesitas páginas especiales no listadas?",hint:"¿Algo <b>fuera de lo común</b>? Calculadoras, áreas privadas, integraciones especiales. Este es el momento.",type:"textarea",required:false,ai:"Las añadimos al **sitemap y diseñamos sus wireframes** correspondientes."},
+      {id:"arq_prioridad",label:"Las 3 páginas más importantes",hint:"Las 3 páginas <b>más importantes para tu negocio</b>. Recibirán atención especial en diseño y contenido.",type:"textarea",required:true,ai:"Estas páginas reciben **atención prioritaria** en diseño, contenido y conversión."},
+      {id:"arq_flujo",label:"Flujo ideal del visitante",hint:"Describe el <b>recorrido ideal</b> del visitante. Ej: Inicio → Servicios → Contacto. Así diseñamos la navegación.",type:"textarea",required:true,ai:"Diseñamos la **navegación interna y los CTAs** para guiar a tus visitantes paso a paso."},
+    ]
+  },
+  {
+    id:7,title:"Contenido Disponible",
+    desc:"Inventariamos los materiales existentes para saber con qué contamos y qué necesita producirse.",
+    goal:"Determinar qué contenido debe generarse desde cero y qué puede adaptarse de materiales existentes.",
+    questions:[
+      {id:"cont_textos",label:"¿Tienes textos redactados actualmente?",hint:"¿Qué <b>material escrito</b> tienes ya? Entre más tengas, menos creamos desde cero.",type:"radio",options:["Sí, textos completos","Textos parciales","Solo ideas y notas","No tengo nada escrito"],required:true,ai:"Define **cuánto contenido creamos desde cero** y cuánto aprovechamos de lo que ya tienes."},
+      {id:"cont_fotos",label:"¿Tienes fotografías profesionales?",hint:"¿Tienes <b>fotografías reales</b> de tu negocio? Define el nivel de producción visual del sitio.",type:"radio",options:["Sí, banco de fotos profesional","Algunas fotos básicas","Solo fotos de teléfono","No tengo fotografías"],required:true,ai:"Define si usamos **fotografía real o stock premium** y el nivel de producción visual."},
+      {id:"cont_videos",label:"¿Tienes material en video?",hint:"Tu <b>material en video</b> disponible. Nos ayuda a decidir si incluimos secciones dinámicas o animaciones.",type:"radio",options:["Sí, videos profesionales","Videos básicos/caseros","No tengo pero estoy dispuesto a producir","No quiero usar videos"],required:false,ai:"Define si incluimos **video hero, galerías o animaciones** según el material disponible."},
+      {id:"cont_recursos",label:"Recursos descargables disponibles",hint:"Los recursos que <b>puedes ofrecer a cambio de un email</b>. Guías, catálogos, plantillas. Esto atrae leads.",type:"textarea",required:false,ai:"Creamos **secciones de descarga y lead magnets** para captar emails de forma natural."},
+    ]
+  },
+  {
+    id:8,title:"Productos y Servicios",
+    desc:"Detallamos cada oferta para que el sitio presente cada producto o servicio de forma estratégica, clara y orientada a la conversión.",
+    goal:"Generar las páginas individuales de servicios/productos con copywriting optimizado para conversión.",
+    questions:[
+      {id:"serv_lista",label:"Lista tus productos o servicios principales",hint:"Enumera tus productos o servicios principales. <b>Cada uno tendrá su propia página</b> con contenido único.",type:"textarea",required:true,ai:"Creamos una **página por servicio** con estructura, contenido y CTA únicos para cada uno."},
+      {id:"serv_estrella",label:"Tu servicio/producto estrella",hint:"Tu <b>producto estrella</b>. El que más vendes, el más rentable o el que más quieres impulsar.",type:"text",required:true,ai:"Tu servicio estrella recibe **tratamiento visual prioritario** en portada y navegación."},
+      {id:"serv_beneficios",label:"Principales beneficios de tus servicios",hint:"Lo que <b>realmente gana tu cliente</b>. No características técnicas, sino beneficios que se sienten.",type:"textarea",required:true,ai:"Construimos **secciones de beneficios y propuestas de valor** para cada servicio."},
+      {id:"serv_proceso",label:"¿Cómo es tu proceso de trabajo?",hint:"Los pasos que sigue un cliente <b>desde que te contacta hasta que recibe</b>. Ayuda a generar confianza.",type:"textarea",required:false,ai:"Creamos la sección **\"Cómo trabajamos\"** con tu proceso visual paso a paso."},
+      {id:"serv_precio",label:"¿Mostrarás precios en el sitio?",hint:"¿Prefieres <b>mostrar precios o mantenerlos a consulta</b>? Cada estrategia tiene un diseño distinto.",type:"radio",options:["Precios fijos visibles","Precios desde/desde","Precios a consultar","No se mostrarán precios"],required:true,ai:"Diseñamos tus **páginas de precios o flujo de cotización** según tu estrategia."},
+    ]
+  },
+  {
+    id:9,title:"Prueba Social y Credibilidad",
+    desc:"La confianza se construye con evidencia. Aquí recopilamos todos los elementos que demuestran que tu empresa cumple lo que promete.",
+    goal:"Diseñar las secciones de credibilidad que reduzcan el riesgo percibido y aceleren la decisión de compra.",
+    questions:[
+      {id:"social_testimonios",label:"Testimonios de clientes",hint:"<b>Testimonios reales</b> de clientes. Incluye nombre y cargo. Con 3 o más construimos una sección sólida.",type:"textarea",required:false,ai:"Creamos una **sección de testimonios** con fotos, nombres y frases destacadas."},
+      {id:"social_numeros",label:"Estadísticas relevantes",hint:"Los números que <b>demuestran tu experiencia</b>. Años, clientes, proyectos. Se ven genial con contadores animados.",type:"textarea",required:false,ai:"Tus números clave se vuelven una **sección de impacto visual** con contadores animados."},
+      {id:"social_clientes",label:"Clientes o marcas importantes",hint:"Las marcas que <b>confían en ti</b>. Comparte los logos (con permiso) para construir autoridad al instante.",type:"textarea",required:false,ai:"Diseñamos una **galería de logos de clientes** que genera autoridad y confianza al instante."},
+      {id:"social_cert",label:"Certificaciones, premios o reconocimientos",hint:"<b>Certificaciones y premios</b> que respaldan tu trabajo. Se colocan como badges en páginas clave.",type:"textarea",required:false,ai:"Estos **badges de credibilidad** aparecen en las páginas más importantes de tu sitio."},
+      {id:"social_casos",label:"¿Tienes casos de éxito documentados?",hint:"¿Tienes <b>casos documentados</b> con resultados? Son el contenido más persuasivo para convertir.",type:"radio",options:["Sí, casos con resultados documentados","Historias pero sin métricas","No tengo pero estoy dispuesto a crear","No tengo casos de éxito"],required:true,ai:"Creamos una **sección de portafolio o casos de éxito** con el nivel de detalle que tengas."},
+    ]
+  },
+  {
+    id:10,title:"Funcionalidades Requeridas",
+    desc:"Definimos las capacidades técnicas del sitio para que la arquitectura y el desarrollo estén alineados con tus necesidades operativas.",
+    goal:"Generar el listado de requerimientos técnicos, integraciones y el stack tecnológico recomendado.",
+    questions:[
+      {id:"func_basicas",label:"Funcionalidades básicas requeridas",hint:"Las <b>funcionalidades esenciales</b> que todo sitio necesita. Marca todas las que aplican a tu proyecto.",type:"checkboxes",options:["Formulario de contacto","Chat en vivo","WhatsApp flotante","Newsletter/Suscripción","Blog/Noticias","Búsqueda interna","Mapa de Google","Galería de imágenes","Galería de videos"],required:true,ai:"Define la **lista de componentes y módulos** que desarrollaremos para tu sitio."},
+      {id:"func_avanzadas",label:"Funcionalidades avanzadas",hint:"<b>Funcionalidades avanzadas</b> para llevar tu sitio al siguiente nivel. E-commerce, CRM, membresías y más.",type:"checkboxes",options:["E-commerce (tienda online)","Sistema de reservas/citas","Área de clientes/Login","Membresías o suscripciones","Pasarela de pago","Portal de afiliados","Múltiples idiomas","Integración con CRM","Automatizaciones de email"],required:false,ai:"Define la **complejidad técnica del proyecto** y las integraciones que necesitamos implementar."},
+      {id:"func_herramientas",label:"Herramientas que usas actualmente",hint:"Las herramientas que <b>ya usas en tu negocio</b>. Las integramos para que todo funcione en conjunto.",type:"textarea",required:false,ai:"Conectamos tu sitio con las **herramientas que ya usas** en tu día a día."},
+      {id:"func_cms",label:"¿Quién actualizará el contenido del sitio?",hint:"¿Quién <b>actualizará el contenido</b> después del lanzamiento? Esto define qué CMS te conviene más.",type:"radio",options:["Yo mismo / equipo interno","Agencia o freelancer externo","No necesito actualizar contenido seguido"],required:true,ai:"Define el **CMS ideal para ti** y el nivel de acceso que tendrás al panel de administración."},
+    ]
+  },
+  {
+    id:11,title:"Estrategia SEO",
+    desc:"El posicionamiento en buscadores es una inversión a largo plazo. Aquí definimos la estrategia de palabras clave y geolocalización para construir autoridad orgánica.",
+    goal:"Generar la estrategia de palabras clave, la estructura de URLs, los metadatos y el SEO técnico inicial.",
+    questions:[
+      {id:"seo_keywords",label:"Palabras clave principales",hint:"Las palabras que <b>tus clientes escriben en Google</b> para encontrar lo que ofreces. Piensa como ellos.",type:"tags",required:true,ai:"Construyen la **estructura de URLs, títulos, encabezados y descripciones** de tu sitio."},
+      {id:"seo_geo",label:"Ubicaciones geográficas objetivo",hint:"¿Dónde quieres que te encuentren? <b>Ciudades, regiones o países</b>. Creamos páginas locales para cada uno.",type:"tags",required:true,ai:"Creamos **páginas locales y una estrategia SEO** enfocada en tus zonas geográficas."},
+      {id:"seo_competencia",label:"¿Tus competidores posicionan bien en Google?",hint:"¿Quién <b>domina los resultados</b> cuando buscas tus servicios? Así calculamos el esfuerzo necesario.",type:"textarea",required:false,ai:"Nos ayuda a calcular el **esfuerzo y tiempo necesario** para posicionarte frente a tu competencia."},
+      {id:"seo_blog",label:"¿Tienes estrategia de contenidos?",hint:"Un blog activo es <b>la mejor inversión SEO a largo plazo</b>. ¿Ya publicas o te gustaría empezar?",type:"radio",options:["Sí, blog activo con publicaciones frecuentes","Lo hice en el pasado pero no constantemente","Me gustaría empezar","No me interesa el blog"],required:false,ai:"Diseñamos la **estructura de tu blog, categorías y calendario editorial** inicial."},
+    ]
+  },
+  {
+    id:12,title:"Referencias Visuales",
+    desc:"Las referencias son el lenguaje más rápido entre cliente y diseñador. Aquí identificamos qué te gusta y qué te desagrada para evitar iteraciones innecesarias.",
+    goal:"Construir el moodboard digital, el brief estético y las restricciones de diseño explícitas.",
+    questions:[
+      {id:"ref_favoritos",label:"Sitios web que te gustan",hint:"Los sitios que <b>te inspiran</b>. Comparte URLs y dinos qué te gusta de cada uno. Esto guía al diseñador.",type:"textarea",required:true,ai:"Identificamos **patrones visuales y estructuras** que inspirarán el diseño de tu sitio."},
+      {id:"ref_odio",label:"Sitios web que no te gustan",hint:"Los sitios que <b>no te gustan</b> y por qué. Igual de importante: saber qué evitar.",type:"textarea",required:false,ai:"Las convertimos en **restricciones de diseño** para evitar todo lo que no te gusta."},
+      {id:"ref_marcas",label:"¿Qué marcas globales representan mejor tu visión?",hint:"Marcas globales que <b>representan el nivel al que aspiras</b>. No importa la industria, importa la inspiración.",type:"textarea",required:true,ai:"Definen el **nivel de aspiración visual** y el posicionamiento que buscamos para tu marca."},
+      {id:"ref_palabras",label:"Tres palabras que deben definir el diseño",hint:"Tres palabras que <b>capturen la esencia del diseño</b> que buscas. Ej: moderno, cálido, audaz.",type:"text",required:true,ai:"Son las **directrices creativas maestras** para cada decisión de diseño."},
+    ]
+  },
+  {
+    id:13,title:"Estrategia de Conversión",
+    desc:"El sitio más bonito del mundo no sirve si no convierte visitantes en clientes. Aquí diseñamos el sistema de captación y persuasión.",
+    goal:"Diseñar el embudo de conversión, los CTAs, los lead magnets y la estrategia de seguimiento post-visita.",
+    questions:[
+      {id:"conv_cta",label:"Texto del CTA principal",hint:"La frase del <b>botón más importante de tu sitio</b>. Debe ser clara, directa y motivar a la acción.",type:"text",required:true,ai:"Aparece en el **hero de portada, el encabezado y las posiciones clave de conversión**."},
+      {id:"conv_oferta",label:"¿Tienes alguna oferta, garantía o incentivo especial?",hint:"¿Tienes algo que <b>haga la decisión más fácil</b>? Garantías, descuentos, consultas gratis. Esto convierte.",type:"textarea",required:false,ai:"Es tu **argumento de conversión más fuerte** y lo destacamos visualmente en el sitio."},
+      {id:"conv_lead",label:"¿Qué ofrecerías a cambio del email de un visitante?",hint:"¿Qué puedes <b>ofrecer a cambio de un email</b>? Un recurso valioso atrae leads de calidad.",type:"textarea",required:false,ai:"Diseñamos tu **sección de lead magnet y el flujo de captación** de nuevos contactos."},
+      {id:"conv_urgencia",label:"¿Puedes generar urgencia o escasez?",hint:"¿Puedes generar <b>urgencia real</b>? Plazas limitadas, precios por tiempo, cupos disponibles. Sin presión artificial.",type:"textarea",required:false,ai:"Añadimos **elementos de urgencia estratégica** sin presiones artificiales."},
+      {id:"conv_seguimiento",label:"¿Tienes estrategia de seguimiento post-contacto?",hint:"El <b>viaje después del formulario</b>. ¿Email automático? ¿Llamada? ¿Secuencia? Definamos la experiencia completa.",type:"textarea",required:false,ai:"Diseñamos tu **página de agradecimiento y los mensajes de seguimiento** automáticos."},
+    ]
+  },
+  {
+    id:14,title:"La esencia de tu marca",
+    desc:"Estas preguntas buscan ir más allá de lo evidente. Aquí defines lo que no siempre se puede ver, pero que se siente en cada detalle de tu marca.",
+    goal:"Capturar la esencia de tu negocio para que cada decisión —visual, narrativa y estratégica— esté completamente alineada.",
+    questions:[
+      {id:"ai_persona",label:"Si tu marca fuera una persona, ¿cómo sería?",hint:"Imagina tu marca como persona. <b>Edad, estilo, voz, intereses</b>. Esto construye una voz coherente.",type:"textarea",required:true,ai:"Construye la **voz completa de tu marca**: tono, vocabulario y estilo narrativo."},
+      {id:"ai_5seg",label:"¿Qué debe sentir un visitante en los primeros 5 segundos?",hint:"La primera impresión es todo. Define qué debe <b>sentir o pensar alguien en los primeros 5 segundos</b> en tu sitio.",type:"text",required:true,ai:"Define el **diseño del hero**: imagen, titular, colores y la jerarquía visual de tu portada."},
+      {id:"ai_diferencia",label:"¿Qué hace que tu empresa sea única de verdad?",hint:"Olvida el discurso de ventas. ¿Qué harías <b>distinto aunque nadie te lo pidiera</b>? Ahí está tu esencia.",type:"textarea",required:true,ai:"Es el **núcleo de tu propuesta de valor única** y atraviesa todo el contenido del sitio."},
+      {id:"ai_prohibido",label:"Elementos visuales que JAMÁS deben aparecer",hint:"Todo lo que <b>NO representa tu marca</b>. Colores, formas, estilos, referencias que deben evitarse por completo.",type:"textarea",required:false,ai:"Los registramos como **restricciones absolutas** en el sistema de diseño."},
+      {id:"ai_metafora",label:"Si tu sitio web fuera una película, ¿cuál sería?",hint:"Si tu sitio fuera una <b>película, libro o canción</b>, ¿cuál sería? Esto captura la esencia emocional del diseño.",type:"text",required:false,ai:"Inspira el **moodboard, el estilo fotográfico y la paleta emocional** de tu sitio."},
+      {id:"ai_extra",label:"¿Hay algo más que debería saber para crear el sitio perfecto?",hint:"Algo que <b>no encajó en las preguntas anteriores</b>. Contexto, intuiciones, restricciones. Todo suma.",type:"textarea",required:false,ai:"Todo este contexto adicional **enriquece la visión final** de tu proyecto."},
+    ]
+  }
+];
+
+const EN_SECTIONS = [
+  {
+    id:1,title:"General Business Information",
+    desc:"We collect the essence of your company: who you are, what you do, and why you exist. This information forms the foundation for all content architecture and the site's tone of voice.",
+    goal:"Build the narrative identity of the website, define the tone of voice and copywriting for all main sections.",
+    questions:[
+      {id:"biz_name",label:"Business name",hint:"The name your customers search for. Be precise — this determines <b>your domain and the main title of your site</b>.",type:"text",required:true,ai:"This defines your **domain, main title, and core site structure**."},
+      {id:"biz_tagline",label:"Slogan or tagline",hint:"Don't have one yet? No problem. We can <b>create options</b> based on what you share.",type:"text",required:false,ai:"Serves as your **main subtitle** on the homepage and header."},
+      {id:"biz_history",label:"Business story",hint:"Tell us how you started, how long you've been around, and the <b>key moment</b> that shaped your business.",type:"textarea",required:true,ai:"Builds your **\"Our story\"** section and brings authenticity to every page."},
+      {id:"biz_mision",label:"Mission",hint:"Why does your company exist beyond making money? A <b>real purpose</b> connects with your audience.",type:"textarea",required:true,ai:"Becomes the heart of your **\"About us\"** page and sets the purpose of your message."},
+      {id:"biz_vision",label:"Vision",hint:"Picture the future. Where do you want to be in 5-10 years? That <b>shapes the direction of the project</b>.",type:"textarea",required:false,ai:"Strengthens your institutional pages and builds **long-term credibility**."},
+      {id:"biz_valores",label:"Corporate values",hint:"The principles that <b>guide your decisions</b>. Between 3 and 6 values that define how you do business.",type:"tags",required:true,ai:"Shape your **content tone** and can be highlighted visually across the site."},
+      {id:"biz_diferenciadores",label:"What makes you different?",hint:"Your real advantage. Be <b>specific and honest</b> — this will become your value proposition.",type:"textarea",required:true,ai:"Become your **core value proposition** -- clear benefits and authentic sales arguments."},
+      {id:"biz_personalidad",label:"Brand personality",hint:"Pick the options that best <b>reflect your brand's personality</b>. This defines how you'll communicate.",type:"checkboxes",options:["Professional and serious","Warm and friendly","Innovative and disruptive","Traditional and reliable","Luxurious and exclusive","Fun and energetic","Minimalist and elegant","Technical and specialized"],required:true,ai:"Defines the **tone, visual style, and formality level** of your entire site."},
+      {id:"biz_contacto",label:"Main contact information",hint:"The key info so <b>your customers can find you</b>. Phone, email, address, and hours.",type:"textarea",required:true,ai:"Feeds your **contact section, footer, and local SEO data**."},
+      {id:"biz_redes",label:"Active social media",hint:"Direct links to <b>your active profiles</b>. Full URLs, no shortcuts.",type:"textarea",required:false,ai:"These appear in your **footer, header, and social sections**."},
+    ]
+  },
+  {
+    id:2,title:"Web Project Objectives",
+    desc:"Without clear objectives, a website is just a digital business card. Here we define the strategic purpose so every design decision is results-oriented.",
+    goal:"Design the conversion architecture, user flow, and success metrics that will guide the design.",
+    questions:[
+      {id:"obj_principal",label:"Main website objective",hint:"The <b>core goal</b> of the project. Everything in the design will revolve around this.",type:"radio",options:["Generate qualified leads","Sell products/services online","Inform and educate customers","Strengthen brand image","Attract talent/recruitment","Support existing customers","Other"],required:true,ai:"Defines your **main CTA, homepage layout, and how users navigate**."},
+      {id:"obj_secundarios",label:"Secondary objectives",hint:"Additional goals that <b>complement the main objective</b>. Check all that apply.",type:"checkboxes",options:["SEO positioning","Community building","Market education","Reduce support load","Expand to new markets","Generate business partnerships"],required:false,ai:"These become **additional sections and features** on your site."},
+      {id:"obj_kpis",label:"Success KPIs",hint:"Define how <b>you'll know the site is working</b>. E.g., leads per month, conversion rate, organic traffic.",type:"textarea",required:true,ai:"Determines which **metrics, forms, and CTAs** get priority in the design."},
+      {id:"obj_conversion",label:"Desired main conversion",hint:"The <b>most important action</b> you expect from every visitor. The design will prioritize this above all.",type:"radio",options:["Fill out a contact form","Make a phone call","Buy a product","Schedule an appointment/meeting","Subscribe to newsletter","Download a resource","Chat via WhatsApp"],required:true,ai:"Defines your **main CTA and the visual hierarchy** of your homepage."},
+      {id:"obj_plazo",label:"Timeline for results",hint:"When do you expect to see results? This <b>defines the urgency and strategy</b> of the project.",type:"radio",options:["1-3 months","3-6 months","6-12 months","Long term +1 year"],required:false,ai:"Helps shape your **visual urgency, conversion strategy, and SEO scope**."},
+    ]
+  },
+  {
+    id:3,title:"Current Situation and Competition",
+    desc:"We analyze the starting point and the competitive landscape to identify differentiation opportunities and areas for improvement.",
+    goal:"Detect positioning opportunities and define the visual and content differentiation strategy.",
+    questions:[
+      {id:"comp_sitio",label:"Your current website URL (if any)",hint:"Your current site, if it exists. If not, just say <b>\"I don't have one\"</b> and we'll start fresh.",type:"url",required:false,ai:"We review your current site to decide **what to keep and what to improve**."},
+      {id:"comp_problemas",label:"Problems with the current site",hint:"Point out what <b>isn't working</b> on your current site. So we know exactly what to avoid or improve.",type:"checkboxes",options:["Outdated design","Doesn't generate leads","Slow or with technical issues","Not mobile-friendly","Difficult to update","Doesn't rank on Google","Doesn't reflect my company's quality","I don't currently have a website"],required:false,ai:"Helps us prioritize **real solutions** in your new architecture and design."},
+      {id:"comp_directos",label:"Direct competitors (URLs)",hint:"Your <b>direct competitors' sites</b>. We analyze them to find your differentiation.",type:"textarea",required:true,ai:"We analyze your competitors to find **real differentiation opportunities**."},
+      {id:"comp_aspiracionales",label:"Aspirational companies",hint:"Brands you <b>admire even if they don't compete with you</b>. They set the bar we aim for.",type:"textarea",required:false,ai:"Sets the **visual aspiration level** and the communication tone we're aiming for."},
+      {id:"comp_oportunidades",label:"Market opportunities",hint:"Your hidden advantage. What can you do <b>better than anyone</b> in your market?",type:"textarea",required:false,ai:"This becomes **unique value propositions** that set your site apart."},
+    ]
+  },
+  {
+    id:4,title:"Target Audience",
+    desc:"Deeply knowing your ideal client allows you to design every message and call to action to resonate emotionally with those who make the purchase decision.",
+    goal:"Build the buyer personas that will guide copywriting, visual design, and content strategy.",
+    questions:[
+      {id:"pub_ideal",label:"Describe your ideal client",hint:"Describe your ideal client in detail: age, occupation, location. This <b>personalizes every message</b> on the site.",type:"textarea",required:true,ai:"We build your **ideal client profile** to tailor every message on the site."},
+      {id:"pub_problemas",label:"What problems does your client have that you solve?",hint:"Your customers' <b>real problems</b>. Be specific — this is where the most powerful sales arguments come from.",type:"textarea",required:true,ai:"These problems become **authentic sales arguments** on your homepage and service pages."},
+      {id:"pub_motivaciones",label:"What motivates your client to seek you out?",hint:"What <b>made them look for you</b>? Identify the pain or desire that triggers the buying decision.",type:"textarea",required:true,ai:"Inspire **impactful headlines** and set the emotional tone of your content."},
+      {id:"pub_objeciones",label:"Most common objections",hint:"The reasons <b>someone hesitates to buy from you</b>. Anticipating them is the best way to respond.",type:"textarea",required:true,ai:"We anticipate these objections and **address them clearly** in FAQs, testimonials, and your value proposition."},
+      {id:"pub_decision",label:"How does your client make decisions?",hint:"How does your client decide? This <b>determines how much information</b> each page needs.",type:"radio",options:["Decides quickly, without much research","Researches and compares several options","Needs to talk to someone before deciding","Depends on third-party recommendations","Requires multiple touchpoints"],required:true,ai:"Shapes your **conversion funnel** and how much information each page needs."},
+      {id:"pub_canales",label:"Which channels does your client find you through?",hint:"The channels where <b>your clients find you</b>. This guides the traffic and acquisition strategy.",type:"checkboxes",options:["Google organic search","Google Ads","Instagram","Facebook","LinkedIn","YouTube","TikTok","Referrals/word of mouth","Fairs and events","Online directories"],required:true,ai:"Guides your **SEO strategy, CTAs, and social media integrations**."},
+    ]
+  },
+  {
+    id:5,title:"Branding and Visual Identity",
+    desc:"Visual design is not decoration, it's strategic communication. Here we define the visual language that will convey your brand's values and personality.",
+    goal:"Generate the complete visual brief: palette, typography, graphic style, and image guidelines for the site.",
+    questions:[
+      {id:"brand_logo",label:"Do you have a logo?",hint:"Do you already have a visual identity? This defines whether <b>we start from your logo or create a new one</b>.",type:"radio",options:["Yes, I have a defined logo","I have one but it needs updating","I don't have a logo yet"],required:true,ai:"Defines whether the design **starts from your existing logo or is built from scratch**."},
+      {id:"brand_colores",label:"Current or desired color palette",hint:"Your colors, if you have them. Share HEX codes or simply <b>describe the tones that represent you</b>.",type:"textarea",required:false,ai:"Sets the **foundation for your color palette**. If you don't have one, we create one that reflects your personality."},
+      {id:"brand_tipografia",label:"Typography or preferences",hint:"Do you have brand fonts? Or tell me <b>what style you prefer</b>: modern, classic, clean, expressive.",type:"textarea",required:false,ai:"Defines your site's **typography system** -- headings, body text, and UI elements."},
+      {id:"brand_estilo",label:"Desired visual style",hint:"Choose the style that best <b>reflects the visual essence</b> you're looking for.",type:"checkboxes",options:["Minimalist and clean","Corporate and formal","Modern and technological","Warm and human","Luxurious and premium","Colorful and vibrant","Dark and sophisticated","Illustrative and creative","Photographic and immersive"],required:true,ai:"Defines your **master visual style** -- spacing, imagery, and graphic elements."},
+      {id:"brand_emociones",label:"What emotions should your site convey?",hint:"The emotions your site should <b>awaken in every visitor</b>. They guide color, imagery, and tone.",type:"checkboxes",options:["Trust and security","Innovation and modernity","Quality and excellence","Closeness and warmth","Exclusivity and prestige","Energy and motivation","Tranquility and well-being","Professionalism and seriousness"],required:true,ai:"Guide every decision on **color, imagery, spacing, and animation**."},
+      {id:"brand_prohibido",label:"Visual elements that should NEVER appear",hint:"Everything you <b>DON'T want to see</b> on your site. Colors, styles, or references that just aren't you.",type:"textarea",required:false,ai:"We log these as **design restrictions** to make sure we avoid them entirely."},
+      {id:"brand_nivel",label:"Desired visual sophistication level",hint:"How <b>visually sophisticated</b> do you want your site? If unsure, 3 is usually a good starting point.",type:"scale",min:1,max:5,required:true,ai:"Sets the **level of visual complexity** -- animations, effects, and design detail."},
+    ]
+  },
+  {
+    id:6,title:"Site Architecture",
+    desc:"The site's structure determines how information flows and how users navigate toward conversion. Here we define the pages, hierarchy, and flow.",
+    goal:"Generate the complete sitemap, navigation hierarchy, and optimal user flow for conversion.",
+    questions:[
+      {id:"arq_paginas",label:"Pages you need on the site",hint:"The pages <b>your site needs</b>. Check all that apply — we can adjust later.",type:"checkboxes",options:["Homepage","About us","Services (general)","Individual service pages","Portfolio/Case studies","Testimonials","Blog/Resources","FAQ","Pricing","Contact","Thank you page","Privacy policy","Terms and conditions"],required:true,ai:"We build your **complete sitemap** and navigation structure."},
+      {id:"arq_extras",label:"Do you need special pages not listed?",hint:"Something <b>out of the ordinary</b>? Calculators, private areas, special integrations. This is the moment.",type:"textarea",required:false,ai:"We add these to the **sitemap and design their wireframes**."},
+      {id:"arq_prioridad",label:"The 3 most important pages",hint:"The 3 pages <b>most important to your business</b>. They'll get special attention in design and content.",type:"textarea",required:true,ai:"These pages get **priority attention** in design, content, and conversion."},
+      {id:"arq_flujo",label:"Ideal visitor flow",hint:"Describe the <b>ideal visitor journey</b>. E.g., Home → Services → Contact. This shapes the navigation.",type:"textarea",required:true,ai:"We design **internal navigation and CTAs** to guide your visitors step by step."},
+    ]
+  },
+  {
+    id:7,title:"Available Content",
+    desc:"We inventory existing materials to know what we have and what needs to be produced.",
+    goal:"Determine what content must be generated from scratch and what can be adapted from existing materials.",
+    questions:[
+      {id:"cont_textos",label:"Do you have written texts?",hint:"What <b>written material</b> do you already have? The more you have, the less we create from scratch.",type:"radio",options:["Yes, complete texts","Partial texts","Only ideas and notes","I have nothing written"],required:true,ai:"Defines **how much content we create from scratch** versus adapt from what you already have."},
+      {id:"cont_fotos",label:"Do you have professional photographs?",hint:"Do you have <b>real photos</b> of your business? This defines the visual production level of the site.",type:"radio",options:["Yes, professional photo bank","Some basic photos","Only phone photos","I don't have photographs"],required:true,ai:"Defines whether we use **real photography or premium stock**, and the visual production level."},
+      {id:"cont_videos",label:"Do you have video material?",hint:"Your available <b>video material</b>. Helps us decide whether to include dynamic sections or animations.",type:"radio",options:["Yes, professional videos","Basic/home videos","I don't have any but I'm willing to produce","I don't want to use videos"],required:false,ai:"Determines whether we include **video hero sections, galleries, or animations** based on your material."},
+      {id:"cont_recursos",label:"Available downloadable resources",hint:"Resources you <b>can offer in exchange for an email</b>. Guides, catalogs, templates. This attracts leads.",type:"textarea",required:false,ai:"We create **download and lead magnet sections** to capture emails naturally."},
+    ]
+  },
+  {
+    id:8,title:"Products and Services",
+    desc:"We detail each offering so the site presents every product or service strategically, clearly, and conversion-oriented.",
+    goal:"Generate individual service/product pages with conversion-optimized copywriting.",
+    questions:[
+      {id:"serv_lista",label:"List your main products or services",hint:"List your main products or services. <b>Each one will get its own page</b> with unique content.",type:"textarea",required:true,ai:"We create a **dedicated page per service** with unique structure, content, and CTA."},
+      {id:"serv_estrella",label:"Your flagship product/service",hint:"Your <b>flagship product</b>. The one you sell most, the most profitable, or the one you want to boost.",type:"text",required:true,ai:"Your flagship service gets **priority visual treatment** on the homepage and navigation."},
+      {id:"serv_beneficios",label:"Main benefits of your services",hint:"What your customer <b>really gains</b>. Not technical features, but benefits they can feel.",type:"textarea",required:true,ai:"We build **benefit sections and value propositions** for each service."},
+      {id:"serv_proceso",label:"What is your work process?",hint:"The steps a customer follows <b>from contacting you to receiving</b>. Helps build trust.",type:"textarea",required:false,ai:"This creates a **\"How we work\"** section with your visual step-by-step process."},
+      {id:"serv_precio",label:"Will you show prices on the site?",hint:"Do you prefer to <b>show prices or keep them upon request</b>? Each strategy has a different design.",type:"radio",options:["Fixed visible prices","Prices from/starting from","Prices on request","Prices won't be shown"],required:true,ai:"We design your **pricing pages or quotation flow** based on your strategy."},
+    ]
+  },
+  {
+    id:9,title:"Social Proof and Credibility",
+    desc:"Trust is built with evidence. Here we collect all the elements that prove your company delivers on its promises.",
+    goal:"Design credibility sections that reduce perceived risk and accelerate the purchasing decision.",
+    questions:[
+      {id:"social_testimonios",label:"Client testimonials",hint:"<b>Real client testimonials</b>. Include name and title. With 3 or more, we build a solid section.",type:"textarea",required:false,ai:"We create a **testimonial section** with photos, names, and featured quotes."},
+      {id:"social_numeros",label:"Relevant statistics",hint:"The numbers that <b>prove your experience</b>. Years, clients, projects. They look great with animated counters.",type:"textarea",required:false,ai:"Your key numbers become an **impact metrics section** with animated counters."},
+      {id:"social_clientes",label:"Important clients or brands",hint:"The brands that <b>trust you</b>. Share their logos (with permission) to build instant authority.",type:"textarea",required:false,ai:"We design a **client logo gallery** that builds authority and trust instantly."},
+      {id:"social_cert",label:"Certifications, awards, or recognition",hint:"<b>Certifications and awards</b> that back up your work. They appear as badges on key pages.",type:"textarea",required:false,ai:"These **credibility badges** appear on your most important pages."},
+      {id:"social_casos",label:"Do you have documented case studies?",hint:"Do you have <b>documented case studies</b> with results? They're the most persuasive content for conversion.",type:"radio",options:["Yes, cases with documented results","Stories but without metrics","I don't have any but I'm willing to create","I don't have case studies"],required:true,ai:"We create a **portfolio or case studies section** at whatever detail level you have."},
+    ]
+  },
+  {
+    id:10,title:"Required Functionalities",
+    desc:"We define the technical capabilities of the site so that architecture and development align with your operational needs.",
+    goal:"Generate the list of technical requirements, integrations, and recommended technology stack.",
+    questions:[
+      {id:"func_basicas",label:"Required basic functionalities",hint:"The <b>essential functionalities</b> every site needs. Check all that apply to your project.",type:"checkboxes",options:["Contact form","Live chat","Floating WhatsApp","Newsletter/Subscription","Blog/News","Internal search","Google map","Image gallery","Video gallery"],required:true,ai:"Defines the **list of components and modules** we'll build for your site."},
+      {id:"func_avanzadas",label:"Advanced functionalities",hint:"<b>Advanced functionalities</b> to take your site to the next level. E-commerce, CRM, memberships, and more.",type:"checkboxes",options:["E-commerce (online store)","Booking/appointment system","Client area/Login","Memberships or subscriptions","Payment gateway","Affiliate portal","Multiple languages","CRM integration","Email automation"],required:false,ai:"Defines the **technical complexity** and the integrations we need to implement."},
+      {id:"func_herramientas",label:"Tools you currently use",hint:"The tools you <b>already use in your business</b>. We integrate them so everything works together.",type:"textarea",required:false,ai:"We connect your site with the **tools you already use** every day."},
+      {id:"func_cms",label:"Who will update the site content?",hint:"Who will <b>update the content</b> after launch? This determines the best CMS for you.",type:"radio",options:["Myself / internal team","Agency or external freelancer","I don't need to update content often"],required:true,ai:"Determines the **best CMS for you** and the level of admin access you'll have."},
+    ]
+  },
+  {
+    id:11,title:"SEO Strategy",
+    desc:"Search engine positioning is a long-term investment. Here we define the keyword strategy and geolocation to build organic authority.",
+    goal:"Generate the keyword strategy, URL structure, metadata, and initial technical SEO.",
+    questions:[
+      {id:"seo_keywords",label:"Main keywords",hint:"The words <b>your clients type into Google</b> to find what you offer. Think like them.",type:"tags",required:true,ai:"Build your **URL structure, page titles, headings, and meta descriptions**."},
+      {id:"seo_geo",label:"Target geographic locations",hint:"Where do you want to be found? <b>Cities, regions, or countries</b>. We create local pages for each.",type:"tags",required:true,ai:"We create **local landing pages and an SEO strategy** focused on your target locations."},
+      {id:"seo_competencia",label:"Do your competitors rank well on Google?",hint:"Who <b>dominates the results</b> when you search for your services? This helps estimate the effort needed.",type:"textarea",required:false,ai:"Helps us estimate the **effort and time needed** to rank against your competition."},
+      {id:"seo_blog",label:"Do you have a content strategy?",hint:"An active blog is <b>the best long-term SEO investment</b>. Do you already publish or would you like to start?",type:"radio",options:["Yes, active blog with frequent publications","I did it in the past but not consistently","I would like to start","I'm not interested in blogging"],required:false,ai:"We design your **blog structure, categories, and initial editorial calendar**."},
+    ]
+  },
+  {
+    id:12,title:"Visual References",
+    desc:"References are the fastest language between client and designer. Here we identify what you like and dislike to avoid unnecessary iterations.",
+    goal:"Build the digital moodboard, aesthetic brief, and explicit design constraints.",
+    questions:[
+      {id:"ref_favoritos",label:"Websites you like",hint:"Sites that <b>inspire you</b>. Share URLs and tell us what you like about each. This guides the designer.",type:"textarea",required:true,ai:"We identify **visual patterns and structures** that will inspire your site's design."},
+      {id:"ref_odio",label:"Websites you don't like",hint:"Sites you <b>don't like</b> and why. Just as important: knowing what to avoid.",type:"textarea",required:false,ai:"We turn these into **design restrictions** to avoid everything you don't like."},
+      {id:"ref_marcas",label:"What global brands best represent your vision?",hint:"Global brands that <b>represent the level you aspire to</b>. Industry doesn't matter, inspiration does.",type:"textarea",required:true,ai:"Define the **visual aspiration level** and positioning we're aiming for your brand."},
+      {id:"ref_palabras",label:"Three words that must define the design",hint:"Three words that <b>capture the essence of the design</b> you're looking for. E.g., modern, warm, bold.",type:"text",required:true,ai:"These become the **master creative guidelines** for every design decision."},
+    ]
+  },
+  {
+    id:13,title:"Conversion Strategy",
+    desc:"The most beautiful website is useless if it doesn't convert visitors into customers. Here we design the capture and persuasion system.",
+    goal:"Design the conversion funnel, CTAs, lead magnets, and post-visit follow-up strategy.",
+    questions:[
+      {id:"conv_cta",label:"Main CTA text",hint:"The text on your <b>most important button</b>. It should be clear, direct, and motivate action.",type:"text",required:true,ai:"Appears in your **hero section, header, and key conversion positions**."},
+      {id:"conv_oferta",label:"Do you have a special offer, guarantee, or incentive?",hint:"Do you have something that <b>makes the decision easier</b>? Guarantees, discounts, free consultations. This converts.",type:"textarea",required:false,ai:"Becomes your **strongest conversion argument** and gets visual priority on the site."},
+      {id:"conv_lead",label:"What would you offer in exchange for a visitor's email?",hint:"What can you <b>offer in exchange for an email</b>? A valuable resource attracts quality leads.",type:"textarea",required:false,ai:"We design your **lead magnet section and contact capture flow**."},
+      {id:"conv_urgencia",label:"Can you generate urgency or scarcity?",hint:"Can you create <b>real urgency</b>? Limited spots, time-based pricing, available slots. No artificial pressure.",type:"textarea",required:false,ai:"We add **strategic urgency elements** without creating artificial pressure."},
+      {id:"conv_seguimiento",label:"Do you have a post-contact follow-up strategy?",hint:"The <b>journey after the form</b>. Auto-email? Call? Sequence? Let's define the complete experience.",type:"textarea",required:false,ai:"We design your **thank you page and automatic follow-up messages**."},
+    ]
+  },
+  {
+    id:14,title:"The essence of your brand",
+    desc:"These questions go beyond the obvious. This is where you define what may not always be seen, but is felt in every detail of your brand.",
+    goal:"Capture the core of your business so every decision —visual, narrative, and strategic— feels fully aligned.",
+    questions:[
+      {id:"ai_persona",label:"If your brand were a person, what would it be like?",hint:"Imagine your brand as a person. <b>Age, style, voice, interests</b>. This builds a consistent voice.",type:"textarea",required:true,ai:"Builds your **complete brand voice**: tone, vocabulary, and narrative style."},
+      {id:"ai_5seg",label:"What should a visitor feel in the first 5 seconds?",hint:"First impressions are everything. Define what someone should <b>feel or think in the first 5 seconds</b> on your site.",type:"text",required:true,ai:"Defines your **hero design**: image, headline, colors, and homepage visual hierarchy."},
+      {id:"ai_diferencia",label:"What truly makes your company unique?",hint:"Forget the sales pitch. What would you do <b>differently even if no one asked</b>? That's your essence.",type:"textarea",required:true,ai:"Becomes the **core of your unique value proposition**, woven into every page."},
+      {id:"ai_prohibido",label:"Visual elements that should NEVER appear",hint:"Everything that <b>does NOT represent your brand</b>. Colors, shapes, styles, references to avoid completely.",type:"textarea",required:false,ai:"We encode these as **absolute restrictions** in the design system."},
+      {id:"ai_metafora",label:"If your website were a movie, what would it be?",hint:"If your site were a <b>movie, book, or song</b>, what would it be? This captures the emotional essence of the design.",type:"text",required:false,ai:"Inspires your **moodboard, photographic style, and emotional palette**."},
+      {id:"ai_extra",label:"Is there anything else I should know to create the perfect site?",hint:"Something that <b>didn't fit in the previous questions</b>. Context, intuitions, restrictions. Everything adds up.",type:"textarea",required:false,ai:"This extra context **enriches the final vision** of your project."},
+    ]
+  }
+];
+
+
+const SECTIONS_ORIG = JSON.parse(JSON.stringify(SECTIONS));
+const _tr = {
+  section_number:{es:"Sección",en:"Section"},
+  of:{es:"de",en:"of"},
+  strategic_goal:{es:"Objetivo estratégico:",en:"Strategic goal:"},
+  required:{es:"Requerido",en:"Required"},
+  optional:{es:"Opcional",en:"Optional"},
+  prev_btn:{es:"Anterior",en:"Previous"},
+  next_btn:{es:"Siguiente sección",en:"Next section"},
+  final_btn:{es:"Generar Build a Brief ?",en:"Generate Build a Brief ?"},
+  tag_placeholder:{es:"Escribe y presiona Agregar...",en:"Type and press Add..."},
+  tag_add:{es:"+ Agregar",en:"+ Add"},
+  scale_simple:{es:"Simple (1)",en:"Simple (1)"},
+  scale_elaborate:{es:"Elaborado",en:"Elaborate"},
+  reset_confirm:{es:"¿Estás seguro? Se borrarán todas las respuestas y comenzarás desde el principio.",en:"Are you sure? All answers will be deleted and you will start from the beginning."},
+  hero_eyebrow:{es:"Aqu\u00ed empieza tu sitio web",en:"Your website starts here"},
+  hero_title:{es:"De idea a <span class=\"accent-word\">sitio web</span>,<br>sin perderte en el camino",en:"From idea to <span class=\"accent-word\">website</span>,<br>without losing your way"},
+  hero_sub:{es:"Convierte lo que tienes en mente en una estructura clara, lista para dise\u00f1o, contenido y desarrollo. Un brief bien hecho es la diferencia entre una web que existe\u2026 y una que funciona.",en:"Turn what you have in mind into a clear structure, ready for design, content and development. A well-made brief is the difference between a website that exists\u2026 and one that works."},
+  hero_cta:{es:"Empezar mi brief",en:"Start my brief"},
+  feat_14:{es:"14 secciones estratégicas",en:"14 strategic sections"},
+  feat_save:{es:"Guardado automático",en:"Auto-save"},
+  feat_pro:{es:"Prompt maestro para Claude",en:"Master prompt for Claude"},
+  feat_custom:{es:"Exportar PDF y Markdown",en:"Export PDF and Markdown"},
+  nav_badge:{es:"Herramienta Premium",en:"Premium Tool"},
+  contact_title:{es:"Gracias por completar tu Discovery Web",en:"Thank you for completing your Web Discovery"},
+  contact_desc:{es:"Hemos recibido toda la información necesaria para analizar tu proyecto. Nuestro equipo revisará tus respuestas y se pondrá en contacto contigo para los siguientes pasos.",en:"We have received all the necessary information to analyze your project. Our team will review your answers and contact you for the next steps."},
+  label_name:{es:"Nombre completo ",en:"Full name "},
+  label_email:{es:"Correo electrónico ",en:"Email "},
+  label_company:{es:"Nombre de la empresa",en:"Company name"},
+  label_phone:{es:"Teléfono",en:"Phone"},
+  inp_name_placeholder:{es:"",en:""},
+  inp_email_placeholder:{es:"correo@ejemplo.com",en:"email@example.com"},
+  inp_phone_placeholder:{es:"+52 55 1234 5678",en:"+52 55 1234 5678"},
+  err_name:{es:"Este campo es obligatorio",en:"This field is required"},
+  err_email:{es:"Ingresa un correo válido",en:"Enter a valid email"},
+  btn_submit:{es:"Enviar información",en:"Send information"},
+  success_title:{es:"¡Información enviada correctamente!",en:"Information sent successfully!"},
+  success_text:{es:"Gracias. Hemos recibido tu proyecto y comenzaremos a revisarlo. Pronto recibirás una confirmación por correo electrónico.",en:"Thank you. We have received your project and will begin reviewing it. You will soon receive a confirmation by email."},
+  success_btn:{es:"Comenzar nuevo cuestionario",en:"Start new questionnaire"},
+  cp_info:{es:"Proceso completado",en:"Process completed"},
+  cp_step:{es:"Discovery Web finalizado",en:"Web Discovery finished"},
+  foot_copy:{es:"\u00a9 2026 Javier Ibrahim \u2014 Construye la base de tu sitio web",en:"\u00a9 2026 Javier Ibrahim \u2014 Build the foundation of your website"},
+  toast_send_success:{es:"Tu brief fue enviado correctamente.",en:"Your brief was sent successfully."},
+  toast_send_error:{es:"Ocurri\u00f3 un problema al enviar el brief.",en:"There was a problem sending your brief."},
+  prog_section:{es:"Secci\u00f3n",en:"Section"},
+  prog_of:{es:"de",en:"of"},
+};
+const AI_PREF_ES=["Utilizaremos esto para:","Esto nos ayudará a:","Con esta información podremos:","Esto servirá para:","A partir de esto podremos:","Esto nos permitirá:","Usaremos esta información para:","Esto será clave para:"];
+const AI_PREF_EN=["We'll use this to:","This helps us to:","With this, we can:","This will allow us to:","We use this to:","This will help shape:","From this, we can:"];
+function aiPref(qi,si){const p=currentLang==='es'?AI_PREF_ES:AI_PREF_EN;return p[(si*7+qi)%p.length]}
+let currentLang = "en";
+function t(key, fallback) {
+  const entry = _tr[key];
+  if (currentLang === "en" && entry && entry.en !== undefined) return entry.en;
+  if (entry && entry.es !== undefined) return entry.es;
+  return fallback !== undefined ? fallback : key;
+}
+function updateUILabels() {
+  const el = (id) => document.getElementById(id);
+  if (el("hero-eyebrow-text")) el("hero-eyebrow-text").textContent = t("hero_eyebrow");
+  if (el("hero-title")) el("hero-title").innerHTML = t("hero_title");
+  if (el("hero-sub")) el("hero-sub").textContent = t("hero_sub");
+  if (el("hero-cta-text")) el("hero-cta-text").textContent = t("hero_cta");
+  if (el("hf-3")) el("hf-3").textContent = t("feat_pro");
+  if (el("hf-4")) el("hf-4").textContent = t("feat_custom");
+  if (el("hf-1")) el("hf-1").textContent = t("feat_14");
+  if (el("hf-2")) el("hf-2").textContent = t("feat_save");
+  if (el("nav-badge-text")) el("nav-badge-text").textContent = t("nav_badge");
+  if (el("prog-sec-label")) el("prog-sec-label").textContent = t("prog_section");
+  if (el("prog-of-label")) el("prog-of-label").textContent = t("prog_of");
+  if (el("contact-title")) el("contact-title").textContent = t("contact_title");
+  if (el("contact-desc")) el("contact-desc").textContent = t("contact_desc");
+  if (el("label-name")) el("label-name").childNodes[0].textContent = t("label_name");
+  if (el("label-email")) el("label-email").childNodes[0].textContent = t("label_email");
+  if (el("label-company")) el("label-company").childNodes[0].textContent = t("label_company");
+  if (el("label-phone")) el("label-phone").childNodes[0].textContent = t("label_phone");
+  if (el("inp-name")) el("inp-name").placeholder = t("inp_name_placeholder");
+  if (el("inp-email")) el("inp-email").placeholder = t("inp_email_placeholder");
+  if (el("inp-phone")) el("inp-phone").placeholder = t("inp_phone_placeholder");
+  if (el("err-name")) el("err-name").textContent = t("err_name");
+  if (el("err-email")) el("err-email").textContent = t("err_email");
+  if (el("btn-submit-text")) el("btn-submit-text").textContent = t("btn_submit");
+  if (el("success-title")) el("success-title").textContent = t("success_title");
+  if (el("success-text")) el("success-text").textContent = t("success_text");
+  if (el("success-btn-text")) el("success-btn-text").textContent = t("success_btn");
+  if (el("cp-info")) el("cp-info").textContent = t("cp_info");
+  if (el("cp-step")) el("cp-step").textContent = t("cp_step");
+  const fc = document.querySelector(".footer-copy");
+  if (fc) fc.textContent = t("foot_copy");
+  document.documentElement.lang = currentLang;
+  document.getElementById("lang-es").classList.toggle("active", currentLang === "es");
+  document.getElementById("lang-en").classList.toggle("active", currentLang === "en");
+}
+function setLang(lang) {
+  if (lang === currentLang && window._langInit) return;
+  window._langInit = true;
+  currentLang = lang;
+  localStorage.setItem('briefMaestroLang', lang);
+  SECTIONS_ORIG.forEach((so, i) => {
+    const s = SECTIONS[i];
+    if (!s) return;
+    s.title = so.title; s.desc = so.desc; s.goal = so.goal;
+    so.questions.forEach((sq, j) => {
+      if (!s.questions[j]) return;
+      s.questions[j].label = sq.label;
+      s.questions[j].hint = sq.hint;
+      s.questions[j].ai = sq.ai;
+      if (sq.options) s.questions[j].options = sq.options;
+    });
+  });
+  if (lang === "en") {
+    EN_SECTIONS.forEach((es, i) => {
+      const s = SECTIONS[i];
+      if (!s) return;
+      s.title = es.title; s.desc = es.desc; s.goal = es.goal;
+      es.questions.forEach((eq, j) => {
+        if (!s.questions[j]) return;
+        s.questions[j].label = eq.label;
+        s.questions[j].hint = eq.hint;
+        s.questions[j].ai = eq.ai;
+        if (eq.options) s.questions[j].options = eq.options;
+      });
+    });
+  }
+  updateUILabels();
+  if (document.getElementById("app") && document.getElementById("app").classList.contains("active")) {
+    currentStep = SECTIONS_ORIG.findIndex((so, i) => SECTIONS[i] && SECTIONS[i].id === SECTIONS_ORIG[currentStep]?.id);
+    renderStep();
+  }
+}
+
+
+let currentStep=0;
+let formData={};
+let tagInputs={};
+
+function save(){localStorage.setItem('briefMaestro',JSON.stringify(formData));localStorage.setItem('briefMaestroLang',currentLang)}
+function load(){try{const d=localStorage.getItem('briefMaestro');if(d)formData=JSON.parse(d)}catch(e){}try{const l=localStorage.getItem('briefMaestroLang');if(l&&(l==='es'||l==='en'))currentLang=l}catch(e){}}
+load();const _bl=(navigator.language||navigator.userLanguage||'').toLowerCase();setLang(localStorage.getItem('briefMaestroLang')||(_bl.startsWith('es')?'es':'en'))
+
+function startApp(){
+  document.getElementById('hero').style.display='none';
+  document.getElementById('app').classList.add('active');
+  document.getElementById('footer').style.display='flex';
+  buildDots();
+  renderStep();
+  window.scrollTo(0,0);
+}
+
+function buildDots(){
+  const c=document.getElementById('step-dots');
+  c.innerHTML='';
+  SECTIONS.forEach((s,i)=>{
+    const d=document.createElement('div');
+    d.className='step-dot'+(i===currentStep?' active':'')+(i<currentStep?' done':'');
+    d.onclick=()=>{if(i<=currentStep||isStepComplete(i-1)){goTo(i)}};
+    d.title=s.title;
+    c.appendChild(d);
+  });
+}
+
+function updateProgress(){
+  const pct=Math.round(((currentStep+1)/SECTIONS.length)*100);
+  document.getElementById('progress-fill').style.width=pct+'%';
+  document.getElementById('cur-step').textContent=currentStep+1;
+  document.getElementById('cur-step-name').textContent=SECTIONS[currentStep].title;
+  document.getElementById('cur-pct').textContent=pct+'%';
+  buildDots();
+}
+
+function isStepComplete(idx){
+  if(idx<0)return true;
+  const s=SECTIONS[idx];
+  return s.questions.filter(q=>q.required).every(q=>{
+    const v=formData[q.id];
+    return v&&((typeof v==='string'&&v.trim())||(Array.isArray(v)&&v.length>0)||typeof v==='number');
+  });
+}
+
+function renderStep(){
+  updateProgress();
+  const s=SECTIONS[currentStep];
+  const c=document.getElementById('form-container');
+  c.style.opacity='0';
+  c.style.transform='translateX(20px)';
+  setTimeout(()=>{
+    c.innerHTML=buildStepHTML(s);
+    attachEvents(s);
+    c.style.transition='opacity 0.4s ease,transform 0.4s ease';
+    c.style.opacity='1';
+    c.style.transform='translateX(0)';
+    window.scrollTo({top:0,behavior:'smooth'});
+  },200);
+}
+
+function buildStepHTML(s){
+  let html=`
+    <div class="section-eyebrow">${t('section_number')} ${s.id} ${t('of')} ${SECTIONS.length}</div>
+    <h2 class="section-title">${s.title}</h2>
+    <p class="section-desc">${s.desc}</p>
+    <div class="section-goal">
+      <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+      <span><strong style="color:var(--text)">${t('strategic_goal')}</strong> ${s.goal}</span>
+    </div>`;
+
+  s.questions.forEach((q,qi)=>{
+    html+=`<div class="question-block" id="qblock-${q.id}">
+      <div class="question-label">
+        ${q.label}
+        ${q.required?'<span class="q-required">'+t('required')+'</span>':'<span class="q-optional">'+t('optional')+'</span>'}
+      </div>
+      <p class="question-hint">${q.hint}</p>
+      ${buildInput(q)}
+      <div class="question-ai">
+        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/></svg>
+        <span>${q.ai.replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>')}</span>
+      </div>
+    </div>`;
+  });
+
+  const isLast=currentStep===SECTIONS.length-1;
+  html+=`<div class="nav-btns">
+    ${currentStep>0?`<button class="btn-nav-back" onclick="prevStep()">
+      <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16l-4-4m0 0l4-4m-4 4h18"/></svg>
+      ${t('prev_btn')}
+    </button>`:'<div></div>'}
+    <button class="btn-nav-next${isLast?' final-btn':''}" onclick="${isLast?'submitForm()':'nextStep()'}">
+      ${isLast?t('final_btn'):t('next_btn')}
+      <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg>
+    </button>
+  </div>`;
+  return html;
+}
+
+function buildInput(q){
+  const v=formData[q.id];
+  if(q.type==='text'||q.type==='url'||q.type==='email'){
+    return `<input type="${q.type}" id="inp-${q.id}" value="${v||''}" placeholder="" oninput="formData['${q.id}']=this.value;save()">`;
+  }
+  if(q.type==='textarea'){
+    return `<textarea id="inp-${q.id}" oninput="formData['${q.id}']=this.value;save()">${v||''}</textarea>`;
+  }
+  if(q.type==='radio'){
+    return `<div class="options-grid">${q.options.map(o=>`
+      <div class="option-item${v===o?' selected':''}" onclick="selectRadio('${q.id}','${o.replace(/'/g,"\\'")}',this)">
+        <div class="option-check">
+          <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>
+        </div>
+        ${o}
+      </div>`).join('')}</div>`;
+  }
+  if(q.type==='checkboxes'){
+    const arr=Array.isArray(v)?v:[];
+    const cols=q.options.length>6?'cols2':'';
+    return `<div class="options-grid ${cols}">${q.options.map(o=>`
+      <div class="option-item${arr.includes(o)?' selected':''}" onclick="toggleCheck('${q.id}','${o.replace(/'/g,"\\'")}',this)">
+        <div class="option-check square">
+          <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>
+        </div>
+        ${o}
+      </div>`).join('')}</div>`;
+  }
+  if(q.type==='scale'){
+    const sv=v||3;
+    return `<div class="scale-wrap">
+      <label>${t('scale_simple')}</label>
+      <input type="range" min="${q.min}" max="${q.max}" step="1" value="${sv}" id="inp-${q.id}"
+        oninput="formData['${q.id}']=parseInt(this.value);document.getElementById('sv-${q.id}').textContent=this.value;save()">
+      <label>${t('scale_elaborate')} (${q.max})</label>
+      <div class="scale-value" id="sv-${q.id}">${sv}</div>
+    </div>`;
+  }
+  if(q.type==='tags'){
+    const tags=Array.isArray(v)?v:[];
+    if(!tagInputs[q.id])tagInputs[q.id]='';
+    return `
+      <div class="tags-container" id="tags-${q.id}">
+        ${tags.map((t,i)=>`<span class="tag-pill">${t}<span class="tag-pill-remove" onclick="removeTag('${q.id}',${i})">×</span></span>`).join('')}
+      </div>
+      <div class="tag-input-row">
+        <input type="text" id="tag-inp-${q.id}" placeholder="${t('tag_placeholder')}" value="${tagInputs[q.id]||''}"
+          oninput="tagInputs['${q.id}']=this.value"
+          onkeydown="if(event.key==='Enter'){event.preventDefault();addTag('${q.id}')}">
+        <button class="btn-tag-add" onclick="addTag('${q.id}')">${t('tag_add')}</button>
+      </div>`;
+  }
+  return '';
+}
+
+function attachEvents(s){
+  s.questions.forEach(q=>{
+    if(q.type==='scale'){
+      const el=document.getElementById('inp-'+q.id);
+      if(el&&!formData[q.id]){formData[q.id]=parseInt(el.value);save()}
+    }
+  });
+}
+
+function selectRadio(id,val,el){
+  formData[id]=val;save();
+  el.closest('.options-grid').querySelectorAll('.option-item').forEach(x=>x.classList.remove('selected'));
+  el.classList.add('selected');
+}
+
+function toggleCheck(id,val,el){
+  if(!Array.isArray(formData[id]))formData[id]=[];
+  if(formData[id].includes(val)){
+    formData[id]=formData[id].filter(x=>x!==val);
+    el.classList.remove('selected');
+  }else{
+    formData[id].push(val);
+    el.classList.add('selected');
+  }
+  save();
+}
+
+function addTag(id){
+  const inp=document.getElementById('tag-inp-'+id);
+  const val=(inp.value||tagInputs[id]||'').trim();
+  if(!val)return;
+  if(!Array.isArray(formData[id]))formData[id]=[];
+  formData[id].push(val);
+  tagInputs[id]='';inp.value='';
+  save();
+  const c=document.getElementById('tags-'+id);
+  const idx=formData[id].length-1;
+  const sp=document.createElement('span');
+  sp.className='tag-pill';
+  sp.innerHTML=`${val}<span class="tag-pill-remove" onclick="removeTag('${id}',${idx})">×</span>`;
+  c.appendChild(sp);
+}
+
+function removeTag(id,idx){
+  formData[id].splice(idx,1);save();
+  const c=document.getElementById('tags-'+id);
+  c.innerHTML=formData[id].map((t,i)=>`<span class="tag-pill">${t}<span class="tag-pill-remove" onclick="removeTag('${id}',${i})">×</span></span>`).join('');
+}
+
+function goTo(idx){currentStep=idx;renderStep()}
+
+function nextStep(){
+  // collect current inputs first
+  collectCurrentInputs();
+  currentStep++;
+  renderStep();
+}
+
+function prevStep(){
+  collectCurrentInputs();
+  currentStep--;
+  renderStep();
+}
+
+function collectCurrentInputs(){
+  const s=SECTIONS[currentStep];
+  s.questions.forEach(q=>{
+    if(q.type==='text'||q.type==='url'||q.type==='email'||q.type==='textarea'){
+      const el=document.getElementById('inp-'+q.id);
+      if(el)formData[q.id]=el.value;
+    }
+  });
+  save();
+}
+
+function submitForm(){
+  collectCurrentInputs();
+  document.getElementById('app').classList.remove('active');
+  document.getElementById('contact-page').classList.add('active');
+  window.scrollTo(0,0);
+}
+
+function generatePrompt(){
+  const d=formData;
+  const p=(k)=>d[k]||(Array.isArray(d[k])&&d[k].length?d[k].join(', '):'No especificado');
+  const arr=(k)=>Array.isArray(d[k])&&d[k].length?d[k].join(', '):'No especificado';
+
+  return `# PROMPT MAESTRO — GENERACIÓN DE SITIO WEB PROFESIONAL
+Generado por Build a Brief | javieribrahim.dev
+Fecha: ${new Date().toLocaleDateString('es-MX',{year:'numeric',month:'long',day:'numeric'})}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+## 1. DATOS DEL NEGOCIO
+
+**Empresa:** ${p('biz_name')}
+**Eslogan/Tagline:** ${p('biz_tagline')}
+**Historia:** ${p('biz_history')}
+**Misión:** ${p('biz_mision')}
+**Visión:** ${p('biz_vision')}
+**Valores corporativos:** ${arr('biz_valores')}
+**Diferenciadores clave:** ${p('biz_diferenciadores')}
+**Personalidad de marca:** ${arr('biz_personalidad')}
+**Contacto:** ${p('biz_contacto')}
+**Redes sociales:** ${p('biz_redes')}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+## 2. OBJETIVOS DEL PROYECTO
+
+**Objetivo principal:** ${p('obj_principal')}
+**Objetivos secundarios:** ${arr('obj_secundarios')}
+**KPIs de éxito:** ${p('obj_kpis')}
+**Conversión principal deseada:** ${p('obj_conversion')}
+**Plazo para resultados:** ${p('obj_plazo')}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+## 3. SITUACIÓN ACTUAL Y COMPETENCIA
+
+**Sitio web actual:** ${p('comp_sitio')}
+**Problemas actuales:** ${arr('comp_problemas')}
+**Competidores directos:** ${p('comp_directos')}
+**Empresas aspiracionales:** ${p('comp_aspiracionales')}
+**Oportunidades detectadas:** ${p('comp_oportunidades')}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+## 4. PÚBLICO OBJETIVO
+
+**Cliente ideal:** ${p('pub_ideal')}
+**Problemas que resuelve:** ${p('pub_problemas')}
+**Motivaciones de compra:** ${p('pub_motivaciones')}
+**Objeciones principales:** ${p('pub_objeciones')}
+**Proceso de decisión:** ${p('pub_decision')}
+**Canales de descubrimiento:** ${arr('pub_canales')}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+## 5. BRANDING E IDENTIDAD VISUAL
+
+**Estado del logotipo:** ${p('brand_logo')}
+**Paleta de colores:** ${p('brand_colores')}
+**Tipografías:** ${p('brand_tipografia')}
+**Estilo visual deseado:** ${arr('brand_estilo')}
+**Emociones a transmitir:** ${arr('brand_emociones')}
+**Elementos prohibidos:** ${p('brand_prohibido')}
+**Nivel de sofisticación:** ${p('brand_nivel')}/5
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+## 6. ARQUITECTURA DEL SITIO
+
+**Páginas requeridas:** ${arr('arq_paginas')}
+**Páginas especiales:** ${p('arq_extras')}
+**Páginas prioritarias:** ${p('arq_prioridad')}
+**Flujo de usuario ideal:** ${p('arq_flujo')}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+## 7. CONTENIDO DISPONIBLE
+
+**Textos existentes:** ${p('cont_textos')}
+**Fotografías profesionales:** ${p('cont_fotos')}
+**Material en video:** ${p('cont_videos')}
+**Recursos descargables:** ${p('cont_recursos')}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+## 8. PRODUCTOS Y SERVICIOS
+
+**Lista de servicios/productos:** ${p('serv_lista')}
+**Servicio estrella:** ${p('serv_estrella')}
+**Beneficios principales:** ${p('serv_beneficios')}
+**Proceso de trabajo:** ${p('serv_proceso')}
+**Estrategia de precios:** ${p('serv_precio')}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+## 9. PRUEBA SOCIAL Y CREDIBILIDAD
+
+**Testimonios:** ${p('social_testimonios')}
+**Estadísticas/métricas:** ${p('social_numeros')}
+**Clientes/marcas importantes:** ${p('social_clientes')}
+**Certificaciones y premios:** ${p('social_cert')}
+**Casos de éxito:** ${p('social_casos')}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+## 10. FUNCIONALIDADES REQUERIDAS
+
+**Básicas:** ${arr('func_basicas')}
+**Avanzadas:** ${arr('func_avanzadas')}
+**Herramientas a integrar:** ${p('func_herramientas')}
+**Administrador del sitio:** ${p('func_cms')}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+## 11. ESTRATEGIA SEO
+
+**Palabras clave:** ${arr('seo_keywords')}
+**Ubicaciones geográficas:** ${arr('seo_geo')}
+**Competencia SEO:** ${p('seo_competencia')}
+**Estrategia de contenidos:** ${p('seo_blog')}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+## 12. REFERENCIAS VISUALES
+
+**Sitios favoritos:** ${p('ref_favoritos')}
+**Sitios que no le gustan:** ${p('ref_odio')}
+**Marcas de referencia:** ${p('ref_marcas')}
+**Tres palabras del diseño:** ${p('ref_palabras')}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+## 13. ESTRATEGIA DE CONVERSIÓN
+
+**CTA principal:** ${p('conv_cta')}
+**Oferta/garantía especial:** ${p('conv_oferta')}
+**Lead magnet:** ${p('conv_lead')}
+**Urgencia/escasez:** ${p('conv_urgencia')}
+**Seguimiento post-contacto:** ${p('conv_seguimiento')}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+## 14. LA ESENCIA DE TU MARCA
+
+**Personalidad de marca (metáfora):** ${p('ai_persona')}
+**Primeros 5 segundos:** ${p('ai_5seg')}
+**Diferenciador real profundo:** ${p('ai_diferencia')}
+**Elementos siempre prohibidos:** ${p('ai_prohibido')}
+**Referente cultural/metáfora:** ${p('ai_metafora')}
+**Contexto adicional:** ${p('ai_extra')}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+## INSTRUCCIÓN FINAL PARA CLAUDE
+
+Con toda la información del brief anterior, genera un sitio web profesional completo que incluya:
+
+1. **Sitemap detallado** con todas las páginas y su jerarquía
+2. **Wireframes en texto** de cada página principal
+3. **Copywriting completo** para todas las secciones (H1, H2, párrafos, CTAs, meta descripciones)
+4. **Sistema de diseño** documentado: paleta de colores HEX, tipografías, componentes UI, espaciados
+5. **Estrategia de conversión** implementada: CTAs ubicados estratégicamente, flujo de usuario, lead magnets
+6. **Metadatos SEO** para cada página: title, description, keywords, schema markup
+7. **Código HTML/CSS/JS** del sitio completo con diseño responsive y mobile-first
+8. **Recomendaciones técnicas** de stack, CMS, hosting y herramientas
+
+El sitio debe reflejar perfectamente la esencia de la marca ${p('biz_name')}, estar diseñado para convertir "${p('pub_ideal')}" en clientes, y generar la emoción de "${p('ai_5seg')}" en los primeros 5 segundos de visita.
+
+Estilo visual requerido: ${arr('brand_estilo')}
+Nivel de sofisticación: ${p('brand_nivel')}/5
+Palabras guía del diseño: ${p('ref_palabras')}`;
+}
+
+function submitContact(){
+  const name=document.getElementById('inp-name').value.trim();
+  const email=document.getElementById('inp-email').value.trim();
+  const company=document.getElementById('inp-company').value.trim();
+  const phone=document.getElementById('inp-phone').value.trim();
+  const btn=document.getElementById('btn-submit');
+  let valid=true;
+  ['field-name','field-email'].forEach(id=>document.getElementById(id).classList.remove('error'));
+  document.getElementById('err-name').classList.remove('show');
+  document.getElementById('err-email').classList.remove('show');
+  if(!name){document.getElementById('field-name').classList.add('error');document.getElementById('err-name').classList.add('show');valid=false}
+  if(!email||!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){document.getElementById('field-email').classList.add('error');document.getElementById('err-email').classList.add('show');valid=false}
+  if(!valid)return;
+  btn.classList.add('loading');btn.disabled=true;
+  const prompt=generatePrompt();
+  const payload={name,email,company,phone,prompt,lang:currentLang,formData:JSON.parse(JSON.stringify(formData))};
+  fetch('/api/sendBrief',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)})
+    .then(r=>{if(!r.ok)throw new Error(r.status);return r.json()})
+    .then(()=>{btn.classList.remove('loading');btn.disabled=false;document.getElementById('success-overlay').classList.add('active')})
+    .catch(()=>{btn.classList.remove('loading');btn.disabled=false;showToast(t('toast_send_error'),'error')});
+}
+
+
+function resetForm(){
+  if(confirm(t('reset_confirm','¿Estás seguro? Se borrarán todas las respuestas y comenzarás desde el principio.'))){
+    localStorage.removeItem('briefMaestro');
+    formData={};tagInputs={};currentStep=0;
+    document.getElementById('contact-page').classList.remove('active');
+    document.getElementById('success-overlay').classList.remove('active');
+    document.getElementById('hero').style.display='flex';
+    document.getElementById('footer').style.display='none';
+    window.scrollTo(0,0);
+  }
+}
+
+function showToast(msg,type){
+  type=type||'success';
+  const t=document.getElementById('toast');
+  document.getElementById('toast-msg').textContent=msg;
+  document.getElementById('toast-icon-success').style.display=type==='success'?'':'none';
+  document.getElementById('toast-icon-error').style.display=type==='error'?'':'none';
+  t.classList.toggle('error',type==='error');
+  t.classList.add('visible');
+  setTimeout(()=>t.classList.remove('visible'),3000);
+}
+
+// Init
+document.getElementById('footer').style.display='none';
+
+// Print styles
+const printStyle=document.createElement('style');
+printStyle.textContent=`@media print{body{background:#fff;color:#000;cursor:auto}#cursor,#cursor-ring,#bg-canvas,nav,.progress-wrapper,.contact-page{display:none!important}}`;
+document.head.appendChild(printStyle);
+</script>
+</body>
+</html>
