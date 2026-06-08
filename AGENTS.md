@@ -66,6 +66,11 @@ Lead generation and client onboarding through contact forms, AI-powered brief co
 │   ├── sendContact.js         # Contact form (2 emails)
 │   ├── projects/              # Dashboard API (legacy)
 │   └── v1/                    # SaaS API v1 (tenant-safe)
+├── dashboard-api.js           # Shared API v1 integration layer (workspace auth, polling)
+├── dashboard.html             # Project list with status badges, create form, auto-refresh
+├── dashboard-project.html     # Project control center (pipeline tracker, scoring, controls)
+├── dashboard-logs.html        # Live execution logs + AI decision viewer
+├── dashboard-preview.html     # Preview renderer (iframe, version selector, approval)
 ├── index.html                 # Portfolio landing page
 ├── brief-maestro.html         # Brief Maestro tool (14 sections)
 ├── test-data.json             # Test fixture (Salmos Café)
@@ -110,6 +115,11 @@ Lead generation and client onboarding through contact forms, AI-powered brief co
 ├── index.html                 # Portfolio landing page
 ├── brief-maestro.html         # Brief Maestro tool (14 sections)
 ├── test-data.json             # Test fixture (Salmos Café)
+├── dashboard-api.js           # Shared API v1 integration layer (workspace auth, polling)
+├── dashboard.html             # Project list with status badges, create form, auto-refresh
+├── dashboard-project.html     # Project control center (pipeline tracker, scoring, controls)
+├── dashboard-logs.html        # Live execution logs + AI decision viewer
+├── dashboard-preview.html     # Preview renderer (iframe, version selector, approval)
 ├── icon.ico                   # Favicon
 ├── package.json               # Project metadata + dependencies
 ├── package-lock.json          # npm lockfile

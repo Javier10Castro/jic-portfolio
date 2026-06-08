@@ -3,29 +3,105 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Project Detail — JIC Dashboard</title>
+<title>Project Control — JIC Dashboard</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
 <style>
-:root{--bg:#0B0F19;--surface:#131829;--surface-2:#1a2035;--border:#1e2640;--text:#d1d5db;--text-strong:#f3f4f6;--muted:#6b7280;--accent:#00D4FF;--accent-2:#00FFC8;--red:#ef4444;--yellow:#f59e0b;--green:#10b981;--radius:8px;--font-sans:'Inter',-apple-system,BlinkMacSystemFont,sans-serif}
+:root{--bg:#0B0F19;--surface:#131829;--surface-2:#1a2035;--border:#1e2640;--text:#d1d5db;--text-strong:#f3f4f6;--muted:#6b7280;--accent:#00D4FF;--accent-2:#00FFC8;--red:#ef4444;--yellow:#f59e0b;--green:#10b981;--orange:#f97316;--radius:8px;--font-sans:'Inter',-apple-system,BlinkMacSystemFont,sans-serif}
 *{margin:0;padding:0;box-sizing:border-box}
 body{background:var(--bg);color:var(--text);font-family:var(--font-sans);min-height:100vh}
-header{background:var(--surface);border-bottom:1px solid var(--border);padding:16px 32px;display:flex;align-items:center;justify-content:space-between}
+header{background:var(--surface);border-bottom:1px solid var(--border);padding:14px 32px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px}
 header h1{font-family:'Space Grotesk',sans-serif;font-size:18px;color:var(--text-strong)}
 header h1 span{color:var(--accent)}
-header nav a{color:var(--muted);text-decoration:none;font-size:13px;margin-left:20px;transition:color .2s}
+header nav a{color:var(--muted);text-decoration:none;font-size:13px;margin-left:16px;transition:color .2s}
 header nav a:hover{color:var(--accent)}
-header nav a.active{color:var(--accent);font-weight:600}
-.back{display:inline-flex;align-items:center;gap:6px;color:var(--muted);text-decoration:none;font-size:13px;margin-bottom:16px;transition:color .2s}
+.container{max-width:1280px;margin:0 auto;padding:32px}
+.back{display:inline-flex;align-items:center;gap:6px;color:var(--muted);text-decoration:none;font-size:13px;margin-bottom:14px;transition:color .2s}
 .back:hover{color:var(--accent)}
-.container{max-width:1200px;margin:0 auto;padding:32px}
-.page-title{font-size:24px;font-weight:700;color:var(--text-strong)}
-.page-id{font-family:monospace;font-size:12px;color:var(--muted);margin-bottom:4px}
-.page-sub{font-size:13px;color:var(--muted);margin-bottom:24px}
+.loading{text-align:center;padding:48px;color:var(--muted)}
+.error-banner{background:rgba(239,68,68,.1);border:1px solid var(--red);border-radius:var(--radius);padding:12px 16px;margin-bottom:16px;font-size:13px;color:var(--red)}
+.success-banner{background:rgba(16,185,129,.1);border:1px solid var(--green);border-radius:var(--radius);padding:12px 16px;margin-bottom:16px;font-size:13px;color:var(--green)}
 .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:24px}
 @media(max-width:900px){.grid-2{grid-template-columns:1fr}}
 .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px;margin-bottom:16px}
-.card h3{font-size:13px;font-weight:600;color:var(--text-strong);margin-bottom:12px;text-transform:uppercase;letter-spacing:.5px}
+.card h3{font-size:12px;font-weight:600;color:var(--text-strong);margin-bottom:14px;text-transform:uppercase;letter-spacing:.5px;display:flex;align-items:center;gap:8px}
+.card h3 .badge{font-size:9px;padding:2px 8px;border-radius:10px;text-transform:none;letter-spacing:0}
+.status-badge{display:inline-block;padding:3px 12px;border-radius:12px;font-size:11px;font-weight:600;text-transform:capitalize}
+.status-badge.draft{background:rgba(107,114,128,.15);color:var(--muted)}
+.status-badge.processing{background:rgba(0,212,255,.12);color:var(--accent);animation:pulse 1.5s ease-in-out infinite}
+.status-badge.preview{background:rgba(245,158,11,.15);color:var(--yellow)}
+.status-badge.approved{background:rgba(0,212,255,.1);color:var(--accent-2)}
+.status-badge.deploying{background:rgba(16,185,129,.1);color:var(--green);animation:pulse 1.5s ease-in-out infinite}
+.status-badge.deployed{background:rgba(16,185,129,.2);color:var(--green)}
+.status-badge.failed{background:rgba(239,68,68,.15);color:var(--red)}
+.status-badge.cancelled{background:rgba(107,114,128,.1);color:var(--muted)}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.proj-header{display:flex;align-items:center;gap:12px;margin-bottom:4px;flex-wrap:wrap}
+.proj-header .page-title{font-size:22px;font-weight:700;color:var(--text-strong)}
+.proj-meta{font-size:12px;color:var(--muted);margin-bottom:20px}
+.proj-meta .mono{font-family:monospace;font-size:11px}
+.pipeline-tracker{display:flex;gap:6px;margin-bottom:16px}
+.pipe-step{flex:1;text-align:center;padding:8px 4px;border-radius:var(--radius);font-size:10px;font-weight:500;background:var(--surface-2);color:var(--muted);border:1px solid var(--border);position:relative;transition:all .3s}
+.pipe-step .icon{display:block;font-size:16px;margin-bottom:2px}
+.pipe-step .label{display:block;line-height:1.3}
+.pipe-step .time{display:block;font-size:8px;color:var(--muted);margin-top:2px;opacity:0;transition:opacity .3s}
+.pipe-step.done{background:rgba(16,185,129,.1);border-color:var(--green);color:var(--green)}
+.pipe-step.done .time{opacity:1}
+.pipe-step.active{background:rgba(0,212,255,.1);border-color:var(--accent);color:var(--accent)}
+.pipe-step.active .time{opacity:1}
+.pipe-step.fail{background:rgba(239,68,68,.1);border-color:var(--red);color:var(--red)}
+.pipe-step.skip{background:rgba(107,114,128,.05);border-color:var(--border);color:var(--muted);opacity:.5}
+.pipe-step:hover{border-color:var(--accent);cursor:default}
+.controls{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px}
+.controls .btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:var(--radius);font-size:12px;font-weight:600;border:none;cursor:pointer;transition:all .2s;font-family:var(--font-sans)}
+.controls .btn-primary{background:linear-gradient(135deg,var(--accent),var(--accent-2));color:#0B0F19}
+.controls .btn-primary:hover:not(:disabled){opacity:.9;transform:translateY(-1px)}
+.controls .btn-secondary{background:var(--surface-2);color:var(--text);border:1px solid var(--border)}
+.controls .btn-secondary:hover:not(:disabled){border-color:var(--accent)}
+.controls .btn-danger{background:rgba(239,68,68,.15);color:var(--red);border:1px solid rgba(239,68,68,.3)}
+.controls .btn-danger:hover:not(:disabled){background:rgba(239,68,68,.25)}
+.controls .btn-success{background:rgba(16,185,129,.15);color:var(--green);border:1px solid rgba(16,185,129,.3)}
+.controls .btn-success:hover:not(:disabled){background:rgba(16,185,129,.25)}
+.controls .btn:disabled{opacity:.4;cursor:not-allowed}
+.controls .btn .spinner{display:none;width:14px;height:14px;border:2px solid rgba(11,15,25,.3);border-top-color:#0B0F19;border-radius:50%;animation:spin .6s linear infinite}
+.controls .btn.loading .spinner{display:inline-block}
+.controls .btn.loading .label{opacity:.6}
+.controls .btn-primary .spinner{border-color:rgba(11,15,25,.2);border-top-color:#0B0F19}
+.controls .btn-secondary .spinner{border-color:rgba(209,213,219,.2);border-top-color:var(--text)}
+.controls .btn-danger .spinner{border-color:rgba(239,68,68,.2);border-top-color:var(--red)}
+.controls .btn-success .spinner{border-color:rgba(16,185,129,.2);border-top-color:var(--green)}
+@keyframes spin{to{transform:rotate(360deg)}}
+.score-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.score-item{padding:8px 12px;background:var(--surface-2);border-radius:6px;border:1px solid var(--border)}
+.score-item .label{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px}
+.score-item .val{font-size:18px;font-weight:700;margin-top:2px}
+.score-item .bar-wrap{background:var(--bg);border-radius:4px;height:4px;margin-top:6px;overflow:hidden}
+.score-item .bar-fill{height:100%;border-radius:4px;transition:width .5s}
+.score-pass{color:var(--green)}
+.score-fail{color:var(--red)}
+.score-warn{color:var(--yellow)}
+.decision-card{background:var(--surface-2);border:1px solid var(--border);border-radius:6px;padding:12px;margin-bottom:8px}
+.decision-card .meta{display:flex;justify-content:space-between;font-size:11px;color:var(--muted);margin-bottom:4px}
+.decision-card .title{font-size:13px;font-weight:600;color:var(--text-strong)}
+.decision-card .feedback{font-size:12px;color:var(--text);margin-top:4px;line-height:1.4}
+.warning-line{display:flex;align-items:center;gap:6px;padding:4px 0;font-size:12px;border-bottom:1px solid rgba(30,38,64,.5)}
+.warning-line:last-child{border:none}
+.warning-line .sev-high{color:var(--red)}
+.warning-line .sev-med{color:var(--yellow)}
+.warning-line .sev-low{color:var(--muted)}
+.state-timeline{position:relative;padding-left:20px}
+.state-entry{position:relative;padding:0 0 12px 16px;border-left:2px solid var(--border)}
+.state-entry:last-child{border-left-color:transparent;padding-bottom:0}
+.state-entry::before{content:'';position:absolute;left:-5px;top:4px;width:8px;height:8px;border-radius:50%;background:var(--muted)}
+.state-entry.draft::before{background:var(--muted)}
+.state-entry.processing::before{background:var(--accent)}
+.state-entry.preview::before{background:var(--yellow)}
+.state-entry.approved::before{background:var(--accent-2)}
+.state-entry.deploying::before{background:var(--green)}
+.state-entry.deployed::before{background:var(--green)}
+.state-entry.failed::before{background:var(--red)}
+.state-entry .s-date{font-size:10px;color:var(--muted)}
+.state-entry .s-trans{font-size:12px;color:var(--text);margin-top:1px}
 .section-item{border-bottom:1px solid var(--border);padding:8px 0}
 .section-item:last-child{border-bottom:none}
 .section-header{display:flex;justify-content:space-between;align-items:center;cursor:pointer;padding:4px 0}
@@ -37,38 +113,17 @@ header nav a.active{color:var(--accent);font-weight:600}
 .section-body.open{display:block}
 .field-row{display:flex;justify-content:space-between;padding:4px 0;font-size:12px;border-bottom:1px solid rgba(30,38,64,.5)}
 .field-row:last-child{border-bottom:none}
-.field-key{color:var(--muted);font-family:monospace;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:40%}
+.field-key{color:var(--muted);font-family:monospace;font-size:11px;max-width:40%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .field-val{color:var(--text);text-align:right;max-width:55%;word-break:break-word}
-.pipeline-btns{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px}
-.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:var(--radius);font-size:12px;font-weight:600;border:none;cursor:pointer;transition:all .2s;font-family:var(--font-sans)}
-.btn-primary{background:linear-gradient(135deg,var(--accent),var(--accent-2));color:#0B0F19}
-.btn-primary:hover:not(:disabled){opacity:.9;transform:translateY(-1px)}
-.btn-secondary{background:var(--surface-2);color:var(--text);border:1px solid var(--border)}
-.btn-secondary:hover:not(:disabled){border-color:var(--accent)}
-.btn:disabled{opacity:.4;cursor:not-allowed}
-.btn .spinner{display:none;width:14px;height:14px;border:2px solid rgba(11,15,25,.3);border-top-color:#0B0F19;border-radius:50%;animation:spin .6s linear infinite}
-.btn.loading .spinner{display:inline-block}
-.btn.loading .label{opacity:.6}
-@keyframes spin{to{transform:rotate(360deg)}}
-.output-box{background:#0a0d14;border:1px solid var(--border);border-radius:var(--radius);padding:16px;font-family:monospace;font-size:11px;color:var(--text);white-space:pre-wrap;word-break:break-word;max-height:400px;overflow:auto;margin-top:8px}
+.output-box{background:#0a0d14;border:1px solid var(--border);border-radius:var(--radius);padding:14px;font-family:monospace;font-size:11px;color:var(--text);white-space:pre-wrap;word-break:break-word;max-height:300px;overflow:auto;margin-top:8px}
 .output-box.success{border-left:3px solid var(--green)}
 .output-box.error{border-left:3px solid var(--red)}
-.output-box .key{color:var(--accent)}
-.output-box .string{color:var(--accent-2)}
-.output-box .number{color:var(--yellow)}
-.output-box .null{color:var(--muted)}
-.output-placeholder{background:var(--surface-2);border:1px dashed var(--border);border-radius:var(--radius);padding:32px;text-align:center;color:var(--muted);font-size:12px;margin-top:8px}
-.pipeline-status{display:flex;gap:8px;margin-bottom:16px}
-.pipeline-step{flex:1;text-align:center;padding:8px;border-radius:var(--radius);font-size:11px;font-weight:500;background:var(--surface-2);color:var(--muted);border:1px solid var(--border)}
-.pipeline-step.done{background:rgba(16,185,129,.1);border-color:var(--green);color:var(--green)}
-.pipeline-step.fail{background:rgba(239,68,68,.1);border-color:var(--red);color:var(--red)}
-.pipeline-step.active{background:rgba(0,212,255,.1);border-color:var(--accent);color:var(--accent)}
-.loading{text-align:center;padding:48px;color:var(--muted)}
-.error-banner{background:rgba(239,68,68,.1);border:1px solid var(--red);border-radius:var(--radius);padding:12px 16px;margin-bottom:16px;font-size:13px;color:var(--red)}
-@media(max-width:600px){header{padding:12px 16px;flex-direction:column;gap:8px}
+.output-placeholder{background:var(--surface-2);border:1px dashed var(--border);border-radius:var(--radius);padding:24px;text-align:center;color:var(--muted);font-size:12px;margin-top:8px}
+@media(max-width:600px){header{padding:12px 16px}
 .container{padding:16px}
-.pipeline-btns{flex-direction:column}
-.pipeline-status{flex-direction:column}}
+.controls{flex-direction:column}
+.pipeline-tracker{flex-direction:column}
+.score-grid{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
@@ -76,188 +131,295 @@ header nav a.active{color:var(--accent);font-weight:600}
   <h1>JIC <span>Dashboard</span></h1>
   <nav>
     <a href="/dashboard.html">Projects</a>
+    <a href="/dashboard-preview.html">Previews</a>
+    <a href="/dashboard-logs.html">Logs</a>
     <a href="/">Portfolio</a>
   </nav>
 </header>
 <div class="container" id="app">
   <a href="/dashboard.html" class="back">← Projects</a>
-  <div id="header"></div>
-  <div class="grid-2">
-    <div class="card">
-      <h3>Pipeline</h3>
-      <div class="pipeline-status" id="pipelineStatus"></div>
-      <div class="pipeline-btns" id="pipelineBtns"></div>
-      <div id="output"></div>
-    </div>
-    <div class="card">
-      <h3>Sections</h3>
-      <div id="sections"></div>
-    </div>
-  </div>
+  <div id="content"><div class="loading">Loading project...</div></div>
 </div>
+<script src="/dashboard-api.js"></script>
 <script>
-let projectId = new URLSearchParams(location.search).get('id');
-let state = null;
+const api = window.DASHBOARD_API;
+const id = new URLSearchParams(location.search).get('id');
+if (!id) { document.getElementById('content').innerHTML = '<div class="error-banner">Missing project id parameter</div>'; }
 
 function escapeHTML(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
-function jsonHighlight(o){
-  if(!o)return '<span class="null">null</span>';
-  const j=JSON.stringify(o,null,2);
-  return j.replace(/"([^"]+)":/g,'<span class="key">"$1"</span>:')
-          .replace(/"([^"]*?)"/g,'<span class="string">"$1"</span>')
-          .replace(/\b(\d+)\b/g,'<span class="number">$1</span>')
-          .replace(/\b(null|true|false)\b/g,'<span class="null">$1</span>');
+function ago(d){if(!d)return'';const s=Math.floor((Date.now()-new Date(d))/1000);if(s<60)return s+'s ago';if(s<3600)return Math.floor(s/60)+'m ago';if(s<86400)return Math.floor(s/3600)+'h ago';return Math.floor(s/86400)+'d ago'}
+function statusBadge(s){return `<span class="status-badge ${s}">${escapeHTML(s)}</span>`}
+
+function pipeStep(name, icon, status, time){
+  const cls = status === 'completed' ? 'done' : status === 'running' ? 'active' : status === 'failed' ? 'fail' : status === 'skipped' ? 'skip' : '';
+  return `<div class="pipe-step ${cls}"><span class="icon">${icon}</span><span class="label">${name}</span>${time ? `<span class="time">${time}</span>` : ''}</div>`;
 }
 
-async function load(){
-  if(!projectId){document.getElementById('header').innerHTML='<div class="error-banner">Missing id parameter</div>';return}
-  document.getElementById('header').innerHTML='<div class="loading">Loading project...</div>';
-  try{
-    const r=await fetch('/api/projects/detail?id='+encodeURIComponent(projectId));
-    if(!r.ok)throw new Error(await r.text());
-    state=await r.json();
-    renderHeader();
-    renderSections();
-    renderPipeline();
-  }catch(e){
-    document.getElementById('header').innerHTML='<div class="error-banner">Failed to load: '+e.message+'</div>';
+const PIPELINE_STEPS = [
+  { key: 'plan', name: 'Plan', icon: '🧠' },
+  { key: 'design_system', name: 'Design', icon: '🎨' },
+  { key: 'preview', name: 'Preview', icon: '👁' },
+  { key: 'scoring', name: 'Score', icon: '📊' },
+  { key: 'scaffold', name: 'Build', icon: '⚙' },
+  { key: 'deploy', name: 'Deploy', icon: '🚀' },
+];
+
+function stepStatus(steps, key){
+  if (!steps || !steps.length) return 'pending';
+  for (const s of steps) {
+    if (typeof s === 'object' && s.name === key) {
+      if (s.status === 'completed') return 'completed';
+      if (s.status === 'running') return 'running';
+      if (s.status === 'failed') return 'failed';
+    }
   }
+  return 'pending';
 }
 
-function renderHeader(){
-  const d=state;
-  const biz=d.grouped?.business||{};
-  const name=biz.biz_name||projectId;
-  const contact=biz.biz_contacto||'—';
-  const sections=Object.keys(d.grouped||{}).length;
-  const fields=d.responses.length;
-  document.getElementById('header').innerHTML=`
-    <div class="page-title">${escapeHTML(name)}</div>
-    <div class="page-id">${projectId}</div>
-    <div class="page-sub">${sections} sections · ${fields} fields · Contact: ${escapeHTML(contact)}</div>
-  `;
-}
-
-function renderSections(){
-  const g=state.grouped||{};
-  const secDiv=document.getElementById('sections');
-  const secOrder=['business','goals','competition','audience','branding','site','content','services','social_proof','functionality','seo','references','conversion','essence'];
-  let html='';
-  for(const key of secOrder){
-    if(!g[key]||Object.keys(g[key]).length===0)continue;
-    const fields=Object.entries(g[key]);
-    html+=`
-      <div class="section-item">
-        <div class="section-header" onclick="toggleSection(this)">
-          <span class="name">${key.replace(/_/g,' ')}</span>
-          <span><span class="count">${fields.length}</span> <span class="arrow">▶</span></span>
-        </div>
-        <div class="section-body">${fields.map(([k,v])=>`
-          <div class="field-row">
-            <span class="field-key">${escapeHTML(k)}</span>
-            <span class="field-val">${escapeHTML(Array.isArray(v)?v.join(', '):v)}</span>
-          </div>
-        `).join('')}</div>
-      </div>
-    `;
+function stepTime(steps, key){
+  if (!steps || !steps.length) return null;
+  for (const s of steps) {
+    if (typeof s === 'object' && s.name === key && s.completed_at) return ago(s.completed_at);
   }
-  secDiv.innerHTML=html||'<div class="output-placeholder">No sections loaded</div>';
+  return null;
+}
+
+function renderScoring(metrics, score, passed){
+  if (!metrics) return '<div class="output-placeholder">No scoring data</div>';
+  const dims = [
+    { key: 'contrast', label: 'Contrast', weight: '25%' },
+    { key: 'ux', label: 'UX', weight: '25%' },
+    { key: 'conversion', label: 'Conversion', weight: '20%' },
+    { key: 'clarity', label: 'Clarity', weight: '15%' },
+    { key: 'seo', label: 'SEO', weight: '15%' },
+  ];
+  const colorMap = { contrast: 'var(--accent)', ux: 'var(--accent-2)', conversion: 'var(--yellow)', clarity: 'var(--orange)', seo: 'var(--green)' };
+  let html = `<div style="margin-bottom:10px;display:flex;align-items:center;gap:8px"><span style="font-size:22px;font-weight:700;color:var(--text-strong)">${score}</span><span style="font-size:12px;color:var(--muted)">/ 100</span>${passed ? '<span style="font-size:11px;color:var(--green)">✓ Passed</span>' : '<span style="font-size:11px;color:var(--red)">✗ Low quality</span>'}</div>`;
+  html += '<div class="score-grid">';
+  for (const d of dims) {
+    const m = metrics[d.key] || {};
+    const v = m.score || 0;
+    const cls = v >= 70 ? 'score-pass' : v >= 50 ? 'score-warn' : 'score-fail';
+    html += `<div class="score-item"><div class="label">${d.label} (${d.weight})</div><div class="val ${cls}">${v}</div><div class="bar-wrap"><div class="bar-fill" style="width:${v}%;background:${colorMap[d.key]}"></div></div></div>`;
+  }
+  html += '</div>';
+  return html;
+}
+
+function renderWarnings(warnings){
+  if (!warnings || !warnings.length) return '<div class="output-placeholder">No warnings</div>';
+  return warnings.map(w => `<div class="warning-line"><span class="sev-${w.severity || 'low'}">●</span> ${escapeHTML(w.message || w)}</div>`).join('');
+}
+
+function renderDecisions(decisions){
+  if (!decisions || !decisions.length) return '<div class="output-placeholder">No decisions recorded</div>';
+  return decisions.map(d => `<div class="decision-card">
+    <div class="meta"><span>${escapeHTML(d.type || 'decision')}</span><span>${d.created_at ? ago(d.created_at) : ''}</span></div>
+    <div class="title">Score: ${d.score || '—'} ${d.passed ? '✓' : '✗'}</div>
+    ${d.metrics ? `<div style="font-size:11px;color:var(--muted);margin-top:2px">${Object.entries(d.metrics).map(([k,v])=>`${k}: ${v.score||v}`).join(' · ')}</div>` : ''}
+    ${d.feedback ? `<div class="feedback">${escapeHTML(d.feedback)}</div>` : ''}
+    ${d.warnings && d.warnings.length ? `<div style="margin-top:6px">${d.warnings.map(w => `<span style="font-size:10px;color:var(--yellow);margin-right:6px">⚠ ${escapeHTML(w.message||w)}</span>`).join('')}</div>` : ''}
+  </div>`).join('');
+}
+
+function renderStateHistory(states){
+  if (!states || !states.length) return '<div class="output-placeholder">No state history</div>';
+  return '<div class="state-timeline">' + states.map(s =>
+    `<div class="state-entry ${s.to}"><div class="s-date">${ago(s.at)}</div><div class="s-trans">${s.from || '—'} → ${s.to}</div></div>`
+  ).join('') + '</div>';
+}
+
+function renderInputs(inputs){
+  if (!inputs || !inputs.length) return '<div class="output-placeholder">No form inputs</div>';
+  const grouped = {};
+  inputs.forEach(i => { if (!grouped[i.section]) grouped[i.section] = []; grouped[i.section].push(i); });
+  const secOrder = ['business','goals','competition','audience','branding','site','content','services','social_proof','functionality','seo','references','conversion','essence','other'];
+  let html = '';
+  for (const key of secOrder) {
+    if (!grouped[key] || !grouped[key].length) continue;
+    html += `<div class="section-item"><div class="section-header" onclick="toggleSection(this)">
+      <span class="name">${key.replace(/_/g,' ')}</span>
+      <span><span class="count">${grouped[key].length}</span> <span class="arrow">▶</span></span>
+    </div><div class="section-body">${grouped[key].map(i => `
+      <div class="field-row"><span class="field-key">${escapeHTML(i.field_key)}</span><span class="field-val">${escapeHTML(i.value)}</span></div>
+    `).join('')}</div></div>`;
+  }
+  return html;
 }
 
 function toggleSection(el){
-  const body=el.nextElementSibling;
-  const arrow=el.querySelector('.arrow');
+  const body = el.nextElementSibling;
+  const arrow = el.querySelector('.arrow');
   body.classList.toggle('open');
   arrow.classList.toggle('open');
 }
 
-function renderPipeline(){
-  const steps=['Plan','Scaffold','Deploy'];
-  document.getElementById('pipelineStatus').innerHTML=steps.map(s=>`<div class="pipeline-step" id="step-${s.toLowerCase()}">${s}</div>`).join('');
-  document.getElementById('pipelineBtns').innerHTML=`
-    <button class="btn btn-secondary" id="btn-plan" onclick="runPlan()"><span class="label">Run Plan</span><span class="spinner"></span></button>
-    <button class="btn btn-secondary" id="btn-scaffold" onclick="runScaffold()"><span class="label">Run Scaffold</span><span class="spinner"></span></button>
-    <button class="btn btn-secondary" id="btn-deploy" onclick="runDeploy()"><span class="label">Run Deploy</span><span class="spinner"></span></button>
-    <button class="btn btn-primary" id="btn-full" onclick="runFull()"><span class="label">Full Pipeline</span><span class="spinner"></span></button>
+let pollStop = null;
+let currentData = null;
+
+async function load(){
+  if (!api.isReady() || !id) return;
+  const content = document.getElementById('content');
+  try {
+    const data = await api.getProject(id, 'inputs,previews,states,decisions');
+    if (!data || !data.project) { content.innerHTML = '<div class="error-banner">Project not found</div>'; return; }
+    currentData = data;
+    render(data);
+    const p = data.project;
+    if (p.status === 'processing' || p.status === 'deploying') {
+      if (pollStop) pollStop();
+      pollStop = api.pollProject(id, (d) => { render(d); currentData = d; }, 3000);
+    } else {
+      if (pollStop) { pollStop(); pollStop = null; }
+    }
+  } catch(e) {
+    content.innerHTML = '<div class="error-banner">Failed: ' + escapeHTML(e.message) + '</div>';
+  }
+}
+
+function render(data){
+  if (!data || !data.project) return;
+  const p = data.project;
+  const isProcessing = p.status === 'processing' || p.status === 'deploying';
+
+  let execSteps = [];
+  if (data.decisions && data.decisions.length) {
+    execSteps = [{name:'scoring',status:'completed'},{name:'plan',status:'completed'},{name:'design_system',status:'completed'},{name:'preview',status:'completed'}];
+  }
+
+  const pipeHtml = PIPELINE_STEPS.map(s => {
+    const status = execSteps.length ? stepStatus(execSteps, s.key) : 'pending';
+    if (s.key === 'scaffold' || s.key === 'deploy') {
+      const ds = p.status === 'deployed' || p.status === 'deploying' || p.status === 'approved' ? 'completed' : p.status === 'failed' ? 'failed' : 'pending';
+      return pipeStep(s.name, s.icon, ds, null);
+    }
+    return pipeStep(s.name, s.icon, status, null);
+  }).join('');
+
+  const lastDecision = data.decisions && data.decisions.length ? data.decisions[0] : null;
+  const scoreMetrics = lastDecision && lastDecision.metrics || null;
+  const totalScore = lastDecision ? lastDecision.score : null;
+  const passed = lastDecision ? lastDecision.passed : null;
+  const scoringWarnings = lastDecision && lastDecision.warnings || data.project.metadata && data.project.metadata.last_error ? [{severity:'high', message: data.project.metadata.last_error}] : [];
+
+  const controlsHtml = `<div class="controls">
+    <button class="btn btn-primary" onclick="doRun()" id="btnRun" ${isProcessing ? 'disabled' : ''}>
+      <span class="spinner"></span><span class="label">${isProcessing ? 'Running...' : '▶ Run Pipeline'}</span>
+    </button>
+    <button class="btn btn-success" onclick="doApprove()" id="btnApprove" ${p.status !== 'preview' ? 'disabled' : ''}>
+      <span class="spinner"></span><span class="label">✓ Approve & Deploy</span>
+    </button>
+    <button class="btn btn-secondary" onclick="doRegen()" id="btnRegen" ${isProcessing ? 'disabled' : ''}>
+      <span class="spinner"></span><span class="label">↻ Regenerate Preview</span>
+    </button>
+    <button class="btn btn-secondary" onclick="location.href='/dashboard-logs.html?id='+encodeURIComponent(id)+'&exec='+encodeURIComponent(lastDecision?._execution_id||'')" ${!lastDecision ? 'disabled' : ''}>
+      📋 View Logs
+    </button>
+    <button class="btn btn-secondary" onclick="location.href='/dashboard-preview.html?id='+encodeURIComponent(id)" ${p.status === 'draft' || p.status === 'failed' ? 'disabled' : ''}>
+      👁 Preview
+    </button>
+  </div>`;
+
+  const actionsHtml = controlsHtml;
+
+  let lastError = '';
+  if (p.metadata && p.metadata.last_error) lastError = `<div class="error-banner">${escapeHTML(p.metadata.last_error)}</div>`;
+  if (p.status === 'deployed') lastError = `<div class="success-banner">✓ Deployed successfully</div>`;
+
+  const now = new Date().toISOString();
+
+  content.innerHTML = `
+    <div class="proj-header">
+      <div class="page-title">${escapeHTML(p.name)}</div>
+      ${statusBadge(p.status)}
+    </div>
+    <div class="proj-meta">
+      <span class="mono">${p.id}</span> · v${p.version||1} · created ${ago(p.created_at)} · updated ${ago(p.updated_at)}
+      ${p.live_url ? `· <a href="${escapeHTML(p.live_url)}" target="_blank" style="color:var(--accent)">${escapeHTML(p.live_url)}</a>` : ''}
+      ${p.github_repo ? `· <a href="${escapeHTML(p.github_repo)}" target="_blank" style="color:var(--accent)">GitHub</a>` : ''}
+    </div>
+    ${lastError}
+    <div class="grid-2">
+      <div class="card">
+        <h3>Pipeline</h3>
+        <div class="pipeline-tracker">${pipeHtml}</div>
+        ${actionsHtml}
+        <div id="resultBox"></div>
+      </div>
+      <div class="card">
+        <h3>Scoring ${totalScore !== null ? `<span class="badge status-badge ${passed ? 'deployed' : 'failed'}">${totalScore}</span>` : ''}</h3>
+        <div id="scoreArea">${renderScoring(scoreMetrics, totalScore, passed)}</div>
+      </div>
+    </div>
+    <div class="grid-2">
+      <div class="card">
+        <h3>Decisions</h3>
+        <div id="decisionsArea">${renderDecisions(data.decisions)}</div>
+      </div>
+      <div class="card">
+        <h3>Warnings</h3>
+        <div id="warningsArea">${renderWarnings(scoringWarnings)}</div>
+      </div>
+    </div>
+    <div class="grid-2">
+      <div class="card">
+        <h3>State History</h3>
+        <div id="statesArea">${renderStateHistory(data.state_history)}</div>
+      </div>
+      <div class="card">
+        <h3>Form Inputs</h3>
+        <div id="inputsArea">${renderInputs(data.form_inputs)}</div>
+      </div>
+    </div>
   `;
 }
 
-async function runPlan(){
-  const btn=document.getElementById('btn-plan');
-  const out=document.getElementById('output');
-  btn.classList.add('loading');btn.disabled=true;
-  updateStep('plan','active');
-  try{
-    const r=await fetch('/api/projects/run-plan',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:projectId})});
-    const d=await r.json();
-    if(!r.ok)throw new Error(d.error);
-    out.innerHTML='<div class="output-box success">'+jsonHighlight(d.ir||d)+'</div>';
-    updateStep('plan','done');
-  }catch(e){
-    out.innerHTML='<div class="output-box error">Error: '+escapeHTML(e.message)+'</div>';
-    updateStep('plan','fail');
-  }finally{btn.classList.remove('loading');btn.disabled=false}
+async function doRun(){
+  const btn = document.getElementById('btnRun');
+  btn.classList.add('loading'); btn.disabled = true;
+  const box = document.getElementById('resultBox');
+  try {
+    const r = await api.runPipeline(id, null);
+    box.innerHTML = '<div class="output-box success">Pipeline triggered: ' + escapeHTML(r.execution_id || '') + '</div>';
+    if (pollStop) pollStop();
+    pollStop = api.pollProject(id, (d) => { render(d); currentData = d; }, 3000);
+  } catch(e) {
+    box.innerHTML = '<div class="output-box error">' + escapeHTML(e.message) + '</div>';
+    btn.classList.remove('loading'); btn.disabled = false;
+  }
 }
 
-async function runScaffold(){
-  const btn=document.getElementById('btn-scaffold');
-  const out=document.getElementById('output');
-  btn.classList.add('loading');btn.disabled=true;
-  updateStep('scaffold','active');
-  try{
-    const r=await fetch('/api/projects/run-scaffold',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:projectId})});
-    const d=await r.json();
-    if(!r.ok)throw new Error(d.error);
-    out.innerHTML='<div class="output-box success">'+jsonHighlight(d.scaffold||d)+'</div>';
-    updateStep('scaffold','done');
-  }catch(e){
-    out.innerHTML='<div class="output-box error">Error: '+escapeHTML(e.message)+'</div>';
-    updateStep('scaffold','fail');
-  }finally{btn.classList.remove('loading');btn.disabled=false}
+async function doApprove(){
+  const btn = document.getElementById('btnApprove');
+  btn.classList.add('loading'); btn.disabled = true;
+  const box = document.getElementById('resultBox');
+  try {
+    const r = await api.approveProject(id);
+    box.innerHTML = '<div class="output-box success">Approved. Status: ' + escapeHTML(r.status) + '</div>';
+    if (pollStop) pollStop();
+    pollStop = api.pollProject(id, (d) => { render(d); currentData = d; }, 3000);
+  } catch(e) {
+    box.innerHTML = '<div class="output-box error">' + escapeHTML(e.message) + '</div>';
+    btn.classList.remove('loading'); btn.disabled = false;
+  }
 }
 
-async function runDeploy(){
-  const btn=document.getElementById('btn-deploy');
-  const out=document.getElementById('output');
-  btn.classList.add('loading');btn.disabled=true;
-  updateStep('deploy','active');
-  try{
-    const r=await fetch('/api/projects/run-deploy',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:projectId})});
-    const d=await r.json();
-    if(!r.ok)throw new Error(d.error);
-    out.innerHTML='<div class="output-box success">'+jsonHighlight(d.deploy||d)+'</div>';
-    updateStep('deploy','done');
-  }catch(e){
-    out.innerHTML='<div class="output-box error">Error: '+escapeHTML(e.message)+'</div>';
-    updateStep('deploy','fail');
-  }finally{btn.classList.remove('loading');btn.disabled=false}
+async function doRegen(){
+  const btn = document.getElementById('btnRegen');
+  btn.classList.add('loading'); btn.disabled = true;
+  const box = document.getElementById('resultBox');
+  try {
+    const r = await api.runPipeline(id, null);
+    box.innerHTML = '<div class="output-box success">Regeneration triggered: ' + escapeHTML(r.execution_id || '') + '</div>';
+    if (pollStop) pollStop();
+    pollStop = api.pollProject(id, (d) => { render(d); currentData = d; }, 3000);
+  } catch(e) {
+    box.innerHTML = '<div class="output-box error">' + escapeHTML(e.message) + '</div>';
+    btn.classList.remove('loading'); btn.disabled = false;
+  }
 }
 
-async function runFull(){
-  const btn=document.getElementById('btn-full');
-  const out=document.getElementById('output');
-  btn.classList.add('loading');btn.disabled=true;
-  ['plan','scaffold','deploy'].forEach(s=>updateStep(s,'active'));
-  try{
-    const r=await fetch('/api/projects/run-deploy',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:projectId})});
-    const d=await r.json();
-    if(!r.ok)throw new Error(d.error);
-    out.innerHTML='<div class="output-box success">'+jsonHighlight(d)+'</div>';
-    if(d.scaffold)updateStep('scaffold','done');
-    if(d.deploy)updateStep('deploy','done');
-    updateStep('plan','done');
-  }catch(e){
-    out.innerHTML='<div class="output-box error">Error: '+escapeHTML(e.message)+'</div>';
-    ['plan','scaffold','deploy'].forEach(s=>updateStep(s,'fail'));
-  }finally{btn.classList.remove('loading');btn.disabled=false}
-}
-
-function updateStep(name,status){
-  const el=document.getElementById('step-'+name);
-  if(el){el.className='pipeline-step '+status}
-}
-
-load();
+if (api.isReady() && id) load();
 </script>
 </body>
 </html>

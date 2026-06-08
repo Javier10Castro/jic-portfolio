@@ -3,45 +3,76 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Decision Logs — JIC Dashboard</title>
+<title>Execution Logs — JIC Dashboard</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
 <style>
 :root{--bg:#0B0F19;--surface:#131829;--surface-2:#1a2035;--border:#1e2640;--text:#d1d5db;--text-strong:#f3f4f6;--muted:#6b7280;--accent:#00D4FF;--accent-2:#00FFC8;--red:#ef4444;--yellow:#f59e0b;--green:#10b981;--radius:8px;--font-sans:'Inter',-apple-system,BlinkMacSystemFont,sans-serif}
 *{margin:0;padding:0;box-sizing:border-box}
 body{background:var(--bg);color:var(--text);font-family:var(--font-sans);min-height:100vh}
-header{background:var(--surface);border-bottom:1px solid var(--border);padding:16px 32px;display:flex;align-items:center;justify-content:space-between}
+header{background:var(--surface);border-bottom:1px solid var(--border);padding:14px 32px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px}
 header h1{font-family:'Space Grotesk',sans-serif;font-size:18px;color:var(--text-strong)}
 header h1 span{color:var(--accent)}
-header nav a{color:var(--muted);text-decoration:none;font-size:13px;margin-left:20px;transition:color .2s}
+header nav a{color:var(--muted);text-decoration:none;font-size:13px;margin-left:16px;transition:color .2s}
 header nav a:hover{color:var(--accent)}
-header nav a.active{color:var(--accent);font-weight:600}
-.container{max-width:1200px;margin:0 auto;padding:32px}
-.page-title{font-size:24px;font-weight:700;color:var(--text-strong);margin-bottom:4px}
-.page-sub{font-size:13px;color:var(--muted);margin-bottom:24px}
-.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:24px}
-.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px}
-.stat-card .num{font-size:28px;font-weight:700;color:var(--accent)}
-.stat-card .label{font-size:11px;color:var(--muted);margin-top:2px}
-.log-entry{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:12px;transition:border-color .2s}
-.log-entry:hover{border-color:var(--accent)}
-.log-entry .meta{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
-.log-entry .id{font-family:monospace;font-size:11px;color:var(--accent)}
-.log-entry .date{font-size:11px;color:var(--muted)}
-.log-entry .title{font-size:14px;font-weight:600;color:var(--text-strong);margin-bottom:4px}
-.log-entry .reason{font-size:12px;color:var(--text);margin-bottom:8px;line-height:1.5}
-.log-entry .tags{display:flex;gap:6px;flex-wrap:wrap}
-.tag{display:inline-block;padding:2px 8px;border-radius:4px;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.5px}
-.tag-impact-high{background:rgba(239,68,68,.15);color:var(--red)}
-.tag-impact-medium{background:rgba(245,158,11,.15);color:var(--yellow)}
-.tag-impact-low{background:rgba(16,185,129,.15);color:var(--green)}
-.tag-module{background:rgba(0,212,255,.1);color:var(--accent);font-family:monospace}
+.container{max-width:1280px;margin:0 auto;padding:32px}
+.back{display:inline-flex;align-items:center;gap:6px;color:var(--muted);text-decoration:none;font-size:13px;margin-bottom:14px;transition:color .2s}
+.back:hover{color:var(--accent)}
 .loading{text-align:center;padding:48px;color:var(--muted)}
-.empty{background:var(--surface);border:1px dashed var(--border);border-radius:var(--radius);padding:48px;text-align:center;color:var(--muted);font-size:14px}
 .error-banner{background:rgba(239,68,68,.1);border:1px solid var(--red);border-radius:var(--radius);padding:12px 16px;margin-bottom:16px;font-size:13px;color:var(--red)}
-footer{margin-top:48px;padding:24px 32px;border-top:1px solid var(--border);font-size:11px;color:var(--muted);text-align:center}
-@media(max-width:600px){header{padding:12px 16px;flex-direction:column;gap:8px}
-.container{padding:16px}}
+.page-title{font-size:22px;font-weight:700;color:var(--text-strong);margin-bottom:4px}
+.page-sub{font-size:13px;color:var(--muted);margin-bottom:20px}
+.exec-header{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px 20px;margin-bottom:16px}
+.exec-header .row{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px}
+.exec-header .id{font-family:monospace;font-size:12px;color:var(--accent)}
+.exec-header .meta{font-size:12px;color:var(--muted);display:flex;gap:16px;flex-wrap:wrap;margin-top:6px}
+.status-badge{display:inline-block;padding:3px 12px;border-radius:12px;font-size:11px;font-weight:600;text-transform:capitalize}
+.status-badge.completed{background:rgba(16,185,129,.15);color:var(--green)}
+.status-badge.processing{background:rgba(0,212,255,.12);color:var(--accent);animation:pulse 1.5s ease-in-out infinite}
+.status-badge.failed{background:rgba(239,68,68,.15);color:var(--red)}
+.status-badge.queued{background:rgba(107,114,128,.15);color:var(--muted)}
+.status-badge.cancelled{background:rgba(107,114,128,.1);color:var(--muted)}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.steps-list{display:flex;flex-direction:column;gap:8px;margin-bottom:20px}
+.step-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;transition:border-color .2s}
+.step-card:hover{border-color:var(--accent)}
+.step-card .head{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+.step-card .name{font-size:14px;font-weight:600;color:var(--text-strong);display:flex;align-items:center;gap:8px}
+.step-card .name .dot{width:8px;height:8px;border-radius:50%;display:inline-block}
+.step-card .name .dot.done{background:var(--green)}
+.step-card .name .dot.running{background:var(--accent);animation:pulse 1s infinite}
+.step-card .name .dot.fail{background:var(--red)}
+.step-card .name .dot.pending{background:var(--muted)}
+.step-card .summary{font-size:12px;color:var(--text);margin-bottom:4px;line-height:1.4}
+.step-card .dur{font-size:10px;color:var(--muted);font-family:monospace}
+.decisions-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:10px;margin-bottom:20px}
+.decision-card{background:var(--surface-2);border:1px solid var(--border);border-radius:6px;padding:14px}
+.decision-card .head{display:flex;justify-content:space-between;font-size:11px;color:var(--muted);margin-bottom:4px}
+.decision-card .score{font-size:20px;font-weight:700}
+.decision-card .score.pass{color:var(--green)}
+.decision-card .score.fail{color:var(--red)}
+.decision-card .sub{font-size:11px;color:var(--muted);margin-top:4px}
+.decision-card .sub span{margin-right:10px}
+.error-list{background:rgba(239,68,68,.05);border:1px solid rgba(239,68,68,.2);border-radius:var(--radius);padding:12px 16px;margin-bottom:16px}
+.error-list .err-item{font-size:12px;color:var(--red);padding:4px 0;border-bottom:1px solid rgba(239,68,68,.1);display:flex;justify-content:space-between}
+.error-list .err-item:last-child{border:none}
+.error-list .err-step{font-size:10px;color:var(--muted);font-family:monospace}
+.empty{background:var(--surface);border:1px dashed var(--border);border-radius:var(--radius);padding:48px;text-align:center;color:var(--muted);font-size:14px}
+.history-list{display:flex;flex-direction:column;gap:6px;margin-bottom:16px}
+.hist-item{display:flex;justify-content:space-between;font-size:12px;padding:6px 10px;background:var(--surface-2);border-radius:4px;border:1px solid var(--border)}
+.hist-item .states{color:var(--text)}
+.hist-item .time{color:var(--muted);font-size:11px}
+.realtime-indicator{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--muted);margin-bottom:12px}
+.realtime-indicator .pulse{width:6px;height:6px;border-radius:50%;background:var(--accent);animation:pulse 1s infinite}
+.realtime-indicator .pulse.stopped{background:var(--muted);animation:none}
+.controls{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px}
+.controls .btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:var(--radius);font-size:12px;font-weight:600;border:none;cursor:pointer;transition:all .2s;font-family:var(--font-sans)}
+.controls .btn-secondary{background:var(--surface-2);color:var(--text);border:1px solid var(--border)}
+.controls .btn-secondary:hover{border-color:var(--accent)}
+.controls .btn:disabled{opacity:.4;cursor:not-allowed}
+@media(max-width:600px){header{padding:12px 16px}
+.container{padding:16px}
+.decisions-list{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
@@ -49,71 +80,171 @@ footer{margin-top:48px;padding:24px 32px;border-top:1px solid var(--border);font
   <h1>JIC <span>Dashboard</span></h1>
   <nav>
     <a href="/dashboard.html">Projects</a>
-    <a href="/dashboard-project.html" id="projectLink">Detail</a>
+    <a href="/dashboard-project.html" id="projectLink" style="display:none">Detail</a>
+    <a href="/dashboard-preview.html">Previews</a>
+    <a href="/dashboard-logs.html" class="active">Logs</a>
     <a href="/">Portfolio</a>
   </nav>
 </header>
 <div class="container" id="app">
-  <div class="page-title">Decision Logs</div>
-  <div class="page-sub">Architectural decisions recorded by the system</div>
-  <div class="stats" id="stats"></div>
-  <div class="loading" id="loading">Loading logs...</div>
-  <div id="logs"></div>
+  <a href="/dashboard-project.html" id="backLink" class="back" style="display:none">← Project</a>
+  <div class="page-title">Execution Logs</div>
+  <div class="page-sub" id="sub">Live execution and decision viewer</div>
+  <div class="loading" id="loading">Loading...</div>
+  <div id="content"></div>
 </div>
-<footer>Agent Pack v1.5.0 — JIC Dashboard</footer>
+<script src="/dashboard-api.js"></script>
 <script>
-function escapeHTML(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
+const api = window.DASHBOARD_API;
+const projectId = new URLSearchParams(location.search).get('id');
+const execId = new URLSearchParams(location.search).get('exec');
+const pl = document.getElementById('projectLink');
+const bl = document.getElementById('backLink');
+if (projectId) { pl.href = '/dashboard-project.html?id=' + encodeURIComponent(projectId); pl.style.display = 'inline'; bl.href = '/dashboard-project.html?id=' + encodeURIComponent(projectId); bl.style.display = 'inline-flex'; }
 
-async function load(){
-  const projectId=new URLSearchParams(location.search).get('id');
-  const link=document.getElementById('projectLink');
-  if(projectId){link.href='/dashboard-project.html?id='+encodeURIComponent(projectId);link.style.display='inline'}
-  else{link.style.display='none'}
-  const logsDiv=document.getElementById('logs');
-  const statsDiv=document.getElementById('stats');
-  const loading=document.getElementById('loading');
-  try{
-    const url=projectId?'/api/projects/logs?id='+encodeURIComponent(projectId):'/api/projects/logs';
-    const r=await fetch(url);
-    if(!r.ok)throw new Error(await r.text());
-    const data=await r.json();
-    const decisions=data.decisions||[];
-    loading.style.display='none';
-    if(decisions.length===0){
-      logsDiv.innerHTML='<div class="empty">No decisions recorded yet.</div>';
-      statsDiv.innerHTML='<div class="stat-card"><div class="num">0</div><div class="label">Decisions</div></div>';
-      return;
-    }
-    const high=decisions.filter(d=>d.impact==='high').length;
-    const med=decisions.filter(d=>d.impact==='medium').length;
-    const low=decisions.filter(d=>d.impact==='low').length;
-    statsDiv.innerHTML=`
-      <div class="stat-card"><div class="num">${decisions.length}</div><div class="label">Total decisions</div></div>
-      <div class="stat-card"><div class="num">${high}</div><div class="label">High impact</div></div>
-      <div class="stat-card"><div class="num">${med}</div><div class="label">Medium impact</div></div>
-      <div class="stat-card"><div class="num">${low}</div><div class="label">Low impact</div></div>
-    `;
-    logsDiv.innerHTML=decisions.map(d=>`
-      <div class="log-entry">
-        <div class="meta">
-          <span class="id">${escapeHTML(d.id)}</span>
-          <span class="date">${new Date(d.timestamp).toLocaleString()}</span>
+function escapeHTML(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
+function ago(d){if(!d)return'';const s=Math.floor((Date.now()-new Date(d))/1000);if(s<60)return s+'s ago';if(s<3600)return Math.floor(s/60)+'m ago';if(s<86400)return Math.floor(s/3600)+'h ago';return Math.floor(s/86400)+'d ago'}
+function statusBadge(s){return `<span class="status-badge ${s}">${escapeHTML(s)}</span>`}
+
+function renderExecution(exec, decisions){
+  if (!exec) return '<div class="empty">No execution found</div>';
+  const steps = exec.steps || [];
+  const errors = exec.errors || [];
+  const pipeline = exec.pipeline || [];
+
+  let stepHtml = '';
+  if (steps.length) {
+    stepHtml = '<div class="steps-list">' + steps.map((s, i) => {
+      if (!s || !s.name) return '';
+      const dot = s.status === 'completed' ? 'done' : s.status === 'running' ? 'running' : s.status === 'failed' ? 'fail' : 'pending';
+      return `<div class="step-card">
+        <div class="head">
+          <div class="name"><span class="dot ${dot}"></span>${escapeHTML(s.name.replace(/_/g,' '))} ${statusBadge(s.status || 'pending')}</div>
         </div>
-        <div class="title">${escapeHTML(d.title)}</div>
-        <div class="reason">${escapeHTML(d.reason)}</div>
-        <div class="tags">
-          <span class="tag tag-impact-${d.impact}">${d.impact}</span>
-          ${(d.modules_affected||[]).map(m=>`<span class="tag tag-module">${escapeHTML(m)}</span>`).join('')}
-          ${d.version?`<span class="tag tag-module">v${escapeHTML(d.version)}</span>`:''}
-        </div>
+        ${s.result_summary ? `<div class="summary">${escapeHTML(s.result_summary)}</div>` : ''}
+        ${s.completed_at ? `<div class="dur">${ago(s.completed_at)}</div>` : ''}
+      </div>`;
+    }).join('') + '</div>';
+  } else if (pipeline.length) {
+    stepHtml = '<div class="steps-list">' + pipeline.map(p =>
+      `<div class="step-card"><div class="head"><div class="name"><span class="dot pending"></span>${escapeHTML(p.replace(/_/g,' '))}</div></div></div>`
+    ).join('') + '</div>';
+  } else {
+    stepHtml = '<div class="empty">No steps recorded yet</div>';
+  }
+
+  let errorHtml = '';
+  if (errors.length) {
+    errorHtml = '<div class="error-list">' + errors.map(e => {
+      const entry = typeof e === 'string' ? { error: e } : e;
+      return `<div class="err-item"><span>${escapeHTML(entry.error || entry.message || 'Unknown error')}</span>${entry.step ? `<span class="err-step">${escapeHTML(entry.step)}</span>` : ''}</div>`;
+    }).join('') + '</div>';
+  }
+
+  let decisionHtml = '';
+  if (decisions && decisions.length) {
+    decisionHtml = '<h3 style="font-size:12px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin-bottom:10px">AI Decisions (' + decisions.length + ')</h3><div class="decisions-list">' + decisions.map(d => {
+      const scoreCls = d.passed ? 'pass' : 'fail';
+      return `<div class="decision-card">
+        <div class="head"><span>${escapeHTML(d.decision_type || d.type || 'decision')}</span><span>${d.created_at ? ago(d.created_at) : ''}</span></div>
+        <div class="score ${scoreCls}">${d.score !== null && d.score !== undefined ? d.score : '—'}</div>
+        ${d.feedback ? `<div style="font-size:12px;color:var(--text);margin-top:6px">${escapeHTML(d.feedback)}</div>` : ''}
+        ${d.metrics ? `<div class="sub">${Object.entries(d.metrics).map(([k,v])=>`<span>${k}: ${v.score||v}</span>`).join('')}</div>` : ''}
+        ${d.warnings && d.warnings.length ? `<div class="sub" style="color:var(--yellow)">⚠ ${d.warnings.map(w=>escapeHTML(w.message||w)).join(', ')}</div>` : ''}
+      </div>`;
+    }).join('') + '</div>';
+  }
+
+  const isLive = exec.status === 'processing' || exec.status === 'queued';
+
+  return `
+    <div class="realtime-indicator">
+      <span class="pulse ${isLive ? '' : 'stopped'}"></span>
+      ${isLive ? 'Live — auto-refreshing every 2s' : 'Last update: ' + ago(exec.completed_at || exec.started_at)}
+    </div>
+    <div class="exec-header">
+      <div class="row">
+        <div><span class="id">${escapeHTML(exec.id)}</span> ${statusBadge(exec.status)}</div>
       </div>
-    `).join('');
-  }catch(e){
-    loading.style.display='none';
-    logsDiv.innerHTML='<div class="error-banner">Failed to load logs: '+e.message+'</div>';
+      <div class="meta">
+        <span>⏱ ${exec.duration_ms ? Math.round(exec.duration_ms/1000) + 's' : '—'}</span>
+        <span>📋 ${escapeHTML(exec.input_type || '—')}</span>
+        <span>🔗 ${escapeHTML(exec.session_id || '—')}</span>
+        <span>📅 started ${ago(exec.started_at)}</span>
+      </div>
+    </div>
+    ${errorHtml}
+    ${stepHtml}
+    ${decisionHtml}
+  `;
+}
+
+let pollStopExec = null;
+
+async function loadExec(){
+  const content = document.getElementById('content');
+  const loading = document.getElementById('loading');
+  const sub = document.getElementById('sub');
+  if (!api.isReady()) {
+    loading.style.display = 'none';
+    content.innerHTML = '<div class="error-banner">Connect to a workspace in the dashboard first</div>';
+    return;
+  }
+
+  if (!execId && !projectId) {
+    loading.style.display = 'none';
+    content.innerHTML = '<div class="empty">Pass ?id=PROJECT_ID or ?exec=EXECUTION_ID to view logs</div>';
+    return;
+  }
+
+  try {
+    if (execId) {
+      sub.textContent = 'Execution ' + execId.substring(0, 8) + '...';
+      loading.style.display = 'none';
+      const d = await api.getExecution(execId);
+      content.innerHTML = renderExecution(d.execution, d.decisions);
+      if (d.execution && (d.execution.status === 'processing' || d.execution.status === 'queued')) {
+        if (pollStopExec) pollStopExec();
+        pollStopExec = api.pollExecution(execId, (d2) => {
+          content.innerHTML = renderExecution(d2.execution, d2.decisions);
+        }, 2000);
+      }
+    } else if (projectId) {
+      sub.textContent = 'Latest executions for project';
+      loading.style.display = 'block';
+      const data = await api.getProject(projectId, 'decisions,states');
+      loading.style.display = 'none';
+      const decisions = data.decisions || [];
+      const states = data.state_history || [];
+      let html = '';
+      if (states.length) {
+        html += '<h3 style="font-size:12px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin-bottom:10px">State Timeline</h3><div class="history-list">';
+        html += states.map(s => `<div class="hist-item"><span class="states">${s.from||'—'} → ${s.to}</span><span class="time">${ago(s.at)}</span></div>`).join('');
+        html += '</div>';
+      }
+      if (decisions.length) {
+        html += '<h3 style="font-size:12px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin-bottom:10px">Decisions (' + decisions.length + ')</h3><div class="decisions-list">';
+        html += decisions.map(d => {
+          const scoreCls = d.passed ? 'pass' : 'fail';
+          return `<div class="decision-card">
+            <div class="head"><span>${escapeHTML(d.type||'decision')}</span><span>${d.created_at ? ago(d.created_at) : ''}</span></div>
+            <div class="score ${scoreCls}">${d.score !== null && d.score !== undefined ? d.score : '—'}</div>
+            ${d.feedback ? `<div style="font-size:12px;color:var(--text);margin-top:6px">${escapeHTML(d.feedback)}</div>` : ''}
+            ${d.metrics ? `<div class="sub">${Object.entries(d.metrics).map(([k,v])=>`<span>${k}: ${v.score||v}</span>`).join('')}</div>` : ''}
+          </div>`;
+        }).join('');
+        html += '</div>';
+      }
+      if (!html) html = '<div class="empty">No logs or decisions for this project yet</div>';
+      content.innerHTML = html;
+    }
+  } catch(e) {
+    loading.style.display = 'none';
+    content.innerHTML = '<div class="error-banner">Failed: ' + escapeHTML(e.message) + '</div>';
   }
 }
-load();
+
+loadExec();
 </script>
 </body>
 </html>

@@ -3,41 +3,83 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Project Dashboard — Agent Pack</title>
+<title>SaaS Dashboard — Agent Pack</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
 <style>
 :root{--bg:#0B0F19;--surface:#131829;--surface-2:#1a2035;--border:#1e2640;--text:#d1d5db;--text-strong:#f3f4f6;--muted:#6b7280;--accent:#00D4FF;--accent-2:#00FFC8;--red:#ef4444;--yellow:#f59e0b;--green:#10b981;--radius:8px;--font-sans:'Inter',-apple-system,BlinkMacSystemFont,sans-serif}
 *{margin:0;padding:0;box-sizing:border-box}
 body{background:var(--bg);color:var(--text);font-family:var(--font-sans);min-height:100vh}
-header{background:var(--surface);border-bottom:1px solid var(--border);padding:16px 32px;display:flex;align-items:center;justify-content:space-between}
+header{background:var(--surface);border-bottom:1px solid var(--border);padding:14px 32px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px}
 header h1{font-family:'Space Grotesk',sans-serif;font-size:18px;color:var(--text-strong)}
 header h1 span{color:var(--accent)}
-header nav a{color:var(--muted);text-decoration:none;font-size:13px;margin-left:20px;transition:color .2s}
+header nav a{color:var(--muted);text-decoration:none;font-size:13px;margin-left:16px;transition:color .2s}
 header nav a:hover{color:var(--accent)}
 header nav a.active{color:var(--accent);font-weight:600}
-.container{max-width:1200px;margin:0 auto;padding:32px}
-.page-title{font-size:24px;font-weight:700;color:var(--text-strong);margin-bottom:4px}
+.container{max-width:1280px;margin:0 auto;padding:32px}
+.page-title{font-size:22px;font-weight:700;color:var(--text-strong);margin-bottom:4px}
 .page-sub{font-size:13px;color:var(--muted);margin-bottom:24px}
-.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:32px}
-.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px}
-.stat-card .num{font-size:28px;font-weight:700;color:var(--accent)}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:28px}
+.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px}
+.stat-card .num{font-size:26px;font-weight:700;color:var(--accent)}
 .stat-card .label{font-size:11px;color:var(--muted);margin-top:2px}
-.projects-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px}
-.project-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px;cursor:pointer;transition:border-color .2s, transform .2s}
-.project-card:hover{border-color:var(--accent);transform:translateY(-2px)}
-.project-card .name{font-size:15px;font-weight:600;color:var(--text-strong);margin-bottom:4px}
-.project-card .id{font-size:11px;color:var(--muted);font-family:monospace;margin-bottom:12px}
-.project-card .meta{display:flex;gap:16px;font-size:12px;color:var(--muted)}
-.project-card .meta span{display:flex;align-items:center;gap:4px}
-.project-card .meta .icon{width:14px;height:14px;opacity:.5}
+.ctx-bar{background:var(--surface-2);border:1px solid var(--border);border-radius:var(--radius);padding:12px 16px;margin-bottom:20px;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.ctx-bar .label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px}
+.ctx-bar input{background:var(--bg);border:1px solid var(--border);border-radius:4px;padding:6px 10px;font-size:12px;color:var(--text);font-family:var(--font-sans);width:180px}
+.ctx-bar input:focus{border-color:var(--accent);outline:none}
+.ctx-bar .btn{background:linear-gradient(135deg,var(--accent),var(--accent-2));color:#0B0F19;border:none;border-radius:4px;padding:6px 14px;font-size:12px;font-weight:600;cursor:pointer;font-family:var(--font-sans)}
+.ctx-bar .btn:hover{opacity:.9}
+.ctx-bar .status{font-size:11px;color:var(--green);margin-left:auto}
+.ctx-bar .status.err{color:var(--red)}
+.toolbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:10px}
+.toolbar .btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:var(--radius);font-size:12px;font-weight:600;border:none;cursor:pointer;transition:all .2s;font-family:var(--font-sans)}
+.toolbar .btn-primary{background:linear-gradient(135deg,var(--accent),var(--accent-2));color:#0B0F19}
+.toolbar .btn-primary:hover{opacity:.9;transform:translateY(-1px)}
+.toolbar .btn-secondary{background:var(--surface-2);color:var(--text);border:1px solid var(--border)}
+.toolbar .btn-secondary:hover{border-color:var(--accent)}
+.toolbar .btn:disabled{opacity:.4;cursor:not-allowed}
+table{width:100%;border-collapse:collapse;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;font-size:13px}
+thead{background:var(--surface-2)}
+th{text-align:left;padding:10px 14px;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;font-weight:600;border-bottom:1px solid var(--border)}
+td{padding:10px 14px;border-bottom:1px solid var(--border);color:var(--text)}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:rgba(0,212,255,.03)}
+tr{cursor:pointer}
+.status-badge{display:inline-block;padding:3px 10px;border-radius:12px;font-size:11px;font-weight:600;text-transform:capitalize}
+.status-badge.draft{background:rgba(107,114,128,.15);color:var(--muted)}
+.status-badge.processing{background:rgba(0,212,255,.12);color:var(--accent)}
+.status-badge.preview{background:rgba(245,158,11,.15);color:var(--yellow)}
+.status-badge.approved{background:rgba(0,212,255,.1);color:var(--accent-2)}
+.status-badge.deploying{background:rgba(16,185,129,.1);color:var(--green)}
+.status-badge.deployed{background:rgba(16,185,129,.2);color:var(--green)}
+.status-badge.failed{background:rgba(239,68,68,.15);color:var(--red)}
+.status-badge.cancelled{background:rgba(107,114,128,.1);color:var(--muted)}
+.mono{font-family:monospace;font-size:11px;color:var(--muted)}
+.id-cell{max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .empty{background:var(--surface);border:1px dashed var(--border);border-radius:var(--radius);padding:48px;text-align:center;color:var(--muted);font-size:14px}
-.error-banner{background:rgba(239,68,68,.1);border:1px solid var(--red);border-radius:var(--radius);padding:12px 16px;margin-bottom:16px;font-size:13px;color:var(--red)}
 .loading{text-align:center;padding:48px;color:var(--muted);font-size:14px}
+.error-banner{background:rgba(239,68,68,.1);border:1px solid var(--red);border-radius:var(--radius);padding:12px 16px;margin-bottom:16px;font-size:13px;color:var(--red)}
+.modal-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;z-index:100;opacity:0;pointer-events:none;transition:opacity .2s}
+.modal-overlay.open{opacity:1;pointer-events:all}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:24px;width:480px;max-width:90vw;max-height:80vh;overflow-y:auto}
+.modal h2{font-size:16px;color:var(--text-strong);margin-bottom:16px}
+.modal label{display:block;font-size:12px;color:var(--muted);margin-bottom:4px;margin-top:12px}
+.modal input,.modal textarea{width:100%;background:var(--bg);border:1px solid var(--border);border-radius:4px;padding:8px 10px;font-size:12px;color:var(--text);font-family:var(--font-sans)}
+.modal input:focus,.modal textarea:focus{border-color:var(--accent);outline:none}
+.modal textarea{min-height:120px;resize:vertical}
+.modal .actions{display:flex;gap:8px;justify-content:flex-end;margin-top:16px}
+.modal .actions .btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:var(--radius);font-size:12px;font-weight:600;border:none;cursor:pointer;font-family:var(--font-sans)}
+.modal .actions .btn-primary{background:linear-gradient(135deg,var(--accent),var(--accent-2));color:#0B0F19}
+.modal .actions .btn-secondary{background:var(--surface-2);color:var(--text);border:1px solid var(--border)}
+.modal .actions .btn:disabled{opacity:.4;cursor:not-allowed}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.status-badge.processing{animation:pulse 1.5s ease-in-out infinite}
 footer{margin-top:48px;padding:24px 32px;border-top:1px solid var(--border);font-size:11px;color:var(--muted);text-align:center}
-@media(max-width:600px){header{padding:12px 16px;flex-direction:column;gap:8px}
+@media(max-width:600px){header{padding:12px 16px}
 .container{padding:16px}
-.projects-grid{grid-template-columns:1fr}}
+.ctx-bar input{width:120px}
+table{font-size:12px}
+th,td{padding:8px 10px}}
 </style>
 </head>
 <body>
@@ -45,60 +87,151 @@ footer{margin-top:48px;padding:24px 32px;border-top:1px solid var(--border);font
   <h1>JIC <span>Dashboard</span></h1>
   <nav>
     <a href="/dashboard.html" class="active">Projects</a>
+    <a href="/dashboard-preview.html">Previews</a>
+    <a href="/dashboard-logs.html">Logs</a>
     <a href="/">Portfolio</a>
   </nav>
 </header>
 <div class="container" id="app">
-  <div class="page-title">Projects</div>
-  <div class="page-sub">All briefs received through Brief Maestro</div>
+  <div class="ctx-bar" id="ctxBar">
+    <span class="label">Workspace ID</span>
+    <input id="inpWs" placeholder="uuid" value="">
+    <span class="label">User ID</span>
+    <input id="inpUid" placeholder="uuid" value="">
+    <button class="btn" onclick="setCtx()">Connect</button>
+    <span class="status" id="ctxStatus">Not connected</span>
+  </div>
+  <div class="toolbar">
+    <div>
+      <div class="page-title">Projects</div>
+      <div class="page-sub" id="subHeader">Connect to a workspace to view projects</div>
+    </div>
+    <button class="btn btn-primary" onclick="openCreate()" id="btnCreate" disabled>+ New Project</button>
+  </div>
   <div class="stats" id="stats"></div>
-  <div class="loading" id="loading">Loading projects...</div>
-  <div class="projects-grid" id="grid"></div>
+  <div class="loading" id="loading">Connect to a workspace to begin</div>
+  <table id="table" style="display:none">
+    <thead><tr><th>Name</th><th>Status</th><th>Type</th><th>Version</th><th>Updated</th><th>Deployed</th></tr></thead>
+    <tbody id="tbody"></tbody>
+  </table>
+  <div class="empty" id="empty" style="display:none">No projects in this workspace.</div>
 </div>
-<footer>Agent Pack v1.5.0 — JIC Dashboard</footer>
+
+<div class="modal-overlay" id="createModal">
+  <div class="modal">
+    <h2>New Project</h2>
+    <label>Project Name *</label>
+    <input id="inpName" placeholder="e.g. Salmos Café" autofocus>
+    <label>Form Data (JSON) — optional</label>
+    <textarea id="inpFormData" placeholder='{"biz_name":"Salmos Café","obj_principal":"Increase online sales"}'>{"biz_name": "New Project"}</textarea>
+    <label><input type="checkbox" id="chkRun" checked> Run pipeline immediately</label>
+    <div class="actions">
+      <button class="btn btn-secondary" onclick="closeCreate()">Cancel</button>
+      <button class="btn btn-primary" onclick="doCreate()" id="btnDoCreate">Create</button>
+    </div>
+    <div id="createErr" class="error-banner" style="display:none;margin-top:12px"></div>
+  </div>
+</div>
+
+<footer>Agent Pack v1.7.0 — SaaS Runtime</footer>
+<script src="/dashboard-api.js"></script>
 <script>
+const api = window.DASHBOARD_API;
+const ctx = api.getContext();
+if (ctx.workspace_id) document.getElementById('inpWs').value = ctx.workspace_id;
+if (ctx.user_id) document.getElementById('inpUid').value = ctx.user_id;
+if (api.isReady()) { document.getElementById('ctxStatus').textContent = 'Connected'; load(); }
+
+function setCtx(){
+  const w = document.getElementById('inpWs').value.trim();
+  const u = document.getElementById('inpUid').value.trim();
+  if (!w || !u) { document.getElementById('ctxStatus').textContent = 'Both IDs required'; document.getElementById('ctxStatus').className = 'status err'; return; }
+  api.setContext(w, u);
+  document.getElementById('ctxStatus').textContent = 'Connected ✓';
+  document.getElementById('ctxStatus').className = 'status';
+  document.getElementById('btnCreate').disabled = false;
+  load();
+}
+
+function escapeHTML(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
+
+function statusBadge(s){return `<span class="status-badge ${s}">${escapeHTML(s)}</span>`}
+function ago(d){if(!d)return'—';const s=Math.floor((Date.now()-new Date(d))/1000);if(s<60)return'just now';if(s<3600)return Math.floor(s/60)+'m ago';if(s<86400)return Math.floor(s/3600)+'h ago';return Math.floor(s/86400)+'d ago'}
+
+let pollStop = null;
+
 async function load(){
-  const grid=document.getElementById('grid');
-  const stats=document.getElementById('stats');
-  const loading=document.getElementById('loading');
-  try{
-    const r=await fetch('/api/projects/list');
-    if(!r.ok)throw new Error(await r.text());
-    const data=await r.json();
-    const projects=data.projects||[];
-    loading.style.display='none';
-    if(projects.length===0){
-      grid.innerHTML='<div class="empty">No projects yet. Submit a brief to see it here.</div>';
-      stats.innerHTML='<div class="stat-card"><div class="num">0</div><div class="label">Projects</div></div>';
-      return;
+  if (!api.isReady()) return;
+  const sub = document.getElementById('subHeader');
+  const loading = document.getElementById('loading');
+  const table = document.getElementById('table');
+  const empty = document.getElementById('empty');
+  const tbody = document.getElementById('tbody');
+  const stats = document.getElementById('stats');
+  loading.textContent = 'Loading projects...';
+  loading.style.display = 'block';
+  table.style.display = 'none';
+  empty.style.display = 'none';
+  if (pollStop) { pollStop(); pollStop = null; }
+  try {
+    const data = await api.listProjects(100, 0);
+    const projects = data.projects || [];
+    loading.style.display = 'none';
+    sub.textContent = projects.length + ' project' + (projects.length !== 1 ? 's' : '') + ' in workspace';
+    const byStatus = {};
+    projects.forEach(p => { byStatus[p.status] = (byStatus[p.status] || 0) + 1; });
+    const st = ['draft','processing','preview','approved','deploying','deployed','failed','cancelled'];
+    stats.innerHTML = st.filter(s => byStatus[s]).map(s =>
+      `<div class="stat-card"><div class="num">${byStatus[s]}</div><div class="label">${s}</div></div>`
+    ).join('') || '<div class="stat-card"><div class="num">0</div><div class="label">No projects</div></div>';
+    if (!projects.length) { empty.style.display = 'block'; return; }
+    table.style.display = '';
+    tbody.innerHTML = projects.map(p => `<tr onclick="location.href='/dashboard-project.html?id=${p.id}'">
+      <td><div class="mono id-cell">${escapeHTML(p.name)}</div></td>
+      <td>${statusBadge(p.status)}</td>
+      <td style="font-size:12px">${escapeHTML(p.project_type||'—')}</td>
+      <td>v${p.version||1}</td>
+      <td style="font-size:12px;color:var(--muted)">${ago(p.updated_at)}</td>
+      <td style="font-size:12px;color:var(--muted)">${p.deployed_at ? ago(p.deployed_at) : '—'}</td>
+    </tr>`).join('');
+    if (projects.some(p => p.status === 'processing')) {
+      pollStop = api.pollProject(projects.filter(p=>p.status==='processing')[0].id, () => {}, 5000);
     }
-    const total=projects.length;
-    const fields=projects.reduce((s,p)=>s+p.fields,0);
-    const newest=new Date(projects[0].created_at).toLocaleDateString();
-    stats.innerHTML=`
-      <div class="stat-card"><div class="num">${total}</div><div class="label">Projects</div></div>
-      <div class="stat-card"><div class="num">${fields}</div><div class="label">Total fields</div></div>
-      <div class="stat-card"><div class="num">${projects[0].sections}</div><div class="label">Sections (latest)</div></div>
-      <div class="stat-card"><div class="num">${newest}</div><div class="label">Latest activity</div></div>
-    `;
-    grid.innerHTML=projects.map(p=>`
-      <div class="project-card" onclick="location.href='/dashboard-project.html?id=${encodeURIComponent(p.project_id)}'">
-        <div class="name">${escapeHTML(p.name)}</div>
-        <div class="id">${p.project_id}</div>
-        <div class="meta">
-          <span><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg>${p.sections} sections</span>
-          <span><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>${p.fields} fields</span>
-          <span><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>${new Date(p.created_at).toLocaleDateString()}</span>
-        </div>
-      </div>
-    `).join('');
-  }catch(e){
-    loading.style.display='none';
-    grid.innerHTML='<div class="error-banner">Failed to load projects: '+e.message+'</div>';
+  } catch(e) {
+    loading.style.display = 'none';
+    sub.innerHTML = '<span class="error-banner">Failed: '+escapeHTML(e.message)+'</span>';
   }
 }
-function escapeHTML(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
-load();
+
+function openCreate(){
+  document.getElementById('createModal').classList.add('open');
+  document.getElementById('inpName').value = '';
+  document.getElementById('createErr').style.display = 'none';
+  document.getElementById('btnDoCreate').disabled = false;
+}
+function closeCreate(){ document.getElementById('createModal').classList.remove('open'); }
+
+async function doCreate(){
+  const name = document.getElementById('inpName').value.trim();
+  const err = document.getElementById('createErr');
+  if (!name) { err.textContent = 'Project name is required'; err.style.display = 'block'; return; }
+  const btn = document.getElementById('btnDoCreate');
+  btn.disabled = true; btn.textContent = 'Creating...';
+  err.style.display = 'none';
+  let fd;
+  try {
+    const raw = document.getElementById('inpFormData').value.trim();
+    if (raw) fd = JSON.parse(raw);
+  } catch(e) { err.textContent = 'Invalid JSON: ' + e.message; err.style.display = 'block'; btn.disabled = false; btn.textContent = 'Create'; return; }
+  try {
+    const r = await api.createProject(name, fd || null, document.getElementById('chkRun').checked);
+    closeCreate();
+    load();
+  } catch(e) { err.textContent = e.message; err.style.display = 'block'; }
+  btn.disabled = false; btn.textContent = 'Create';
+}
+
+if (api.isReady()) { document.getElementById('btnCreate').disabled = false; }
 </script>
 </body>
 </html>

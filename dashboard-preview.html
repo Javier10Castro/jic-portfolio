@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Preview Renderer — JIC Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0B0F19;--surface:#131829;--surface-2:#1a2035;--border:#1e2640;--text:#d1d5db;--text-strong:#f3f4f6;--muted:#6b7280;--accent:#00D4FF;--accent-2:#00FFC8;--red:#ef4444;--yellow:#f59e0b;--green:#10b981;--radius:8px;--font-sans:'Inter',-apple-system,BlinkMacSystemFont,sans-serif}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--bg);color:var(--text);font-family:var(--font-sans);min-height:100vh}
+header{background:var(--surface);border-bottom:1px solid var(--border);padding:14px 32px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px}
+header h1{font-family:'Space Grotesk',sans-serif;font-size:18px;color:var(--text-strong)}
+header h1 span{color:var(--accent)}
+header nav a{color:var(--muted);text-decoration:none;font-size:13px;margin-left:16px;transition:color .2s}
+header nav a:hover{color:var(--accent)}
+.container{max-width:1400px;margin:0 auto;padding:32px}
+.back{display:inline-flex;align-items:center;gap:6px;color:var(--muted);text-decoration:none;font-size:13px;margin-bottom:14px;transition:color .2s}
+.back:hover{color:var(--accent)}
+.loading{text-align:center;padding:48px;color:var(--muted)}
+.error-banner{background:rgba(239,68,68,.1);border:1px solid var(--red);border-radius:var(--radius);padding:12px 16px;margin-bottom:16px;font-size:13px;color:var(--red)}
+.grid-side{display:grid;grid-template-columns:280px 1fr;gap:16px;min-height:70vh}
+@media(max-width:1000px){.grid-side{grid-template-columns:1fr}}
+.sidebar{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px;overflow-y:auto;max-height:calc(100vh - 140px)}
+.sidebar h3{font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;margin-top:16px}
+.sidebar h3:first-child{margin-top:0}
+.sidebar .proj-name{font-size:15px;font-weight:700;color:var(--text-strong);margin-bottom:2px}
+.sidebar .proj-id{font-size:10px;color:var(--muted);font-family:monospace;margin-bottom:12px}
+.sidebar .meta-row{display:flex;justify-content:space-between;font-size:11px;padding:5px 0;border-bottom:1px solid var(--border)}
+.sidebar .meta-row:last-child{border:none}
+.sidebar .meta-key{color:var(--muted)}
+.sidebar .meta-val{color:var(--text-strong);font-weight:500}
+.sidebar .version-btn{display:block;width:100%;text-align:left;padding:6px 10px;border-radius:4px;font-size:12px;background:var(--surface-2);border:1px solid var(--border);color:var(--text);cursor:pointer;margin-bottom:4px;transition:all .2s;font-family:var(--font-sans)}
+.sidebar .version-btn:hover{border-color:var(--accent)}
+.sidebar .version-btn.active{background:rgba(0,212,255,.1);border-color:var(--accent);color:var(--accent)}
+.sidebar .btn{display:block;width:100%;padding:8px 12px;margin-top:8px;border-radius:var(--radius);font-size:12px;font-weight:600;border:none;cursor:pointer;transition:all .2s;font-family:var(--font-sans);text-align:center}
+.sidebar .btn-primary{background:linear-gradient(135deg,var(--accent),var(--accent-2));color:#0B0F19}
+.sidebar .btn-primary:hover{opacity:.9}
+.sidebar .btn-secondary{background:var(--surface-2);color:var(--text);border:1px solid var(--border)}
+.sidebar .btn-secondary:hover{border-color:var(--accent)}
+.sidebar .btn-success{background:rgba(16,185,129,.15);color:var(--green);border:1px solid rgba(16,185,129,.3)}
+.sidebar .btn-success:hover{background:rgba(16,185,129,.25)}
+.sidebar .btn:disabled{opacity:.4;cursor:not-allowed}
+.sidebar .score-big{font-size:28px;font-weight:700;margin:4px 0}
+.sidebar .score-big.pass{color:var(--green)}
+.sidebar .score-big.fail{color:var(--red)}
+.sidebar .score-big.warn{color:var(--yellow)}
+.sidebar .status-badge{display:inline-block;padding:3px 10px;border-radius:12px;font-size:11px;font-weight:600;text-transform:capitalize}
+.sidebar .status-badge.preview{background:rgba(245,158,11,.15);color:var(--yellow)}
+.sidebar .status-badge.deployed{background:rgba(16,185,129,.2);color:var(--green)}
+.preview-frame{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;flex:1;display:flex;flex-direction:column}
+.preview-toolbar{display:flex;align-items:center;justify-content:space-between;padding:10px 16px;border-bottom:1px solid var(--border);flex-wrap:wrap;gap:8px}
+.preview-toolbar .tabs{display:flex;gap:4px}
+.preview-toolbar .tab{padding:5px 14px;border-radius:4px;font-size:11px;font-weight:600;cursor:pointer;background:var(--surface-2);border:1px solid var(--border);color:var(--muted);transition:all .2s;font-family:var(--font-sans)}
+.preview-toolbar .tab:hover{border-color:var(--accent)}
+.preview-toolbar .tab.active{background:rgba(0,212,255,.1);border-color:var(--accent);color:var(--accent)}
+.preview-toolbar .dim{font-size:11px;color:var(--muted);font-family:monospace}
+.preview-viewport{flex:1;background:#fff;position:relative;min-height:500px}
+.preview-viewport iframe{width:100%;height:100%;border:none;display:block;min-height:500px}
+.preview-viewport .placeholder{display:flex;align-items:center;justify-content:center;height:100%;min-height:500px;color:#666;font-size:14px;font-family:var(--font-sans)}
+.preview-viewport.dark iframe{background:#0B0F19}
+.warning-list{list-style:none;margin-top:8px}
+.warning-list li{font-size:11px;padding:4px 0;color:var(--yellow);display:flex;gap:6px;align-items:start}
+.warning-list li::before{content:'⚠';color:var(--yellow);flex-shrink:0}
+.preview-info{font-size:11px;color:var(--muted);padding:10px 16px;border-top:1px solid var(--border);display:flex;gap:16px;flex-wrap:wrap}
+@media(max-width:600px){header{padding:12px 16px}
+.container{padding:16px}
+.grid-side{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<header>
+  <h1>JIC <span>Dashboard</span></h1>
+  <nav>
+    <a href="/dashboard.html">Projects</a>
+    <a href="/dashboard-project.html" id="projectLink" style="display:none">Detail</a>
+    <a href="/dashboard-preview.html" class="active">Previews</a>
+    <a href="/dashboard-logs.html">Logs</a>
+    <a href="/">Portfolio</a>
+  </nav>
+</header>
+<div class="container" id="app">
+  <div class="loading" id="loading">Loading preview...</div>
+  <div id="content" style="display:none">
+    <div class="grid-side">
+      <div class="sidebar" id="sidebar"></div>
+      <div class="preview-frame" id="frame">
+        <div class="preview-toolbar" id="toolbar"></div>
+        <div class="preview-viewport" id="viewport">
+          <div class="placeholder" id="placeholder">Select a project and version to preview</div>
+        </div>
+        <div class="preview-info" id="info"></div>
+      </div>
+    </div>
+  </div>
+</div>
+<script src="/dashboard-api.js"></script>
+<script>
+const api = window.DASHBOARD_API;
+const projectId = new URLSearchParams(location.search).get('id');
+const pl = document.getElementById('projectLink');
+if (projectId) { pl.href = '/dashboard-project.html?id=' + encodeURIComponent(projectId); pl.style.display = 'inline'; }
+
+function escapeHTML(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
+function ago(d){if(!d)return'';const s=Math.floor((Date.now()-new Date(d))/1000);if(s<60)return s+'s ago';if(s<3600)return Math.floor(s/60)+'m ago';if(s<86400)return Math.floor(s/3600)+'h ago';return Math.floor(s/86400)+'d ago'}
+function statusBadge(s){return `<span class="status-badge ${s}">${escapeHTML(s)}</span>`}
+
+let currentPreview = null;
+let currentMode = 'desktop';
+
+function renderSidebar(data){
+  const p = data.project;
+  const previews = data.previews || [];
+  const lastDec = data.decisions && data.decisions.length ? data.decisions[0] : null;
+
+  let html = `<div class="proj-name">${escapeHTML(p.name)}</div>
+    <div class="proj-id">${p.id}</div>
+    <div class="meta-row"><span class="meta-key">Status</span>${statusBadge(p.status)}</div>
+    <div class="meta-row"><span class="meta-key">Version</span><span class="meta-val">v${p.version}</span></div>
+    <div class="meta-row"><span class="meta-key">Type</span><span class="meta-val">${escapeHTML(p.project_type||'website')}</span></div>
+    ${p.live_url ? `<div class="meta-row"><span class="meta-key">Live</span><span class="meta-val"><a href="${escapeHTML(p.live_url)}" target="_blank" style="color:var(--accent);text-decoration:none">${escapeHTML(p.live_url)}</a></span></div>` : ''}
+    ${p.github_repo ? `<div class="meta-row"><span class="meta-key">Repo</span><span class="meta-val"><a href="${escapeHTML(p.github_repo)}" target="_blank" style="color:var(--accent);text-decoration:none">GitHub</a></span></div>` : ''}
+    <div class="meta-row"><span class="meta-key">Created</span><span class="meta-val">${ago(p.created_at)}</span></div>
+    ${p.deployed_at ? `<div class="meta-row"><span class="meta-key">Deployed</span><span class="meta-val">${ago(p.deployed_at)}</span></div>` : ''}
+    <h3>Score</h3>`;
+  if (lastDec && lastDec.score !== null) {
+    const cls = lastDec.score >= 70 ? 'pass' : lastDec.score >= 50 ? 'warn' : 'fail';
+    html += `<div class="score-big ${cls}">${lastDec.score}</div>`;
+    if (lastDec.metrics) {
+      html += Object.entries(lastDec.metrics).map(([k,v]) =>
+        `<div class="meta-row"><span class="meta-key">${k}</span><span class="meta-val">${v.score||v}</span></div>`
+      ).join('');
+    }
+  } else {
+    html += `<div style="font-size:12px;color:var(--muted)">No score yet</div>`;
+  }
+
+  if (previews.length) {
+    html += `<h3>Versions</h3>`;
+    html += previews.map(pv =>
+      `<button class="version-btn ${pv.is_current ? 'active' : ''}" onclick="loadVersion('${pv.id}', ${pv.version})">v${pv.version} ${pv.is_current ? '✓ current' : ''} ${pv.is_approved ? '✓ approved' : ''}</button>`
+    ).join('');
+  }
+
+  html += `<h3>Actions</h3>`;
+  html += `<button class="btn btn-primary" onclick="loadLatest()">↻ Refresh</button>`;
+  html += `<button class="btn btn-secondary" onclick="window.open('/dashboard-project.html?id=${p.id}','_blank')">⚙ Control Center</button>`;
+  if (data.previews && data.previews.length && data.previews.some(pv => pv.is_current)) {
+    html += `<button class="btn btn-success" onclick="doApprove()" id="btnApproveSide" ${p.status !== 'preview' ? 'disabled' : ''}>✓ Approve & Deploy</button>`;
+  }
+
+  document.getElementById('sidebar').innerHTML = html;
+}
+
+function renderToolbar(){
+  document.getElementById('toolbar').innerHTML = `
+    <div class="tabs">
+      <button class="tab ${currentMode === 'desktop' ? 'active' : ''}" onclick="setMode('desktop')">🖥 Desktop</button>
+      <button class="tab ${currentMode === 'tablet' ? 'active' : ''}" onclick="setMode('tablet')">📱 Tablet</button>
+      <button class="tab ${currentMode === 'mobile' ? 'active' : ''}" onclick="setMode('mobile')">📱 Mobile</button>
+    </div>
+    <div class="dim">${currentMode === 'desktop' ? '1280×720' : currentMode === 'tablet' ? '768×1024' : '375×667'}</div>
+  `;
+}
+
+function setMode(mode){
+  currentMode = mode;
+  renderToolbar();
+  const vp = document.getElementById('viewport');
+  vp.style.maxWidth = mode === 'desktop' ? '100%' : mode === 'tablet' ? '768px' : '375px';
+  vp.style.margin = mode === 'desktop' ? '0' : '0 auto';
+}
+
+function renderPreview(preview){
+  currentPreview = preview;
+  const vp = document.getElementById('viewport');
+  const placeholder = document.getElementById('placeholder');
+
+  if (!preview || !preview.html) {
+    placeholder.style.display = 'flex';
+    placeholder.textContent = 'No preview content available';
+    return;
+  }
+
+  placeholder.style.display = 'none';
+
+  const iframe = document.createElement('iframe');
+  iframe.srcdoc = preview.html;
+  iframe.style.width = '100%';
+  iframe.style.height = '100%';
+  iframe.style.minHeight = '500px';
+
+  vp.innerHTML = '';
+  vp.appendChild(iframe);
+
+  const info = document.getElementById('info');
+  let infoHtml = `<span>v${preview.version || '?'}</span>
+    <span>Score: ${preview.score !== null && preview.score !== undefined ? preview.score : '—'}</span>
+    <span>HTML: ${(preview.html || '').length.toLocaleString()} chars</span>
+    <span>CSS: ${(preview.css || '').length.toLocaleString()} chars</span>
+    <span>${preview.is_approved ? '✓ Approved' : ''}</span>`;
+  if (preview.design_system) {
+    const ds = typeof preview.design_system === 'string' ? JSON.parse(preview.design_system) : preview.design_system;
+    infoHtml += `<span>Theme: ${ds.mapping?.theme || '—'}</span>`;
+  }
+  if (preview.plan_ir) {
+    const ir = typeof preview.plan_ir === 'string' ? JSON.parse(preview.plan_ir) : preview.plan_ir;
+    infoHtml += `<span>Pages: ${ir.project?.structure?.pages?.length || '—'}</span>`;
+  }
+  info.innerHTML = infoHtml;
+}
+
+async function loadVersion(previewId, version){
+  if (!api.isReady() || !projectId) return;
+  try {
+    const data = await api.getPreview(projectId, 'json');
+    if (!data || !data.preview) { throw new Error('No preview data'); }
+    const pv = data.preview;
+    document.querySelectorAll('.version-btn').forEach(b => b.classList.remove('active'));
+    document.querySelector(`.version-btn[onclick*="'${previewId}'"]`)?.classList.add('active');
+    renderPreview(pv);
+  } catch(e) {
+    document.getElementById('viewport').innerHTML = `<div class="error-banner">${escapeHTML(e.message)}</div>`;
+  }
+}
+
+async function loadLatest(){
+  if (!api.isReady()) return;
+  const content = document.getElementById('content');
+  const loading = document.getElementById('loading');
+  if (!projectId) {
+    loading.style.display = 'none';
+    content.style.display = '';
+    document.getElementById('placeholder').textContent = 'Pass ?id=PROJECT_ID to view a project preview';
+    return;
+  }
+  loading.style.display = 'block';
+  content.style.display = 'none';
+  try {
+    const data = await api.getProject(projectId, 'previews,decisions');
+    renderSidebar(data);
+    renderToolbar();
+    if (data.previews && data.previews.length) {
+      const current = data.previews.find(p => p.is_current) || data.previews[0];
+      const pvData = await api.getPreview(projectId, 'json');
+      if (pvData && pvData.preview) renderPreview(pvData.preview);
+    }
+    loading.style.display = 'none';
+    content.style.display = '';
+  } catch(e) {
+    loading.textContent = 'Failed: ' + e.message;
+  }
+}
+
+async function doApprove(){
+  const btn = document.getElementById('btnApproveSide');
+  if (btn) { btn.disabled = true; btn.textContent = 'Approving...'; }
+  try {
+    const r = await api.approveProject(projectId);
+    alert('Approved! Status: ' + r.status);
+    loadLatest();
+  } catch(e) {
+    alert('Failed: ' + e.message);
+    if (btn) { btn.disabled = false; btn.textContent = '✓ Approve & Deploy'; }
+  }
+}
+
+loadLatest();
+</script>
+</body>
+</html>
