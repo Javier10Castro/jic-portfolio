@@ -1,5 +1,32 @@
 # Changelog
 
+## [v1.6.0] - 2026-06-08
+
+### Added
+- Complete multi-tenant SaaS architecture design (ARCHITECTURE-SAAS.md)
+- Full PostgreSQL schema with 14 tables: workspaces, users, workspace_members, projects, project_inputs, project_states, previews, deployments, executions, decisions, artifacts, webhook_events, api_keys, form_responses (legacy)
+- Row-Level Security (RLS) tenant isolation strategy with workspace-scoped data
+- Decision Scoring Engine v2 specification — 5-dimension AI evaluation (contrast 25%, UX 25%, conversion 20%, clarity 15%, SEO 15%)
+- Automatic improvement loop with up to 2 regeneration attempts on score < 50
+- Project lifecycle state machine: DRAFT → PROCESSING → PREVIEW → APPROVED → DEPLOYING → DEPLOYED (with FAILED and REJECTED branches)
+- Workspace model with 4 roles: owner, admin, member, viewer
+- Billing plan tiers: Free (3 projects), Starter (15), Pro (50), Enterprise (unlimited)
+- GitHub + Vercel integration design — auto-repo creation, auto-commit, preview vs production branches
+- Live preview system with Redis TTL caching, design system token injection, approval gating
+- Async job queue architecture via Bull/Redis for non-blocking AI pipeline
+- Vercel API client specification (lib/deployment/vercel.js)
+- Stripe billing adapter specification (lib/billing/)
+- Rate limiting middleware with per-plan limits
+- SQL migration script (data/migrations/003_saas_schema.sql) — 14 tables + triggers + functions + indexes
+- Versioning model with rollback support (deployments store commit SHAs)
+- Preview versioning (max 10 per project, auto-cleanup)
+- Amplified pipeline flow from user input through GitHub repo creation to Vercel deployment
+
+### Notes
+This is a design-phase release (v1.6.0). No engines were modified — the existing system remains fully compatible. All new modules are documented in ARCHITECTURE-SAAS.md and ready for implementation.
+
+---
+
 ## [v1.5.0] - 2026-06-08
 
 ### Added

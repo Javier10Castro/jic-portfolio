@@ -63,6 +63,7 @@ Lead generation and client onboarding through contact forms, AI-powered brief co
 ├── AGENTS.md                  # This file
 ├── ARCHITECTURE.md            # System architecture
 ├── CHANGELOG.md               # Version history
+├── ARCHITECTURE-SAAS.md       # SaaS multi-tenant architecture design
 ├── .gitignore                 # Ignores .vercel, node_modules, data/
 └── .gitattributes             # Line ending normalization
 ```
@@ -81,7 +82,14 @@ Lead generation and client onboarding through contact forms, AI-powered brief co
 │   ├── db/                    # Database modules (Neon PostgreSQL)
 │   │   ├── index.js           # Pool + query + connection management
 │   │   └── formResponses.js   # Form Persistence Layer v1
-│   └── loader/                # Project Loader Engine v1 (read-only)
+│   ├── loader/                # Project Loader Engine v1 (read-only)
+│   ├── design-system/         # Design System Engine v1 (CSS vars + tokens)
+│   ├── preview/               # Visual Preview Engine v1 (simulation)
+│   ├── scoring/               # (planned) Decision Scoring Engine v2
+│   ├── queue/                 # (planned) Bull/Redis job queue adapter
+│   ├── storage/               # (planned) Blob storage adapter
+│   ├── billing/               # (planned) Stripe subscription adapter
+│   └── auth/                  # (planned) Auth + RBAC helpers
 ├── data/                      # Runtime storage (not committed)
 │   ├── decisions.json         # Architectural decision records
 │   ├── deployments.json       # Deployment records
@@ -95,6 +103,7 @@ Lead generation and client onboarding through contact forms, AI-powered brief co
 ├── AGENTS.md                  # This file
 ├── ARCHITECTURE.md            # System architecture
 ├── CHANGELOG.md               # Version history
+├── ARCHITECTURE-SAAS.md       # SaaS multi-tenant architecture design
 ├── .gitignore                 # Ignores .vercel, node_modules, data/
 └── .gitattributes             # Line ending normalization
 ```
@@ -312,6 +321,7 @@ The Agent Pack follows semantic versioning:
 
 - `v1.0.0` — Initial stable system
 - `v1.1.0` — Improvements without breaking changes
+- `v1.6.0` — SaaS multi-tenant architecture design (design phase)
 - `v2.0.0` — Architecture changes or new agent system
 
 ---
@@ -718,6 +728,40 @@ Es un módulo **read-only** — no modifica datos, solo los consulta y reconstru
 - Sin dependencias externas
 
 ---
+
+## SaaS Architecture (v1.6.0 — Design Phase)
+
+The system has been extended with a full multi-tenant SaaS architecture design. See `ARCHITECTURE-SAAS.md` for complete documentation.
+
+### Key Extensions
+
+- **Workspace model** with `owner`, `admin`, `member`, `viewer` roles
+- **Project lifecycle**: DRAFT → PROCESSING → PREVIEW → APPROVED → DEPLOYING → DEPLOYED
+- **Decision Scoring Engine v2** (`lib/scoring/`) — 5-dimension AI evaluation (contrast, UX, conversion, clarity, SEO)
+- **Async job queue** via Bull/Redis for non-blocking AI pipeline
+- **Vercel API client** (`lib/deployment/vercel.js`) for automated deployments
+- **Stripe billing adapter** (`lib/billing/`) with plan enforcement
+- **Preview system** with versioned HTML/CSS snapshots, TTL caching, approval gating
+- **Full PostgreSQL schema** with 14 tables, RLS, triggers, and plan enforcement
+
+### Compatibility Rules
+
+- All existing `lib/` engines remain unchanged — new SaaS modules extend, never replace
+- Existing `api/` endpoints remain functional — new SaaS endpoints are additive
+- Legacy `form_responses` table preserved — `project_inputs` is the new standard
+- Existing `data/decisions.json` remains for architectural decisions; `decisions` table is for AI governance
+- Dashboard API routes (`/api/projects/*`) remain for backward compat — new SaaS API at `/api/v1/*`
+
+### SaaS Architecture Reference
+
+| Document | Purpose |
+|---|---|
+| `ARCHITECTURE-SAAS.md` | Full architecture: layers, DB schema, lifecycle, GitHub/Vercel, preview, scoring, scalability |
+| `data/migrations/003_saas_schema.sql` | PostgreSQL schema: 14 tables, RLS, triggers, plan enforcement |
+| `lib/scoring/` (planned) | Decision Scoring Engine v2 |
+| `lib/deployment/vercel.js` (planned) | Vercel API client |
+| `lib/queue/` (planned) | Bull/Redis job queue adapter |
+| `lib/billing/` (planned) | Stripe subscription adapter |
 
 ### Known Issues
 
