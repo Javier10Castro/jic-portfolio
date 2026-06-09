@@ -1,11 +1,11 @@
 const nodemailer = require('nodemailer');
+const emailQueue = require('../lib/queue');
 const {
   RATE_LIMIT_REASON,
   edgeCheck, rateLimitKey,
   rateLimitHeaders, softLimitHeaders,
   emailDedup, honeypotCheck, timingCheck,
   validateEmail, sanitizeAndValidateName, clientIp, maskEmail,
-  waitForSmtpSlot, releaseSmtpSlot,
 } = require('../lib/rate-limit');
 const log = require('../lib/logger');
 
@@ -41,16 +41,13 @@ async function sendWithTimeout(transporter, mailOptions, timeoutMs, req, label) 
     ]);
     const elapsed = Date.now() - sendStart;
     log.debugLog(req, `email_send:${label}`, { elapsed_ms: elapsed });
-    releaseSmtpSlot(elapsed, true);
     return true;
   } catch (err) {
     if (err.timedOut) {
       log.warn(req, `Email send timed out`, { label, timeout_ms: timeoutMs, elapsed_ms: Date.now() - sendStart });
       log.debugLog(req, `email_send:${label} (timed_out)`, { elapsed_ms: Date.now() - sendStart });
-      releaseSmtpSlot(Date.now() - sendStart, false);
       return false;
     }
-    releaseSmtpSlot(Date.now() - sendStart, false);
     throw err;
   }
 }
@@ -163,42 +160,44 @@ module.exports = async (req, res) => {
 
   const templateData = { name: safeName, email, company, project, message, dateStr, lang: isES ? 'es' : 'en' };
 
-  // ── 8. LAYER 3: Acquire SMTP slot (concurrency + adaptive) ────
+  // ── 8. Queue email sending (non-blocking, returns 202) ─────────
   stage(req, 'before_email_send');
-  const slot = await waitForSmtpSlot(req, 3000);
-  if (!slot.acquired) {
-    log.warn(req, 'SMTP slot unavailable', { reason: slot.reason, retryAfter: slot.retryAfter });
-    return json(503, { ...rateLimitHeaders(slot), ...debugHeaders(slot, RATE_LIMIT_REASON.SMTP_CONGESTION) }, { success: false, error: 'Service is busy. Please try again in a moment.' })(res);
-  }
+  const { queueId, position, depth } = emailQueue.enqueue({
+    handler: async () => {
+      await sendWithTimeout(transporter, {
+        from: `"Javier Ibrahim — Portfolio" <${GMAIL_USER}>`,
+        to: GMAIL_USER,
+        replyTo: email,
+        subject: isES
+          ? `Nuevo mensaje de ${safeName}${company ? ` — ${company}` : ''}`
+          : `New message from ${safeName}${company ? ` — ${company}` : ''}`,
+        html: buildContactHTML(templateData, 'admin'),
+      }, EMAIL_TIMEOUT_MS, req, 'admin');
 
-  try {
-    await sendWithTimeout(transporter, {
-      from: `"Javier Ibrahim — Portfolio" <${GMAIL_USER}>`,
-      to: GMAIL_USER,
-      replyTo: email,
-      subject: isES
-        ? `Nuevo mensaje de ${safeName}${company ? ` — ${company}` : ''}`
-        : `New message from ${safeName}${company ? ` — ${company}` : ''}`,
-      html: buildContactHTML(templateData, 'admin'),
-    }, EMAIL_TIMEOUT_MS, req, 'admin');
+      stage(req, 'before_email_client');
+      await sendWithTimeout(transporter, {
+        from: `"Javier Ibrahim" <${GMAIL_USER}>`,
+        to: [email, GMAIL_USER],
+        replyTo: GMAIL_USER,
+        subject: isES ? 'Hemos recibido tu mensaje ✅' : 'We received your message ✅',
+        html: buildContactHTML(templateData, 'client'),
+      }, EMAIL_TIMEOUT_MS, req, 'client');
 
-    stage(req, 'before_email_client');
-    await sendWithTimeout(transporter, {
-      from: `"Javier Ibrahim" <${GMAIL_USER}>`,
-      to: [email, GMAIL_USER],
-      replyTo: GMAIL_USER,
-      subject: isES ? 'Hemos recibido tu mensaje ✅' : 'We received your message ✅',
-      html: buildContactHTML(templateData, 'client'),
-    }, EMAIL_TIMEOUT_MS, req, 'client');
+      stage(req, 'after_email_send');
+      log.info(req, 'Contact emails sent', { name: safeName, email: maskEmail(email) });
+    },
+    req,
+    label: 'sendContact',
+  });
 
-    stage(req, 'after_email_send');
-    log.info(req, 'Contact emails sent', { name: safeName, email: maskEmail(email), duration_ms: Date.now() - start });
-    return json(200, withSoftHeaders(req, { 'Content-Type': 'application/json' }), { success: true })(res);
-  } catch (error) {
-    log.error(req, 'Failed to send contact emails', error, { name: safeName, email: maskEmail(email), duration_ms: Date.now() - start });
-    log.debugLog(req, 'Catch block hit', { error: error.message, stack: error.stack?.split('\n').slice(0, 3).join('; ') });
-    return json(502, { 'Content-Type': 'application/json' }, { success: false, error: 'Failed to send email. Please try again later.' })(res);
-  }
+  log.debugLog(req, 'Emails queued', { queueId, position, depth });
+  return json(202, withSoftHeaders(req, {
+    'Content-Type': 'application/json',
+    'X-Queue-Id': String(queueId),
+    'X-Queue-Depth': String(depth),
+    'X-Queue-Position': String(position),
+    'X-Processing-Mode': depth > 0 ? 'queued' : 'immediate',
+  }), { success: true, queued: true, position, depth })(res);
 };
 
 function buildContactHTML({ name, email, company, project, message, dateStr, lang }, type) {

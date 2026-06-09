@@ -1,5 +1,6 @@
 const nodemailer = require('nodemailer');
 const PDFDocument = require('pdfkit');
+const emailQueue = require('../lib/queue');
 
 const formResponses = require('../lib/db/formResponses');
 const {
@@ -7,7 +8,6 @@ const {
   edgeCheck, rateLimitKey, rateLimitHeaders, softLimitHeaders,
   emailDedup, honeypotCheck, timingCheck,
   validateEmail, sanitizeAndValidateName, validatePrompt, clientIp, maskEmail,
-  waitForSmtpSlot, releaseSmtpSlot,
 } = require('../lib/rate-limit');
 const log = require('../lib/logger');
 
@@ -43,16 +43,13 @@ async function sendWithTimeout(transporter, mailOptions, timeoutMs, req, label) 
     ]);
     const elapsed = Date.now() - sendStart;
     log.debugLog(req, `email_send:${label}`, { elapsed_ms: elapsed });
-    releaseSmtpSlot(elapsed, true);
     return true;
   } catch (err) {
     if (err.timedOut) {
       log.warn(req, `Email send timed out`, { label, timeout_ms: timeoutMs, elapsed_ms: Date.now() - sendStart });
       log.debugLog(req, `email_send:${label} (timed_out)`, { elapsed_ms: Date.now() - sendStart });
-      releaseSmtpSlot(Date.now() - sendStart, false);
       return false;
     }
-    releaseSmtpSlot(Date.now() - sendStart, false);
     throw err;
   }
 }
@@ -208,54 +205,56 @@ module.exports = async (req, res) => {
 
   const bizName = (formData && formData.biz_name) || safeCompany || safeName;
 
-  // ── 9. LAYER 3: Acquire SMTP slot (concurrency + adaptive) ────
+  // ── 9. Generate PDF (fast, before queue) ───────────────────────
+  stage(req, 'before_pdf_generation');
+  const pdfBuffer = await generatePDF(prompt, safeName, bizName, isES);
+  stage(req, 'after_pdf_generation');
+
+  // ── 10. Queue email sending (non-blocking, returns 202) ────────
   stage(req, 'before_email_send');
-  const slot = await waitForSmtpSlot(req, 3000);
-  if (!slot.acquired) {
-    log.warn(req, 'SMTP slot unavailable', { reason: slot.reason, retryAfter: slot.retryAfter });
-    return json(503, { ...rateLimitHeaders(slot), ...debugHeaders(slot, RATE_LIMIT_REASON.SMTP_CONGESTION) }, { success: false, error: 'Service is busy. Please try again in a moment.' })(res);
-  }
+  const { queueId, position, depth } = emailQueue.enqueue({
+    handler: async () => {
+      await sendWithTimeout(transporter, {
+        from: `"Build a Brief" <${GMAIL_USER}>`,
+        to: GMAIL_USER,
+        replyTo: email,
+        subject: isES
+          ? `Nuevo brief de ${safeName}${safeCompany ? ` — ${safeCompany}` : ''}`
+          : `New brief from ${safeName}${safeCompany ? ` — ${safeCompany}` : ''}`,
+        html: buildEmailHTML({ name: safeName, email, company: safeCompany, phone, prompt, dateStr, lang: isES ? 'es' : 'en', formData }),
+        attachments: [{
+          filename: `brief-${bizName.replace(/[^a-zA-Z0-9\u00C0-\u024F]/g,'_').toLowerCase()}.pdf`,
+          content: pdfBuffer,
+          contentType: 'application/pdf',
+        }],
+      }, EMAIL_TIMEOUT_MS, req, 'admin');
 
-  try {
-    stage(req, 'before_pdf_generation');
-    const pdfBuffer = await generatePDF(prompt, safeName, bizName, isES);
-    stage(req, 'after_pdf_generation');
+      stage(req, 'before_email_client');
+      await sendWithTimeout(transporter, {
+        from: `"Build a Brief" <${GMAIL_USER}>`,
+        to: [email, GMAIL_USER],
+        replyTo: GMAIL_USER,
+        subject: isES
+          ? `Gracias por compartir tu proyecto conmigo 🚀`
+          : `Thank you for sharing your project with me 🚀`,
+        html: buildClientEmailHTML({ name: safeName, bizName, dateStr, lang: isES ? 'es' : 'en' }),
+      }, EMAIL_TIMEOUT_MS, req, 'client');
 
-    stage(req, 'before_email_admin');
-    await sendWithTimeout(transporter, {
-      from: `"Build a Brief" <${GMAIL_USER}>`,
-      to: GMAIL_USER,
-      replyTo: email,
-      subject: isES
-        ? `Nuevo brief de ${safeName}${safeCompany ? ` — ${safeCompany}` : ''}`
-        : `New brief from ${safeName}${safeCompany ? ` — ${safeCompany}` : ''}`,
-      html: buildEmailHTML({ name: safeName, email, company: safeCompany, phone, prompt, dateStr, lang: isES ? 'es' : 'en', formData }),
-      attachments: [{
-        filename: `brief-${bizName.replace(/[^a-zA-Z0-9\u00C0-\u024F]/g,'_').toLowerCase()}.pdf`,
-        content: pdfBuffer,
-        contentType: 'application/pdf',
-      }],
-    }, EMAIL_TIMEOUT_MS, req, 'admin');
+      stage(req, 'after_email_send');
+      log.info(req, 'Brief emails sent', { name: safeName, email: maskEmail(email) });
+    },
+    req,
+    label: 'sendBrief',
+  });
 
-    stage(req, 'before_email_client');
-    await sendWithTimeout(transporter, {
-      from: `"Build a Brief" <${GMAIL_USER}>`,
-      to: [email, GMAIL_USER],
-      replyTo: GMAIL_USER,
-      subject: isES
-        ? `Gracias por compartir tu proyecto conmigo 🚀`
-        : `Thank you for sharing your project with me 🚀`,
-      html: buildClientEmailHTML({ name: safeName, bizName, dateStr, lang: isES ? 'es' : 'en' }),
-    }, EMAIL_TIMEOUT_MS, req, 'client');
-
-    stage(req, 'after_email_send');
-    log.info(req, 'Brief emails sent', { name: safeName, email: maskEmail(email), duration_ms: Date.now() - start });
-    return json(200, withSoftHeaders(req, { 'Content-Type': 'application/json' }), { success: true })(res);
-  } catch (error) {
-    log.error(req, 'Failed to send brief emails', error, { name: safeName, email: maskEmail(email), duration_ms: Date.now() - start });
-    log.debugLog(req, 'Catch block hit', { error: error.message, stack: error.stack?.split('\n').slice(0, 3).join('; ') });
-    return json(502, { 'Content-Type': 'application/json' }, { success: false, error: 'Failed to send email. Please try again later.' })(res);
-  }
+  log.debugLog(req, 'Brief emails queued', { queueId, position, depth });
+  return json(202, withSoftHeaders(req, {
+    'Content-Type': 'application/json',
+    'X-Queue-Id': String(queueId),
+    'X-Queue-Depth': String(depth),
+    'X-Queue-Position': String(position),
+    'X-Processing-Mode': depth > 0 ? 'queued' : 'immediate',
+  }), { success: true, queued: true, position, depth })(res);
 };
 
 /* ─── Email templates (unchanged) ──────────────────────────────── */
