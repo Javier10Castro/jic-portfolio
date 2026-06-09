@@ -295,7 +295,61 @@ if (localStorage.getItem('briefMaestroAuto')) {
 - Use `vercel --prod` for production deployment
 - Environment variables must be set in Vercel Dashboard
 
----
+## Vercel CLI Usage (Windows)
+
+```powershell
+# ── Deployment ──────────────────────────────────────────────────
+# List deployments (find the right one)
+vercel list
+
+# Inspect a specific deployment (get URL)
+vercel inspect <deployment-url-or-id>
+
+# Promote preview to production
+vercel promote <deployment-url>
+
+# Set environment variables
+vercel env add GMAIL_USER
+vercel env add GMAIL_APP_PASSWORD
+vercel env add DATABASE_URL
+vercel env add UPSTASH_REDIS_REST_URL
+vercel env add UPSTASH_REDIS_REST_TOKEN
+
+# Add to all environments (Production + Preview + Development)
+vercel env add DATABASE_URL production
+vercel env add DATABASE_URL preview
+vercel env add DATABASE_URL development
+
+# ── Logs ────────────────────────────────────────────────────────
+# Stream logs for current deployment
+vercel logs
+
+# Stream logs for a specific deployment
+vercel logs <deployment-url>
+
+# Follow logs in real-time (use with search for filtering)
+vercel logs --follow | Select-String -Pattern "429|error|rate.limit"
+
+# Query specific time range (last 5 minutes)
+vercel logs --since=5m
+
+# ── Dev (local) ─────────────────────────────────────────────────
+vercel dev
+# Access at http://localhost:3000
+# API endpoints: http://localhost:3000/api/sendContact
+
+# ── Production deploy ──────────────────────────────────────────
+vercel --prod
+# Returns: https://<project>.vercel.app
+```
+
+### Common mistakes (Windows)
+| Mistake | Correct |
+|---|---|
+| `vercel logs <deployment-name>` | `vercel logs <full-deployment-url>` |
+| `vercel logs \| grep 429` | `vercel logs \| Select-String -Pattern "429"` |
+| `curl` for API testing | `Invoke-RestMethod` or `node scripts/loadtest.js` |
+| `npm run build` before deploy | Vercel builds automatically — just `vercel --prod` |
 
 ## Testing Checklist
 

@@ -2,49 +2,147 @@ const nodemailer = require('nodemailer');
 const PDFDocument = require('pdfkit');
 
 const formResponses = require('../lib/db/formResponses');
-const { rateLimit, rateLimitKey } = require('../lib/rate-limit');
+const {
+  RATE_LIMIT_REASON, tokenBucket, rateLimitKey, rateLimitHeaders,
+  emailDedup, honeypotCheck, timingCheck,
+  validateEmail, sanitizeAndValidateName, validatePrompt, clientIp,
+} = require('../lib/rate-limit');
 const log = require('../lib/logger');
+
+function json(status, headers, payload) {
+  return res => { res.writeHead(status, headers).end(JSON.stringify(payload)); };
+}
+
+// ── Upstash Redis client (optional, auto-detect) ─────────────────
+let redis = null;
+function getRedis() {
+  if (redis !== null) return redis;
+  const url = process.env.UPSTASH_REDIS_REST_URL;
+  const token = process.env.UPSTASH_REDIS_REST_TOKEN;
+  if (!url || !token) { redis = false; return null; }
+  try {
+    const { Redis } = require('@upstash/redis');
+    redis = new Redis({ url, token });
+    return redis;
+  } catch { redis = false; return null; }
+}
+
+async function redisSlidingWindow(key, maxReqs, windowMs) {
+  const r = getRedis();
+  if (!r) return null;
+  const now = Date.now();
+  const windowStart = now - windowMs;
+  try {
+    await r.zremrangebyscore(key, 0, windowStart);
+    const count = await r.zcard(key);
+    if (count >= maxReqs) {
+      const oldest = await r.zrange(key, 0, 0, { withScores: true });
+      const retryAfter = oldest && oldest.length >= 2
+        ? Math.ceil((oldest[1] + windowMs - now) / 1000) : 60;
+      return { allowed: false, remaining: 0, limit: maxReqs, retryAfter, source: 'redis' };
+    }
+    await r.zadd(key, { score: now, member: `${now}:${Math.random()}` });
+    await r.expire(key, Math.ceil(windowMs / 1000) + 10);
+    return { allowed: true, remaining: maxReqs - count - 1, limit: maxReqs, retryAfter: 0, source: 'redis' };
+  } catch (err) {
+    log.error(null, 'Redis rate limit error', err);
+    return null;
+  }
+}
 
 module.exports = async (req, res) => {
   const start = Date.now();
-  let parsed = {};
+  const ip = clientIp(req);
 
   if (req.method !== 'POST') {
-    return res.writeHead(405, { 'Content-Type': 'application/json' }).end(JSON.stringify({ error: 'Method Not Allowed' }));
+    log.warn(req, 'Method not allowed', { ip, method: req.method, reason: RATE_LIMIT_REASON.VALIDATION });
+    return json(405, { 'Content-Type': 'application/json' }, { success: false, error: 'Method Not Allowed' })(res);
   }
 
-  const rlCheck = rateLimit(rateLimitKey('brief', req), 10, 60000);
-  if (!rlCheck.allowed) {
-    return res.writeHead(429, { 'Content-Type': 'application/json', 'Retry-After': String(rlCheck.retryAfter) }).end(JSON.stringify({ error: 'Too many requests' }));
-  }
-
+  // ── 1. Body parsing ───────────────────────────────────────────
   let body = '';
   for await (const chunk of req) body += chunk;
-  if (body.length > 1000000) {
-    return res.writeHead(413, { 'Content-Type': 'application/json' }).end(JSON.stringify({ error: 'Payload too large' }));
-  }
-  try { parsed = JSON.parse(body || '{}'); } catch { return res.writeHead(400, { 'Content-Type': 'application/json' }).end(JSON.stringify({ error: 'Invalid JSON body' })); }
-
-  const { name, email, company, phone, prompt, lang, formData } = parsed;
-
-  if (!name || !email) {
-    return res.writeHead(400, { 'Content-Type': 'application/json' }).end(JSON.stringify({ error: 'Name and email are required' }));
+  if (body.length > 1_000_000) {
+    return json(413, { 'Content-Type': 'application/json' }, { success: false, error: 'Payload too large' })(res);
   }
 
+  let parsed;
+  try { parsed = JSON.parse(body || '{}'); } catch {
+    return json(400, { 'Content-Type': 'application/json' }, { success: false, error: 'Invalid JSON body' })(res);
+  }
+
+  // ── 2. Anti-spam: honeypot (silent 200, bot sees success) ─────
+  const hp = honeypotCheck(parsed);
+  if (hp.triggered) {
+    log.warn(req, 'Honeypot triggered', { ip, field: hp.field, reason: RATE_LIMIT_REASON.BOT });
+    return json(200, { 'Content-Type': 'application/json' }, { success: true })(res);
+  }
+
+  // ── 3. Anti-spam: timing check (submittedAt is REQUIRED) ──────
+  const tc = timingCheck(parsed);
+  if (tc.tooFast) {
+    log.warn(req, 'Timing check failed', { ip, elapsedMs: tc.elapsedMs, reason: tc.reason === 'missing_timestamp' ? RATE_LIMIT_REASON.BOT : RATE_LIMIT_REASON.TIMING });
+    return json(400, { 'Content-Type': 'application/json' }, { success: false, error: 'Invalid request' })(res);
+  }
+
+  // ── 4. Validate payload fields ────────────────────────────────
+  const { name: rawName, email, company, phone, prompt, lang, formData } = parsed;
+
+  const nameCheck = sanitizeAndValidateName(rawName);
+  if (!nameCheck.valid) {
+    return json(400, { 'Content-Type': 'application/json' }, { success: false, error: nameCheck.reason })(res);
+  }
+  const safeName = nameCheck.value;
+  const safeCompany = company && typeof company === 'string' ? company.replace(/<[^>]*>/g, '').trim().slice(0, 200) : '';
+
+  if (!validateEmail(email)) {
+    log.warn(req, 'Invalid email', { ip, email, reason: RATE_LIMIT_REASON.VALIDATION });
+    return json(400, { 'Content-Type': 'application/json' }, { success: false, error: 'A valid email address is required' })(res);
+  }
+
+  const promptCheck = validatePrompt(prompt);
+  if (!promptCheck.valid) {
+    return json(400, { 'Content-Type': 'application/json' }, { success: false, error: promptCheck.reason })(res);
+  }
+
+  // ── 5. Rate limiting: IP-based ────────────────────────────────
+  const rlKey = rateLimitKey('brief', req);
+  const rlRedis = await redisSlidingWindow(rlKey, 10, 60000);
+  let rlCheck;
+  if (rlRedis) {
+    rlCheck = rlRedis;
+  } else {
+    rlCheck = tokenBucket(rlKey, 10, 60000);
+    rlCheck.source = 'memory';
+  }
+  if (!rlCheck.allowed) {
+    log.warn(req, 'Rate limited (IP)', { ip, retryAfter: rlCheck.retryAfter, source: rlCheck.source, reason: RATE_LIMIT_REASON.IP_LIMIT });
+    return json(429, rateLimitHeaders(rlCheck), { success: false, error: 'Too many requests. Please wait before submitting again.' })(res);
+  }
+
+  // ── 6. Rate limiting: email dedup (1 req/60s per email) �───────
+  const dedupCheck = emailDedup(email, 60000);
+  if (!dedupCheck.allowed) {
+    log.warn(req, 'Rate limited (email)', { email, retryAfter: dedupCheck.retryAfter, reason: RATE_LIMIT_REASON.EMAIL_LIMIT });
+    return json(429, rateLimitHeaders(dedupCheck), { success: false, error: 'A brief was already submitted with this email. Please wait before submitting again.' })(res);
+  }
+
+  // ── 7. Persist form responses (non-blocking, best-effort) ─────
   try {
-    const projectId = formResponses.generateProjectId(name, email);
+    const projectId = formResponses.generateProjectId(safeName, email);
     await formResponses.saveBulkFormResponses(projectId, formData || {});
-    log.info(req, 'Form responses persisted', { projectId, name, email });
+    log.info(req, 'Form responses persisted', { projectId, name: safeName, email });
   } catch (dbErr) {
-    log.error(req, 'Failed to persist form responses', dbErr);
+    log.error(req, 'Failed to persist form responses', dbErr, { name: safeName, email });
   }
 
+  // ── 8. Send emails ────────────────────────────────────────────
   const GMAIL_USER = process.env.GMAIL_USER;
   const GMAIL_APP_PASSWORD = process.env.GMAIL_APP_PASSWORD;
 
   if (!GMAIL_USER || !GMAIL_APP_PASSWORD) {
-    log.error(req, 'Missing GMAIL_USER or GMAIL_APP_PASSWORD environment variables');
-    return res.writeHead(500, { 'Content-Type': 'application/json' }).end(JSON.stringify({ error: 'Email service misconfigured' }));
+    log.error(req, 'Missing GMAIL_USER or GMAIL_APP_PASSWORD', null, { ip });
+    return json(500, { 'Content-Type': 'application/json' }, { success: false, error: 'Email service misconfigured' })(res);
   }
 
   const transporter = nodemailer.createTransport({
@@ -59,19 +157,20 @@ module.exports = async (req, res) => {
     ? now.toLocaleDateString('es-MX', { timeZone: tz, year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })
     : now.toLocaleDateString('en-US', { timeZone: tz, year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' });
 
-  const bizName = (formData && formData.biz_name) || company || name;
-  const pdfBuffer = await generatePDF(prompt, name, bizName, isES);
+  const bizName = (formData && formData.biz_name) || safeCompany || safeName;
 
   try {
+    const pdfBuffer = await generatePDF(prompt, safeName, bizName, isES);
+
     // Email 1 — Admin notification
     await transporter.sendMail({
       from: `"Build a Brief" <${GMAIL_USER}>`,
       to: GMAIL_USER,
       replyTo: email,
       subject: isES
-        ? `Nuevo brief de ${name}${company ? ` — ${company}` : ''}`
-        : `New brief from ${name}${company ? ` — ${company}` : ''}`,
-      html: buildEmailHTML({ name, email, company, phone, prompt, dateStr, lang: isES ? 'es' : 'en', formData }),
+        ? `Nuevo brief de ${safeName}${safeCompany ? ` — ${safeCompany}` : ''}`
+        : `New brief from ${safeName}${safeCompany ? ` — ${safeCompany}` : ''}`,
+      html: buildEmailHTML({ name: safeName, email, company: safeCompany, phone, prompt, dateStr, lang: isES ? 'es' : 'en', formData }),
       attachments: [{
         filename: `brief-${bizName.replace(/[^a-zA-Z0-9\u00C0-\u024F]/g,'_').toLowerCase()}.pdf`,
         content: pdfBuffer,
@@ -80,25 +179,25 @@ module.exports = async (req, res) => {
     });
 
     // Email 2 — Client confirmation
-    const clientSubject = isES
-      ? `Gracias por compartir tu proyecto conmigo 🚀`
-      : `Thank you for sharing your project with me 🚀`;
-
     await transporter.sendMail({
       from: `"Build a Brief" <${GMAIL_USER}>`,
       to: [email, GMAIL_USER],
       replyTo: GMAIL_USER,
-      subject: clientSubject,
-      html: buildClientEmailHTML({ name, bizName, dateStr, lang: isES ? 'es' : 'en' }),
+      subject: isES
+        ? `Gracias por compartir tu proyecto conmigo 🚀`
+        : `Thank you for sharing your project with me 🚀`,
+      html: buildClientEmailHTML({ name: safeName, bizName, dateStr, lang: isES ? 'es' : 'en' }),
     });
 
-    log.info(req, 'Brief emails sent', { name, email, duration_ms: Date.now() - start });
-    return res.writeHead(200, { 'Content-Type': 'application/json' }).end(JSON.stringify({ success: true }));
+    log.info(req, 'Brief emails sent', { name: safeName, email, duration_ms: Date.now() - start });
+    return json(200, { 'Content-Type': 'application/json' }, { success: true })(res);
   } catch (error) {
-    log.error(req, 'Failed to send brief emails', error, { name, email, duration_ms: Date.now() - start });
-    return res.writeHead(502, { 'Content-Type': 'application/json' }).end(JSON.stringify({ error: 'Failed to send email' }));
+    log.error(req, 'Failed to send brief emails', error, { name: safeName, email, duration_ms: Date.now() - start });
+    return json(502, { 'Content-Type': 'application/json' }, { success: false, error: 'Failed to send email. Please try again later.' })(res);
   }
 };
+
+/* ─── Email templates (unchanged) ──────────────────────────────── */
 
 function v(fd, key, fallback) {
   const v = fd && fd[key];
@@ -287,7 +386,6 @@ function buildClientEmailHTML({ name, bizName, dateStr, lang }) {
             </tr>
           </table>
           <div style="margin-top:20px;text-align:center">
-            <!-- Success checkmark -->
             <table align="center" cellpadding="0" cellspacing="0" border="0">
               <tr><td style="width:64px;height:64px;border-radius:50%;background:rgba(11,15,19,0.08);text-align:center;vertical-align:middle">
                 <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#0B0F19" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
@@ -321,7 +419,6 @@ function buildClientEmailHTML({ name, bizName, dateStr, lang }) {
             ? 'Ahora viene una de mis partes favoritas del proceso: conocer a fondo tu proyecto, entender qué lo hace diferente y descubrir oportunidades para construir algo que realmente aporte valor a tu negocio.'
             : 'Now comes one of my favorite parts of the process: getting to know your project deeply, understanding what makes it different, and finding opportunities to build something that truly adds value to your business.'}</p>
 
-          <!-- PROJECT STATUS CARD -->
           <table width="100%" cellpadding="0" cellspacing="0" border="0" class="email-card" style="background:#f8f9fb;border-radius:8px;border:1px solid #e5e7eb;margin-bottom:28px">
             <tr><td style="padding:14px 18px">
               <table width="100%" cellpadding="0" cellspacing="0" border="0">
@@ -341,12 +438,10 @@ function buildClientEmailHTML({ name, bizName, dateStr, lang }) {
             </td></tr>
           </table>
 
-          <!-- NEXT STEPS SECTION -->
           <h2 style="margin:0 0 16px;font-size:16px;font-weight:700;color:#0B0F19">${isES ? '¿Qué sucederá ahora?' : 'What happens next?'}</h2>
 
           <table width="100%" cellpadding="0" cellspacing="0" border="0">${stepsRows}</table>
 
-          <!-- TIMELINE -->
           <table width="100%" cellpadding="0" cellspacing="0" border="0" class="email-card" style="background:#f8f9fb;border-radius:8px;border:1px solid #e5e7eb;margin:20px 0 28px">
             <tr><td style="padding:16px 18px">
               <table width="100%" cellpadding="0" cellspacing="0" border="0">
@@ -363,14 +458,12 @@ function buildClientEmailHTML({ name, bizName, dateStr, lang }) {
             </td></tr>
           </table>
 
-          <!-- ADDITIONAL MATERIALS -->
           <h2 style="margin:0 0 12px;font-size:16px;font-weight:700;color:#0B0F19">${isES ? '¿Quieres agregar algo más?' : 'Want to add something else?'}</h2>
 
           <p class="email-text" style="margin:0 0 24px;font-size:14px;color:#222;line-height:1.7">${isES
             ? 'Si después de enviar el formulario recuerdas algún detalle importante, deseas compartir referencias, fotografías, logotipos o cualquier material adicional, puedes responder directamente a este correo y lo tomaré en cuenta durante la revisión.'
             : 'If after submitting the form you remember an important detail, want to share references, photos, logos, or any additional material, feel free to reply directly to this email and I will consider it during the review.'}</p>
 
-          <!-- COMMITMENT -->
           <table width="100%" cellpadding="0" cellspacing="0" border="0" class="email-card" style="background:linear-gradient(135deg,rgba(0,212,255,0.06),rgba(0,255,200,0.04));background-color:#f0fdfa;border-radius:8px;border:1px solid #c8f0e0;margin-bottom:28px">
             <tr><td style="padding:18px 20px">
               <h2 style="margin:0 0 10px;font-size:15px;font-weight:700;color:#0B0F19">${isES ? 'Mi compromiso' : 'My commitment'}</h2>
@@ -383,7 +476,6 @@ function buildClientEmailHTML({ name, bizName, dateStr, lang }) {
             </td></tr>
           </table>
 
-          <!-- SIGNATURE -->
           <div style="text-align:center;margin-bottom:16px">
             <div style="display:inline-block;width:36px;height:36px;border-radius:8px;background:linear-gradient(135deg,#00D4FF,#00FFC8);text-align:center;line-height:36px;font-size:13px;font-weight:700;color:#0B0F19;letter-spacing:-0.03em">JIC</div>
           </div>
@@ -394,7 +486,6 @@ function buildClientEmailHTML({ name, bizName, dateStr, lang }) {
 
         </td></tr>
 
-        <!-- FOOTER -->
         <tr><td bgcolor="#f8f9fb" style="background-color:#f8f9fb;padding:16px 32px;border-top:1px solid #e5e7eb" class="email-footer">
           <p style="margin:0;font-size:11px;color:#999">Brief Maestro — javieribrahim.dev</p>
         </td></tr>
@@ -433,18 +524,15 @@ function generatePDF(prompt, name, company, isES) {
       doc.fontSize(11).font('Helvetica').fillColor(textColor).text(`${isES ? 'Cliente' : 'Client'}: ${name}${company ? ` — ${company}` : ''}`, { align: 'center' });
       doc.moveDown(0.3);
 
-      // Line
       doc.moveTo(50, doc.y).lineTo(545, doc.y).strokeColor(brandColor).lineWidth(2).stroke();
       doc.moveDown(0.5);
 
-      // Prompt content
       doc.font('Courier').fontSize(7.5).fillColor('#333');
       const lines = (prompt || '').split('\n');
       for (const line of lines) {
         doc.text(line, { indent: 0 });
       }
 
-      // Footer
       doc.moveDown(0.5);
       doc.fontSize(7).font('Helvetica').fillColor('#bbb').text('Build a Brief — javieribrahim.dev', { align: 'center' });
 
