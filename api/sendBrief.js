@@ -1,6 +1,7 @@
 const nodemailer = require('nodemailer');
 const PDFDocument = require('pdfkit');
 const emailQueue = require('../lib/queue');
+const { parseBody } = require('../lib/safeBodyParser');
 
 const formResponses = require('../lib/db/formResponses');
 const {
@@ -102,21 +103,11 @@ module.exports = async (req, res) => {
     return json(405, { 'Content-Type': 'application/json' }, { success: false, error: 'Method Not Allowed' })(res);
   }
 
-  // ── 1. Body parsing ───────────────────────────────────────────
-  let body = '';
-  for await (const chunk of req) body += chunk;
-  if (body.length > 1_000_000) {
-    log.debugLog(req, 'Payload too large', { ip, length: body.length });
-    return json(413, { 'Content-Type': 'application/json' }, { success: false, error: 'Payload too large' })(res);
+  // ── 1. Body parsing (safe, handles Vercel pre-parsed + stream) ─
+  const parsed = await parseBody(req);
+  if (!parsed) {
+    return json(400, { 'Content-Type': 'application/json' }, { success: false, error: 'INVALID_BODY' })(res);
   }
-
-  let parsed;
-  try { parsed = JSON.parse(body || '{}'); } catch {
-    log.debugLog(req, 'Invalid JSON body', { ip, bodyPreview: body.slice(0, 200) });
-    return json(400, { 'Content-Type': 'application/json' }, { success: false, error: 'Invalid JSON body' })(res);
-  }
-
-  log.debugLog(req, 'Body parsed', { ip, hasEmail: !!parsed.email, nameLength: parsed.name?.length, hasPrompt: !!parsed.prompt });
 
   // ── 2. Anti-spam: honeypot (silent 200, bot sees success) ─────
   const hp = honeypotCheck(parsed);
