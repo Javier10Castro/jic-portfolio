@@ -1,0 +1,47 @@
+{
+"biz_name": "EcoWash Express",
+"biz_tagline": "Lavamos tu auto mientras cuidas el planeta",
+
+"obj_principal": "Generar reservas online",
+
+"conv_cta": "Reserva tu lavado ahora",
+
+"brand_colores": "Verde #2E7D32, Blanco, Gris oscuro",
+
+"brand_valores": [
+"Sustentabilidad",
+"Rapidez",
+"Confianza",
+"Calidad"
+],
+
+"arq_paginas": [
+"Inicio",
+"Servicios",
+"Precios",
+"Galería",
+"Nosotros",
+"Contacto",
+"Blog"
+],
+
+"seo_keywords": [
+"lavado ecológico",
+"car wash tijuana",
+"lavado a domicilio",
+"detallado automotriz",
+"encerado profesional"
+],
+
+"seo_geo": [
+"Tijuana"
+],
+
+"serv_lista": [
+"Lavado exterior",
+"Lavado interior",
+"Detallado",
+"Pulido",
+"Encerado"
+]
+}

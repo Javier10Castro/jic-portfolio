@@ -3,6 +3,13 @@
   "version": "1.0.0",
   "private": true,
   "description": "Javier Ibrahim — Portfolio & Build a Brief",
+  "scripts": {
+    "db:query": "node scripts/query.js",
+    "db:repl": "node scripts/query.js --repl",
+    "db:reset": "node scripts/db-reset.js --force",
+    "db:migrate": "node scripts/run-migrations.js",
+    "db:seed": "node scripts/seed-test.js"
+  },
   "dependencies": {
     "dotenv": "^17.4.2",
     "nodemailer": "^8.0.10",

@@ -1,9 +1,12 @@
-require('dotenv').config();
 const runtime = require('../../../../lib/runtime');
 const { query } = require('../../../../lib/db');
+const log = require('../../../../lib/logger');
 const HEADERS = { 'Content-Type': 'application/json' };
 
 module.exports = async (req, res) => {
+  const start = Date.now();
+  log.info(req, 'Preview project', { method: req.method });
+
   if (req.method !== 'GET') {
     return res.writeHead(405, HEADERS).end(JSON.stringify({ error: 'Method Not Allowed' }));
   }
@@ -16,7 +19,9 @@ module.exports = async (req, res) => {
   const version = url.searchParams.get('version');
 
   if (!workspace_id) return res.writeHead(400, HEADERS).end(JSON.stringify({ error: 'workspace_id is required' }));
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(workspace_id)) return res.writeHead(400, HEADERS).end(JSON.stringify({ error: 'workspace_id must be a valid UUID v4' }));
   if (!user_id) return res.writeHead(400, HEADERS).end(JSON.stringify({ error: 'user_id is required' }));
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(user_id)) return res.writeHead(400, HEADERS).end(JSON.stringify({ error: 'user_id must be a valid UUID v4' }));
 
   try {
     const membership = await query(
@@ -62,6 +67,7 @@ module.exports = async (req, res) => {
       return res.end(full.css_content || '');
     }
 
+    log.info(req, 'Preview retrieved', { projectId, version: full.version, duration_ms: Date.now() - start });
     return res.writeHead(200, HEADERS).end(JSON.stringify({
       success: true,
       preview: {
@@ -78,7 +84,8 @@ module.exports = async (req, res) => {
       },
     }));
   } catch (err) {
-    console.error('[api/v1/projects/preview]', err.message);
-    return res.writeHead(500, HEADERS).end(JSON.stringify({ error: err.message }));
+    log.error(req, 'Preview retrieval failed', err, { projectId, duration_ms: Date.now() - start });
+    const msg = process.env.NODE_ENV === 'production' && !err.statusCode ? 'Internal server error' : err.message;
+    return res.writeHead(err.statusCode || 500, HEADERS).end(JSON.stringify({ error: msg }));
   }
 };

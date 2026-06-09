@@ -426,6 +426,56 @@ Brief PDFs are generated server-side using PDFKit and attached to the admin noti
 
 ---
 
+### 2026-06 — Workspace Resolution Architecture (Designed & Fixed)
+
+The workspace resolution flow was redesigned on 2026-06-09 to eliminate "Workspace not found" errors caused by uuidv5 hashing of non-UUID workspace_ids.
+
+#### Architecture Rules (Fixed)
+
+| Rule | Description |
+|---|---|
+| **STRICT ID POLICY** | `workspace_id` MUST be a valid UUID v4. Non-UUID throws `INVALID_ID_FORMAT`. No hashing, no conversion. |
+| **SLUG FIRST-CLASS** | `workspace_slug` resolves via `WHERE slug = $1` — no normalization, no UUID conversion. |
+| **PRIORITY** | `workspace_id` (if valid UUID) → `workspace_slug` → throw `INVALID_INPUT` |
+| **BOTH PRESENT** | If workspace_id is provided but invalid → throws `INVALID_ID_FORMAT` immediately (slug is NOT fallback) |
+
+#### Resolution matrix
+
+| Input pattern | What happens | Works? |
+|---|---|---|
+| `workspace_id: "00000000-...0001"` | UUID → assertUUID → `WHERE id = seed.id` | ✅ |
+| `workspace_id: "ws_demo_001"` | not UUID → `INVALID_ID_FORMAT` (never reaches DB) | ❌ early fail |
+| `workspace_slug: "test-workspace"` | slug → `WHERE slug = 'test-workspace'` | ✅ |
+| `workspace_id: "0000...0001" + workspace_slug: "test"` | UUID takes priority → `WHERE id` | ✅ |
+| Neither provided | `INVALID_INPUT: workspace_id or workspace_slug is required` | ❌ early fail |
+
+#### ID Contract (STRICT vs FLEXIBLE)
+
+| Entity | Field | Validation | Behavior |
+|---|---|---|---|
+| **workspace** | `workspace_id` | STRICT UUID v4 | `assertUUID` → throws `INVALID_ID_FORMAT` on non-UUID |
+| **workspace** | `workspace_slug` | First-class string | `WHERE slug = $1` — no normalization |
+| **project** | `project_id` | FLEXIBLE (UUID or string) | `normalizeProjectId()` → accepts any non-empty string; `resolveProject()` resolves UUID→id, string→slug |
+| **execution** | `execution_id` | FLEXIBLE (UUID or string) | `normalizeProjectId()` — non-UUID auto-converted to UUID for DB |
+| **user** | `user_id` | STRICT UUID v4 | `normalizeId()` → throws `INVALID_ID_FORMAT` on non-UUID |
+
+#### Code changes (2026-06-09)
+
+| File | Change |
+|---|---|
+| `lib/runtime/id-normalizer.js` | `normalizeId`: removed uuidv5 hashing — throws `INVALID_ID_FORMAT` on non-UUID; `normalizeProjectId`: new function accepts any non-empty string (no UUID enforcement); `safeUUID`: returns `null` on non-UUID |
+| `lib/runtime/validators.js:29-30` | `assertUUID`: updated message, removed "auto-normalized" reference |
+| `lib/runtime/index.js:234` | `createProject`: replaced `normalizeId(workspaceId)` with `if (workspaceId) assertUUID()` |
+| `lib/runtime/index.js:256` | `runPipeline`: replaced `normalizeId(projectId)` with `normalizeProjectId()` for flexible project_id |
+| `lib/runtime/index.js:258` | `runPipeline`: replaced `normalizeId(executionId)` with `normalizeProjectId()` + UUID fallback for DB |
+| `lib/runtime/index.js:174-178` | `getProjectById`: added 22P02 catch → returns `null` (project not found) for non-UUID project_ids |
+| `lib/runtime/index.js:267` | `runPipeline`: replaced `getProjectById` with `resolveProject()` — dual-path id/slug resolution; reassigns `projectId = project.id` (DB UUID) for all downstream ops |
+| `lib/runtime/index.js:403` | `approveProject`: same pattern — `resolveProject()` + `projectId = project.id` reassignment |
+| `lib/runtime/project-resolver.js` | **New file**: `resolveProject({ project_id, workspace_id })` — if UUID → `WHERE p.id = $1`, if string → `WHERE p.slug = $1`. Throws `NOT_FOUND` directly. |
+| `test-runtime-safe.js` | 7 tests updated: error codes, 4 uuidv5 conversion → strict throw, 5 new normalizeProjectId tests |
+
+---
+
 ## Project Bootstrap System (v1.0)
 
 El sistema ahora genera **proyectos completos**, no solo sitios web. Cada output es un producto deployable inmediatamente con estructura estándar, Git-ready y documentación auto-generada.

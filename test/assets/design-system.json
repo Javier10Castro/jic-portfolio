@@ -1,0 +1,18 @@
+{
+  "theme": "dark",
+  "colors": {
+    "accent": null,
+    "primary": null,
+    "secondary": null
+  },
+  "palette": [],
+  "semantic": {
+    "text": "#F3F4F6",
+    "accent": "#F3F4F6",
+    "border": "#1E2640",
+    "primary": "#F3F4F6",
+    "surface": "#131829",
+    "secondary": "#131829",
+    "background": "#0B0F19"
+  }
+}

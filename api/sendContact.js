@@ -1,30 +1,45 @@
 const nodemailer = require('nodemailer');
+const { rateLimit, rateLimitKey } = require('../lib/rate-limit');
+const log = require('../lib/logger');
 
 module.exports = async (req, res) => {
+  const start = Date.now();
+  let parsed = {};
+
   if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method Not Allowed' });
+    return res.writeHead(405, { 'Content-Type': 'application/json' }).end(JSON.stringify({ error: 'Method Not Allowed' }));
   }
 
-  const { name, email, company, project, message, lang } = req.body;
+  const rlCheck = rateLimit(rateLimitKey('contact', req), 10, 60000);
+  if (!rlCheck.allowed) {
+    return res.writeHead(429, { 'Content-Type': 'application/json', 'Retry-After': String(rlCheck.retryAfter) }).end(JSON.stringify({ error: 'Too many requests' }));
+  }
+
+  let body = '';
+  for await (const chunk of req) body += chunk;
+  if (body.length > 1000000) {
+    return res.writeHead(413, { 'Content-Type': 'application/json' }).end(JSON.stringify({ error: 'Payload too large' }));
+  }
+  try { parsed = JSON.parse(body || '{}'); } catch { return res.writeHead(400, { 'Content-Type': 'application/json' }).end(JSON.stringify({ error: 'Invalid JSON body' })); }
+
+  const { name, email, company, project, message, lang } = parsed;
 
   if (!name || !email || !message) {
-    return res.status(400).json({ error: 'Name, email, and message are required' });
+    return res.writeHead(400, { 'Content-Type': 'application/json' }).end(JSON.stringify({ error: 'Name, email, and message are required' }));
   }
 
   const GMAIL_USER = process.env.GMAIL_USER;
   const GMAIL_APP_PASSWORD = process.env.GMAIL_APP_PASSWORD;
 
   if (!GMAIL_USER || !GMAIL_APP_PASSWORD) {
-    console.error('Missing GMAIL_USER or GMAIL_APP_PASSWORD environment variables');
-    return res.status(500).json({ error: 'Email service misconfigured' });
+    log.error(req, 'Missing GMAIL_USER or GMAIL_APP_PASSWORD environment variables');
+    return res.writeHead(500, { 'Content-Type': 'application/json' }).end(JSON.stringify({ error: 'Email service misconfigured' }));
   }
 
   const transporter = nodemailer.createTransport({
     service: 'gmail',
     auth: { user: GMAIL_USER, pass: GMAIL_APP_PASSWORD },
   });
-
-  await transporter.verify();
 
   const isES = lang === 'es';
   const now = new Date();
@@ -57,10 +72,11 @@ module.exports = async (req, res) => {
       html: buildContactHTML(templateData, 'client'),
     });
 
-    return res.json({ success: true });
+    log.info(req, 'Contact emails sent', { name, email, duration_ms: Date.now() - start });
+    return res.writeHead(200, { 'Content-Type': 'application/json' }).end(JSON.stringify({ success: true }));
   } catch (error) {
-    console.error('sendMail error:', error);
-    return res.status(502).json({ error: 'Failed to send email' });
+    log.error(req, 'Failed to send contact emails', error, { name, email, duration_ms: Date.now() - start });
+    return res.writeHead(502, { 'Content-Type': 'application/json' }).end(JSON.stringify({ error: 'Failed to send email' }));
   }
 };
 

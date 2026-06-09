@@ -1,0 +1,4 @@
+Vercel CLI 54.9.1 (Node.js 22.11.0)
+Retrieving project…
+> Ready! Available at http://localhost:3000
+◇ injected env (0) from .env // tip: ⌘ enable debugging { debug: true }

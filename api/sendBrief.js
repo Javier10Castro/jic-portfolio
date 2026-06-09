@@ -1,42 +1,56 @@
 const nodemailer = require('nodemailer');
 const PDFDocument = require('pdfkit');
-require('dotenv').config();
 
 const formResponses = require('../lib/db/formResponses');
+const { rateLimit, rateLimitKey } = require('../lib/rate-limit');
+const log = require('../lib/logger');
 
 module.exports = async (req, res) => {
+  const start = Date.now();
+  let parsed = {};
+
   if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method Not Allowed' });
+    return res.writeHead(405, { 'Content-Type': 'application/json' }).end(JSON.stringify({ error: 'Method Not Allowed' }));
   }
 
-  const { name, email, company, phone, prompt, lang, formData } = req.body;
+  const rlCheck = rateLimit(rateLimitKey('brief', req), 10, 60000);
+  if (!rlCheck.allowed) {
+    return res.writeHead(429, { 'Content-Type': 'application/json', 'Retry-After': String(rlCheck.retryAfter) }).end(JSON.stringify({ error: 'Too many requests' }));
+  }
+
+  let body = '';
+  for await (const chunk of req) body += chunk;
+  if (body.length > 1000000) {
+    return res.writeHead(413, { 'Content-Type': 'application/json' }).end(JSON.stringify({ error: 'Payload too large' }));
+  }
+  try { parsed = JSON.parse(body || '{}'); } catch { return res.writeHead(400, { 'Content-Type': 'application/json' }).end(JSON.stringify({ error: 'Invalid JSON body' })); }
+
+  const { name, email, company, phone, prompt, lang, formData } = parsed;
 
   if (!name || !email) {
-    return res.status(400).json({ error: 'Name and email are required' });
+    return res.writeHead(400, { 'Content-Type': 'application/json' }).end(JSON.stringify({ error: 'Name and email are required' }));
   }
 
   try {
     const projectId = formResponses.generateProjectId(name, email);
     await formResponses.saveBulkFormResponses(projectId, formData || {});
-    console.log(`[persist] saved ${projectId} — ${name} / ${email}`);
+    log.info(req, 'Form responses persisted', { projectId, name, email });
   } catch (dbErr) {
-    console.error('[persist] failed to save form responses:', dbErr.message);
+    log.error(req, 'Failed to persist form responses', dbErr);
   }
 
-const GMAIL_USER = process.env.GMAIL_USER;
-const GMAIL_APP_PASSWORD = process.env.GMAIL_APP_PASSWORD;
+  const GMAIL_USER = process.env.GMAIL_USER;
+  const GMAIL_APP_PASSWORD = process.env.GMAIL_APP_PASSWORD;
 
   if (!GMAIL_USER || !GMAIL_APP_PASSWORD) {
-    console.error('Missing GMAIL_USER or GMAIL_APP_PASSWORD environment variables');
-    return res.status(500).json({ error: 'Email service misconfigured' });
+    log.error(req, 'Missing GMAIL_USER or GMAIL_APP_PASSWORD environment variables');
+    return res.writeHead(500, { 'Content-Type': 'application/json' }).end(JSON.stringify({ error: 'Email service misconfigured' }));
   }
 
   const transporter = nodemailer.createTransport({
     service: 'gmail',
     auth: { user: GMAIL_USER, pass: GMAIL_APP_PASSWORD },
   });
-
-  await transporter.verify();
 
   const isES = lang === 'es';
   const now = new Date();
@@ -78,10 +92,11 @@ const GMAIL_APP_PASSWORD = process.env.GMAIL_APP_PASSWORD;
       html: buildClientEmailHTML({ name, bizName, dateStr, lang: isES ? 'es' : 'en' }),
     });
 
-    return res.json({ success: true });
+    log.info(req, 'Brief emails sent', { name, email, duration_ms: Date.now() - start });
+    return res.writeHead(200, { 'Content-Type': 'application/json' }).end(JSON.stringify({ success: true }));
   } catch (error) {
-    console.error('sendMail error:', error);
-    return res.status(502).json({ error: 'Failed to send email' });
+    log.error(req, 'Failed to send brief emails', error, { name, email, duration_ms: Date.now() - start });
+    return res.writeHead(502, { 'Content-Type': 'application/json' }).end(JSON.stringify({ error: 'Failed to send email' }));
   }
 };
 

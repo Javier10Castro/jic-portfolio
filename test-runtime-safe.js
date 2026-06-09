@@ -118,7 +118,7 @@ test('createProject throws on missing workspace_id', async () => {
 test('createProject throws on missing user_id', async () => {
   let threw = false;
   try { await runtime.createProject('550e8400-e29b-41d4-a716-446655440000', undefined, 'Test Project'); }
-  catch (e) { threw = true; if (e.code !== 'INVALID_INPUT') throw new Error('Wrong code: ' + e.code); }
+  catch (e) { threw = true; if (e.code !== 'INVALID_ID_FORMAT') throw new Error('Wrong code: ' + e.code); }
   if (!threw) throw new Error('Should have thrown');
 });
 
@@ -136,11 +136,10 @@ test('createProject throws on empty name', async () => {
   if (!threw) throw new Error('Should have thrown');
 });
 
-test('createProject throws on non-UUID workspace_id', async () => {
+test('normalizeId throws on non-UUID workspace_id', async () => {
   let threw = false;
-  try { await runtime.createProject('not-a-uuid', '550e8400-e29b-41d4-a716-446655440000', 'Test'); }
-  catch (e) { threw = true; if (e.code !== 'INVALID_INPUT') throw new Error('Wrong code: ' + e.code); if (e.field !== 'workspace_id') throw new Error('Wrong field: ' + e.field); }
-  if (!threw) throw new Error('Should have thrown');
+  try { normalizer.normalizeId('not-a-uuid', 'workspace_id'); } catch (e) { threw = true; if (e.code !== 'INVALID_ID_FORMAT') throw new Error('Wrong code: ' + e.code); if (e.field !== 'workspace_id') throw new Error('Wrong field: ' + e.field); }
+  if (!threw) throw new Error('Should have thrown on non-UUID string');
 });
 
 // === runPipeline VALIDATION TESTS ===
@@ -159,11 +158,32 @@ test('runPipeline throws on missing workspace_id', async () => {
   if (!threw) throw new Error('Should have thrown');
 });
 
-test('runPipeline throws on missing execution_id', async () => {
-  let threw = false;
+test('runPipeline accepts undefined execution_id (auto-generates)', async () => {
+  let execIdError = false;
   try { await runtime.runPipeline('550e8400-e29b-41d4-a716-446655440000', '550e8400-e29b-41d4-a716-446655440000', undefined); }
-  catch (e) { threw = true; if (e.code !== 'INVALID_INPUT') throw new Error('Wrong code: ' + e.code); if (e.field !== 'execution_id') throw new Error('Wrong field: ' + e.field); }
-  if (!threw) throw new Error('Should have thrown');
+  catch (e) { if (e.code === 'INVALID_INPUT' && e.field === 'execution_id') execIdError = true; }
+  if (execIdError) throw new Error('execution_id should be optional — undefined must auto-generate');
+});
+
+test('runPipeline accepts null execution_id (auto-generates)', async () => {
+  let execIdError = false;
+  try { await runtime.runPipeline('550e8400-e29b-41d4-a716-446655440000', '550e8400-e29b-41d4-a716-446655440000', null); }
+  catch (e) { if (e.code === 'INVALID_INPUT' && e.field === 'execution_id') execIdError = true; }
+  if (execIdError) throw new Error('execution_id should be optional — null must auto-generate');
+});
+
+test('runPipeline accepts empty string execution_id (auto-generates)', async () => {
+  let execIdError = false;
+  try { await runtime.runPipeline('550e8400-e29b-41d4-a716-446655440000', '550e8400-e29b-41d4-a716-446655440000', ''); }
+  catch (e) { if (e.code === 'INVALID_INPUT' && e.field === 'execution_id') execIdError = true; }
+  if (execIdError) throw new Error('execution_id should be optional — empty string must auto-generate');
+});
+
+test('runPipeline normalizes non-UUID execution_id to UUID', async () => {
+  let execIdError = false;
+  try { await runtime.runPipeline('550e8400-e29b-41d4-a716-446655440000', '550e8400-e29b-41d4-a716-446655440000', 'my-custom-id'); }
+  catch (e) { if (e.code === 'INVALID_INPUT' && e.field === 'execution_id') execIdError = true; }
+  if (execIdError) throw new Error('non-UUID execution_id should auto-normalize to UUID');
 });
 
 // === approveProject VALIDATION TESTS ===
@@ -185,7 +205,7 @@ test('approveProject throws on missing workspace_id', async () => {
 test('approveProject throws on missing user_id', async () => {
   let threw = false;
   try { await runtime.approveProject('550e8400-e29b-41d4-a716-446655440000', '550e8400-e29b-41d4-a716-446655440000', undefined); }
-  catch (e) { threw = true; if (e.code !== 'INVALID_INPUT') throw new Error('Wrong code: ' + e.code); }
+  catch (e) { threw = true; if (e.code !== 'INVALID_ID_FORMAT') throw new Error('Wrong code: ' + e.code); }
   if (!threw) throw new Error('Should have thrown');
 });
 
@@ -205,7 +225,7 @@ test('runtime exports all original functions', () => {
   const expected = ['createProject', 'runPipeline', 'approveProject', 'getProjectById',
     'getProjectInputs', 'listWorkspaceProjects', 'getExecutionById',
     'getProjectPreviews', 'getPreviewById', 'getDecisionsForProject',
-    'getProjectStates', 'extractRuntimeState', 'makeError'];
+    'getProjectStates', 'extractRuntimeState', 'formDataToPromptMaestro', 'makeError'];
   const missing = expected.filter(n => typeof runtime[n] !== 'function');
   if (missing.length) throw new Error('Missing: ' + missing.join(', '));
   if (typeof runtime.events !== 'object' || runtime.events === null) throw new Error('events should be an object');
@@ -225,6 +245,42 @@ test('plan engine is untouched', () => {
 test('design-system engine is untouched', () => {
   const ds = require('./lib/design-system');
   if (typeof ds.buildDesignSystem !== 'function') throw new Error('ds.buildDesignSystem not a function');
+});
+
+test('formDataToPromptMaestro produces parsable sections format', () => {
+  const rt = require('./lib/runtime');
+  if (typeof rt.formDataToPromptMaestro !== 'function') throw new Error('formDataToPromptMaestro not exported');
+  const fd = { biz_name: 'Test Co', arq_paginas: ['A','B'], seo_keywords: ['k1','k2'], conv_cta: 'CTA', brand_estilo: ['moderno'], brand_nivel: '4' };
+  const pm = rt.formDataToPromptMaestro(fd);
+  if (!pm.startsWith('# PROMPT MAESTRO')) throw new Error('Should start with header');
+  if (!/^## \d+\.\s+.+/m.test(pm)) throw new Error('Missing section header');
+  if (!/^\*\*.+?:\*\*\s+.+/m.test(pm)) throw new Error('Missing field format');
+  if (!pm.includes('Test Co')) throw new Error('Should include biz_name');
+  if (!pm.includes('A, B')) throw new Error('Should include arq_paginas as comma-separated');
+  const plan = require('./lib/plan');
+  const ir = plan.compile(pm);
+  if (!ir.project.identity || !ir.project.identity.business_name) throw new Error('plan.compile should extract business_name');
+  if (!ir.project.structure || !ir.project.structure.pages) throw new Error('plan.compile should extract pages');
+  if (!ir.project.conversion || !ir.project.conversion.main_cta) throw new Error('plan.compile should extract main_cta');
+});
+
+test('formDataToPromptMaestro returns safe fallback for null input', () => {
+  const rt = require('./lib/runtime');
+  const pm = rt.formDataToPromptMaestro(null);
+  if (typeof pm !== 'string' || !pm.startsWith('#')) throw new Error('Should return safe fallback: ' + pm);
+  const pm2 = rt.formDataToPromptMaestro(undefined);
+  if (typeof pm2 !== 'string' || !pm2.startsWith('#')) throw new Error('Should return safe fallback for undefined');
+  const pm3 = rt.formDataToPromptMaestro('not an object');
+  if (typeof pm3 !== 'string' || !pm3.startsWith('#')) throw new Error('Should return safe fallback for string');
+});
+
+test('formDataToPromptMaestro handles empty arrays as No especificado', () => {
+  const rt = require('./lib/runtime');
+  const pm = rt.formDataToPromptMaestro({ biz_name: 'X', arq_paginas: [], seo_keywords: [] });
+  const plan = require('./lib/plan');
+  const ir = plan.compile(pm);
+  if (ir.project.identity.business_name !== 'X') throw new Error('Should extract biz_name');
+  if (!pm.includes('No especificado')) throw new Error('Should include fallback for empty arrays');
 });
 
 // === RESOLVER SAFE TESTS ===
@@ -247,7 +303,7 @@ test('resolveWorkspace throws with no args', async () => {
 test('resolveWorkspace throws on invalid UUID format for workspace_id', async () => {
   let threw = false;
   try { await resolver.resolveWorkspace({ workspace_id: 'not-a-uuid' }); }
-  catch (e) { threw = true; if (e.code !== 'INVALID_INPUT') throw new Error('Wrong code: ' + e.code); if (e.field !== 'workspace_id') throw new Error('Wrong field: ' + e.field); }
+  catch (e) { threw = true; if (e.code !== 'INVALID_ID_FORMAT') throw new Error('Wrong code: ' + e.code); if (e.field !== 'workspace_id') throw new Error('Wrong field: ' + e.field); }
   if (!threw) throw new Error('Should have thrown');
 });
 
@@ -274,6 +330,132 @@ test('resolveContext throws on missing workspace (no slug, no id)', async () => 
 
 test('clearCache resets without error', () => {
   resolver.clearCache();
+});
+
+// === ID NORMALIZER TESTS ===
+
+const normalizer = require('./lib/runtime/id-normalizer');
+
+test('id-normalizer exports all functions', () => {
+  const expected = ['isUUID', 'normalizeId', 'normalizeProjectId', 'safeUUID', 'uuidv5', 'UUID_REGEX'];
+  const missing = expected.filter(n => typeof normalizer[n] === 'undefined');
+  if (missing.length) throw new Error('Missing exports: ' + missing.join(', '));
+});
+
+test('isUUID detects valid UUID v4', () => {
+  if (!normalizer.isUUID('550e8400-e29b-41d4-a716-446655440000')) throw new Error('Should accept valid UUID');
+  if (!normalizer.isUUID('f47ac10b-58cc-4372-a567-0e02b2c3d479')) throw new Error('Should accept valid UUID');
+  if (!normalizer.isUUID('00000000-0000-4000-8000-000000000000')) throw new Error('Should accept nil UUID v4 variant');
+});
+
+test('isUUID rejects non-UUID strings', () => {
+  if (normalizer.isUUID('not-a-uuid')) throw new Error('Should reject plain string');
+  if (normalizer.isUUID('proj_test_001')) throw new Error('Should reject custom ID format');
+  if (normalizer.isUUID('')) throw new Error('Should reject empty string');
+  if (normalizer.isUUID(123)) throw new Error('Should reject number');
+  if (normalizer.isUUID(null)) throw new Error('Should reject null');
+  if (normalizer.isUUID(undefined)) throw new Error('Should reject undefined');
+});
+
+test('normalizeId passes through valid UUID unchanged', () => {
+  const uuid = 'f47ac10b-58cc-4372-a567-0e02b2c3d479';
+  const result = normalizer.normalizeId(uuid, 'test_id');
+  if (result !== uuid) throw new Error('Should return UUID unchanged: got ' + result);
+});
+
+test('normalizeId throws on null/undefined', () => {
+  let threw = false;
+  try { normalizer.normalizeId(null, 'field'); } catch (e) { threw = true; if (e.code !== 'INVALID_ID_FORMAT') throw new Error('Wrong code'); }
+  if (!threw) throw new Error('Should throw on null');
+
+  threw = false;
+  try { normalizer.normalizeId(undefined, 'field'); } catch (e) { threw = true; }
+  if (!threw) throw new Error('Should throw on undefined');
+});
+
+test('normalizeId throws on non-string type', () => {
+  let threw = false;
+  try { normalizer.normalizeId(42, 'field'); } catch (e) { threw = true; if (e.code !== 'INVALID_ID_FORMAT') throw new Error('Wrong code'); }
+  if (!threw) throw new Error('Should throw on number');
+});
+
+test('normalizeId throws on non-UUID project_id', () => {
+  let threw = false;
+  try { normalizer.normalizeId('proj_test_001', 'project_id'); } catch (e) { threw = true; if (e.code !== 'INVALID_ID_FORMAT') throw new Error('Wrong code: ' + e.code); }
+  if (!threw) throw new Error('Should throw on non-UUID string');
+});
+
+test('normalizeId throws on non-UUID string regardless of field', () => {
+  let threw = false;
+  try { normalizer.normalizeId('test_001', 'project_id'); } catch (e) { threw = true; if (e.code !== 'INVALID_ID_FORMAT') throw new Error('Wrong code: ' + e.code); }
+  if (!threw) throw new Error('Should throw on non-UUID string for project_id');
+  threw = false;
+  try { normalizer.normalizeId('test_001', 'workspace_id'); } catch (e) { threw = true; if (e.code !== 'INVALID_ID_FORMAT') throw new Error('Wrong code: ' + e.code); }
+  if (!threw) throw new Error('Should throw on non-UUID string for workspace_id');
+});
+
+test('normalizeId throws on non-UUID even in production NODE_ENV', () => {
+  const prevEnv = process.env.NODE_ENV;
+  try {
+    process.env.NODE_ENV = 'production';
+    const normalizerProd = require('./lib/runtime/id-normalizer');
+    let threw = false;
+    try { normalizerProd.normalizeId('ws_demo_001', 'workspace_id'); } catch (e) { threw = true; if (e.code !== 'INVALID_ID_FORMAT') throw new Error('Wrong code: ' + e.code); }
+    if (!threw) throw new Error('Should throw in production mode');
+  } finally {
+    process.env.NODE_ENV = prevEnv;
+  }
+});
+
+test('safeUUID returns null for invalid input', () => {
+  if (normalizer.safeUUID(null, 'field') !== null) throw new Error('Should return null for null');
+  if (normalizer.safeUUID(undefined, 'field') !== null) throw new Error('Should return null for undefined');
+  if (normalizer.safeUUID(42, 'field') !== null) throw new Error('Should return null for number');
+});
+
+test('safeUUID passes through valid UUID', () => {
+  const uuid = '550e8400-e29b-41d4-a716-446655440000';
+  const result = normalizer.safeUUID(uuid, 'field');
+  if (result !== uuid) throw new Error('Should return UUID unchanged');
+});
+
+test('normalizeId throws on empty string', () => {
+  let threw = false;
+  try { normalizer.normalizeId('', 'field'); } catch (e) { threw = true; }
+  if (!threw) throw new Error('Should throw on empty string');
+});
+
+test('normalizeProjectId accepts non-UUID string', () => {
+  const r1 = normalizer.normalizeProjectId('test');
+  if (r1 !== 'test') throw new Error('Should return as-is: got ' + r1);
+  const r2 = normalizer.normalizeProjectId('proj_test_001');
+  if (r2 !== 'proj_test_001') throw new Error('Should return as-is: got ' + r2);
+});
+
+test('normalizeProjectId passes through valid UUID', () => {
+  const uuid = '550e8400-e29b-41d4-a716-446655440000';
+  const r = normalizer.normalizeProjectId(uuid);
+  if (r !== uuid) throw new Error('Should return UUID unchanged: got ' + r);
+});
+
+test('normalizeProjectId throws on null/undefined', () => {
+  let threw = false;
+  try { normalizer.normalizeProjectId(null); } catch (e) { threw = true; if (e.code !== 'INVALID_INPUT') throw new Error('Wrong code: ' + e.code); }
+  if (!threw) throw new Error('Should throw on null');
+  threw = false;
+  try { normalizer.normalizeProjectId(undefined); } catch (e) { threw = true; if (e.code !== 'INVALID_INPUT') throw new Error('Wrong code: ' + e.code); }
+  if (!threw) throw new Error('Should throw on undefined');
+});
+
+test('normalizeProjectId throws on empty string', () => {
+  let threw = false;
+  try { normalizer.normalizeProjectId(''); } catch (e) { threw = true; if (e.code !== 'INVALID_INPUT') throw new Error('Wrong code: ' + e.code); }
+  if (!threw) throw new Error('Should throw on empty string');
+});
+
+test('normalizeProjectId trims whitespace', () => {
+  const r = normalizer.normalizeProjectId('  test  ');
+  if (r !== 'test') throw new Error('Should trim: got "' + r + '"');
 });
 
 runTests();

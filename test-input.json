@@ -1,0 +1,15 @@
+{
+  "name": "Salmos Café Test",
+  "workspace_id": "ws_demo_001",
+  "user_id": "usr_demo_001",
+  "input_type": "form_brief",
+  "business": {
+    "name": "Salmos Café",
+    "tagline": "Donde el café es un verso al paladar",
+    "goal": "Fortalecer imagen de marca",
+    "audience": "Gente de iglesia y expansión a nuevos mercados",
+    "service": "Barra de café para bodas y eventos",
+    "colors": ["#529fb3", "#000000", "#ffffff"],
+    "cta": "Reserva ahora"
+  }
+}
