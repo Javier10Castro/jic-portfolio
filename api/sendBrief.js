@@ -3,14 +3,58 @@ const PDFDocument = require('pdfkit');
 
 const formResponses = require('../lib/db/formResponses');
 const {
-  RATE_LIMIT_REASON, tokenBucket, rateLimitKey, rateLimitHeaders,
+  RATE_LIMIT_REASON,
+  edgeCheck, rateLimitKey, rateLimitHeaders, softLimitHeaders,
   emailDedup, honeypotCheck, timingCheck,
-  validateEmail, sanitizeAndValidateName, validatePrompt, clientIp,
+  validateEmail, sanitizeAndValidateName, validatePrompt, clientIp, maskEmail,
+  waitForSmtpSlot, releaseSmtpSlot,
 } = require('../lib/rate-limit');
 const log = require('../lib/logger');
 
 function json(status, headers, payload) {
   return res => { res.writeHead(status, headers).end(JSON.stringify(payload)); };
+}
+
+function debugHeaders(rlCheck, reason) {
+  if (process.env.DEBUG_RATE_LIMIT !== 'true') return {};
+  return {
+    'X-Debug-RateLimit': `${rlCheck.allowed ? 'ALLOW' : 'BLOCK'}`,
+    'X-Debug-Reason': reason,
+  };
+}
+
+const EMAIL_TIMEOUT_MS = 5000;
+
+function stage(req, label) {
+  log.logStage(req, label);
+}
+
+function withSoftHeaders(req, baseHeaders) {
+  if (!req._edgeSoft) return baseHeaders;
+  return { ...baseHeaders, ...softLimitHeaders(req._edgeSoft) };
+}
+
+async function sendWithTimeout(transporter, mailOptions, timeoutMs, req, label) {
+  const sendStart = Date.now();
+  try {
+    await Promise.race([
+      transporter.sendMail(mailOptions),
+      new Promise((_, reject) => setTimeout(() => reject(Object.assign(new Error('send_timeout'), { timedOut: true })), timeoutMs)),
+    ]);
+    const elapsed = Date.now() - sendStart;
+    log.debugLog(req, `email_send:${label}`, { elapsed_ms: elapsed });
+    releaseSmtpSlot(elapsed, true);
+    return true;
+  } catch (err) {
+    if (err.timedOut) {
+      log.warn(req, `Email send timed out`, { label, timeout_ms: timeoutMs, elapsed_ms: Date.now() - sendStart });
+      log.debugLog(req, `email_send:${label} (timed_out)`, { elapsed_ms: Date.now() - sendStart });
+      releaseSmtpSlot(Date.now() - sendStart, false);
+      return false;
+    }
+    releaseSmtpSlot(Date.now() - sendStart, false);
+    throw err;
+  }
 }
 
 // ── Upstash Redis client (optional, auto-detect) ─────────────────
@@ -53,6 +97,8 @@ async function redisSlidingWindow(key, maxReqs, windowMs) {
 module.exports = async (req, res) => {
   const start = Date.now();
   const ip = clientIp(req);
+  req._debugEndpoint = 'sendBrief';
+  stage(req, 'start');
 
   if (req.method !== 'POST') {
     log.warn(req, 'Method not allowed', { ip, method: req.method, reason: RATE_LIMIT_REASON.VALIDATION });
@@ -63,26 +109,31 @@ module.exports = async (req, res) => {
   let body = '';
   for await (const chunk of req) body += chunk;
   if (body.length > 1_000_000) {
+    log.debugLog(req, 'Payload too large', { ip, length: body.length });
     return json(413, { 'Content-Type': 'application/json' }, { success: false, error: 'Payload too large' })(res);
   }
 
   let parsed;
   try { parsed = JSON.parse(body || '{}'); } catch {
+    log.debugLog(req, 'Invalid JSON body', { ip, bodyPreview: body.slice(0, 200) });
     return json(400, { 'Content-Type': 'application/json' }, { success: false, error: 'Invalid JSON body' })(res);
   }
+
+  log.debugLog(req, 'Body parsed', { ip, hasEmail: !!parsed.email, nameLength: parsed.name?.length, hasPrompt: !!parsed.prompt });
 
   // ── 2. Anti-spam: honeypot (silent 200, bot sees success) ─────
   const hp = honeypotCheck(parsed);
   if (hp.triggered) {
     log.warn(req, 'Honeypot triggered', { ip, field: hp.field, reason: RATE_LIMIT_REASON.BOT });
-    return json(200, { 'Content-Type': 'application/json' }, { success: true })(res);
+    return json(200, { 'Content-Type': 'application/json', ...debugHeaders({ allowed: false }, RATE_LIMIT_REASON.BOT) }, { success: true })(res);
   }
 
   // ── 3. Anti-spam: timing check (submittedAt is REQUIRED) ──────
   const tc = timingCheck(parsed);
   if (tc.tooFast) {
-    log.warn(req, 'Timing check failed', { ip, elapsedMs: tc.elapsedMs, reason: tc.reason === 'missing_timestamp' ? RATE_LIMIT_REASON.BOT : RATE_LIMIT_REASON.TIMING });
-    return json(400, { 'Content-Type': 'application/json' }, { success: false, error: 'Invalid request' })(res);
+    const reason = tc.reason === 'missing_timestamp' ? RATE_LIMIT_REASON.BOT : RATE_LIMIT_REASON.TIMING;
+    log.warn(req, 'Timing check failed', { ip, elapsedMs: tc.elapsedMs, reason });
+    return json(400, { 'Content-Type': 'application/json', ...debugHeaders({ allowed: false }, reason) }, { success: false, error: 'Invalid request' })(res);
   }
 
   // ── 4. Validate payload fields ────────────────────────────────
@@ -90,42 +141,40 @@ module.exports = async (req, res) => {
 
   const nameCheck = sanitizeAndValidateName(rawName);
   if (!nameCheck.valid) {
+    log.debugLog(req, 'Name validation failed', { ip, reason: nameCheck.reason });
     return json(400, { 'Content-Type': 'application/json' }, { success: false, error: nameCheck.reason })(res);
   }
   const safeName = nameCheck.value;
   const safeCompany = company && typeof company === 'string' ? company.replace(/<[^>]*>/g, '').trim().slice(0, 200) : '';
 
   if (!validateEmail(email)) {
-    log.warn(req, 'Invalid email', { ip, email, reason: RATE_LIMIT_REASON.VALIDATION });
+    log.warn(req, 'Invalid email', { ip, email: maskEmail(email), reason: RATE_LIMIT_REASON.VALIDATION });
     return json(400, { 'Content-Type': 'application/json' }, { success: false, error: 'A valid email address is required' })(res);
   }
 
   const promptCheck = validatePrompt(prompt);
   if (!promptCheck.valid) {
+    log.debugLog(req, 'Prompt validation failed', { ip, reason: promptCheck.reason });
     return json(400, { 'Content-Type': 'application/json' }, { success: false, error: promptCheck.reason })(res);
   }
 
-  // ── 5. Rate limiting: IP-based ────────────────────────────────
+  // ── 5. LAYER 1: Edge protection (IP burst) ────────────────────
   const rlKey = rateLimitKey('brief', req);
-  const rlRedis = await redisSlidingWindow(rlKey, 10, 60000);
-  let rlCheck;
-  if (rlRedis) {
-    rlCheck = rlRedis;
-  } else {
-    rlCheck = tokenBucket(rlKey, 10, 60000);
-    rlCheck.source = 'memory';
-  }
-  if (!rlCheck.allowed) {
-    log.warn(req, 'Rate limited (IP)', { ip, retryAfter: rlCheck.retryAfter, source: rlCheck.source, reason: RATE_LIMIT_REASON.IP_LIMIT });
-    return json(429, rateLimitHeaders(rlCheck), { success: false, error: 'Too many requests. Please wait before submitting again.' })(res);
+  const edge = edgeCheck(rlKey);
+  if (edge.soft) req._edgeSoft = edge;
+  if (!edge.allowed) {
+    log.warn(req, 'Edge blocked', { ip, retryAfter: edge.retryAfter, reason: RATE_LIMIT_REASON.IP_BURST });
+    return json(429, { ...rateLimitHeaders(edge), ...debugHeaders(edge, RATE_LIMIT_REASON.IP_BURST) }, { success: false, error: 'Too many requests. Please wait before submitting again.' })(res);
   }
 
-  // ── 6. Rate limiting: email dedup (1 req/60s per email) �───────
-  const dedupCheck = emailDedup(email, 60000);
+  // ── 6. LAYER 2: Abuse protection — email dedup (5 min) ────────
+  const dedupCheck = emailDedup(email);
   if (!dedupCheck.allowed) {
-    log.warn(req, 'Rate limited (email)', { email, retryAfter: dedupCheck.retryAfter, reason: RATE_LIMIT_REASON.EMAIL_LIMIT });
-    return json(429, rateLimitHeaders(dedupCheck), { success: false, error: 'A brief was already submitted with this email. Please wait before submitting again.' })(res);
+    log.warn(req, 'Email dedup blocked', { email: maskEmail(email), retryAfter: dedupCheck.retryAfter, reason: RATE_LIMIT_REASON.EMAIL_DUP });
+    return json(429, { ...rateLimitHeaders(dedupCheck), ...debugHeaders(dedupCheck, RATE_LIMIT_REASON.EMAIL_DUP) }, { success: false, error: 'A brief was already submitted with this email. Please wait before submitting again.' })(res);
   }
+
+  stage(req, 'after_validation');
 
   // ── 7. Persist form responses (non-blocking, best-effort) ─────
   try {
@@ -159,11 +208,21 @@ module.exports = async (req, res) => {
 
   const bizName = (formData && formData.biz_name) || safeCompany || safeName;
 
-  try {
-    const pdfBuffer = await generatePDF(prompt, safeName, bizName, isES);
+  // ── 9. LAYER 3: Acquire SMTP slot (concurrency + adaptive) ────
+  stage(req, 'before_email_send');
+  const slot = await waitForSmtpSlot(req, 3000);
+  if (!slot.acquired) {
+    log.warn(req, 'SMTP slot unavailable', { reason: slot.reason, retryAfter: slot.retryAfter });
+    return json(503, { ...rateLimitHeaders(slot), ...debugHeaders(slot, RATE_LIMIT_REASON.SMTP_CONGESTION) }, { success: false, error: 'Service is busy. Please try again in a moment.' })(res);
+  }
 
-    // Email 1 — Admin notification
-    await transporter.sendMail({
+  try {
+    stage(req, 'before_pdf_generation');
+    const pdfBuffer = await generatePDF(prompt, safeName, bizName, isES);
+    stage(req, 'after_pdf_generation');
+
+    stage(req, 'before_email_admin');
+    await sendWithTimeout(transporter, {
       from: `"Build a Brief" <${GMAIL_USER}>`,
       to: GMAIL_USER,
       replyTo: email,
@@ -176,10 +235,10 @@ module.exports = async (req, res) => {
         content: pdfBuffer,
         contentType: 'application/pdf',
       }],
-    });
+    }, EMAIL_TIMEOUT_MS, req, 'admin');
 
-    // Email 2 — Client confirmation
-    await transporter.sendMail({
+    stage(req, 'before_email_client');
+    await sendWithTimeout(transporter, {
       from: `"Build a Brief" <${GMAIL_USER}>`,
       to: [email, GMAIL_USER],
       replyTo: GMAIL_USER,
@@ -187,12 +246,14 @@ module.exports = async (req, res) => {
         ? `Gracias por compartir tu proyecto conmigo 🚀`
         : `Thank you for sharing your project with me 🚀`,
       html: buildClientEmailHTML({ name: safeName, bizName, dateStr, lang: isES ? 'es' : 'en' }),
-    });
+    }, EMAIL_TIMEOUT_MS, req, 'client');
 
-    log.info(req, 'Brief emails sent', { name: safeName, email, duration_ms: Date.now() - start });
-    return json(200, { 'Content-Type': 'application/json' }, { success: true })(res);
+    stage(req, 'after_email_send');
+    log.info(req, 'Brief emails sent', { name: safeName, email: maskEmail(email), duration_ms: Date.now() - start });
+    return json(200, withSoftHeaders(req, { 'Content-Type': 'application/json' }), { success: true })(res);
   } catch (error) {
-    log.error(req, 'Failed to send brief emails', error, { name: safeName, email, duration_ms: Date.now() - start });
+    log.error(req, 'Failed to send brief emails', error, { name: safeName, email: maskEmail(email), duration_ms: Date.now() - start });
+    log.debugLog(req, 'Catch block hit', { error: error.message, stack: error.stack?.split('\n').slice(0, 3).join('; ') });
     return json(502, { 'Content-Type': 'application/json' }, { success: false, error: 'Failed to send email. Please try again later.' })(res);
   }
 };
