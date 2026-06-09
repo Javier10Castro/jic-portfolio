@@ -1,7 +1,7 @@
 const nodemailer = require('nodemailer');
 const PDFDocument = require('pdfkit');
 const emailQueue = require('../lib/queue');
-const { parseBody } = require('../lib/safeBodyParser');
+const { parseBody, deployInfo } = require('../lib/safeBodyParser');
 
 const formResponses = require('../lib/db/formResponses');
 const {
@@ -33,6 +33,15 @@ function stage(req, label) {
 function withSoftHeaders(req, baseHeaders) {
   if (!req._edgeSoft) return baseHeaders;
   return { ...baseHeaders, ...softLimitHeaders(req._edgeSoft) };
+}
+
+function deployHeaders(req) {
+  const info = deployInfo();
+  return {
+    'X-Deploy-SHA': info.sha,
+    'X-Deploy-Env': info.env,
+    'X-Body-Parse-Method': req._bodyParseMethod || 'unknown',
+  };
 }
 
 async function sendWithTimeout(transporter, mailOptions, timeoutMs, req, label) {
@@ -97,6 +106,8 @@ module.exports = async (req, res) => {
   const ip = clientIp(req);
   req._debugEndpoint = 'sendBrief';
   stage(req, 'start');
+  const di = deployInfo();
+  log.info(req, 'deploy_context', { sha: di.sha, env: di.env, region: di.region });
 
   if (req.method !== 'POST') {
     log.warn(req, 'Method not allowed', { ip, method: req.method, reason: RATE_LIMIT_REASON.VALIDATION });
@@ -106,7 +117,7 @@ module.exports = async (req, res) => {
   // ── 1. Body parsing (safe, handles Vercel pre-parsed + stream) ─
   const parsed = await parseBody(req);
   if (!parsed) {
-    return json(400, { 'Content-Type': 'application/json' }, { success: false, error: 'INVALID_BODY' })(res);
+    return json(400, { 'Content-Type': 'application/json', ...deployHeaders(req) }, { success: false, error: 'INVALID_BODY' })(res);
   }
 
   // ── 2. Anti-spam: honeypot (silent 200, bot sees success) ─────
@@ -241,6 +252,7 @@ module.exports = async (req, res) => {
   log.debugLog(req, 'Brief emails queued', { queueId, position, depth });
   return json(202, withSoftHeaders(req, {
     'Content-Type': 'application/json',
+    ...deployHeaders(req),
     'X-Queue-Id': String(queueId),
     'X-Queue-Depth': String(depth),
     'X-Queue-Position': String(position),
