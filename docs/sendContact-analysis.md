@@ -369,7 +369,76 @@ All field failures return the same error code: `INVALID_REQUEST`. The specific f
 
 ---
 
-## 5. Expected HTTP Responses
+## 5. Request Lifecycle Observability
+
+### Execution States
+
+| State | When | Transition |
+|---|---|---|
+| `queued` | After queue.assign, HTTP 202 sent | → processing |
+| `processing` | Worker dequeues and starts executing handler | → completed or failed |
+| `completed` | Both admin and client emails sent successfully | Terminal |
+| `failed` | Email timeout or SMTP error after retries | Terminal |
+
+### Timestamps Captured
+
+| Timestamp | Source | Captured at |
+|---|---|---|
+| `receivedAt` | `req._lifecycle.startTime` | Line 98: `log.initTrace(req)` |
+| `queuedAt` | `Date.now()` after `queue.enqueue` | Line 291: `req._lifecycle.queuedAt` |
+| `executionStartedAt` | `Date.now()` at handler start | Line 243: handler entry |
+| `executionFinishedAt` | `Date.now()` after email.sendEnd | Line 275: after emails |
+
+### Derived Metrics
+
+- `queueWaitTimeMs = executionStartedAt - queuedAt`
+- `executionDurationMs = executionFinishedAt - executionStartedAt`
+- `totalLifecycleTimeMs = executionFinishedAt - receivedAt`
+
+### Diagnostic Endpoint
+
+`GET /api/sendContact?id=<requestId>` — returns full lifecycle record:
+
+```json
+{
+  "requestId": "550e8400-e29b-41d4-a716-446655440000",
+  "status": "completed",
+  "receivedAt": 1718010000000,
+  "queuedAt": 1718010000050,
+  "executionStartedAt": 1718010000100,
+  "executionFinishedAt": 1718010002500,
+  "queuePosition": 0,
+  "queueDepth": 0,
+  "queueWaitTimeMs": 50,
+  "executionDurationMs": 2400,
+  "totalLifecycleTimeMs": 2500
+}
+```
+
+Limitations:
+- In-memory only (1,000 entries, 5min TTL) — lost on instance termination
+- Per-instance — cannot query across Vercel instances
+- No persistence — not suitable for audit trails
+
+### Queue Health Metrics
+
+`/api/health?section=queue` now includes `lifecycle`:
+
+```json
+{
+  "lifecycle": {
+    "totalRequests": 42,
+    "completedRequests": 38,
+    "failedRequests": 4,
+    "averageExecutionTimeMs": 2450,
+    "averageQueueWaitTimeMs": 320
+  }
+}
+```
+
+---
+
+## 6. Expected HTTP Responses
 
 | Status | `error` field | `success` | When | Response Headers |
 |---|---|---|---|---|
@@ -412,7 +481,7 @@ X-Body-Parse-Method: object|string|stream|unknown
 
 ---
 
-## 6. Recommended Safe Testing Strategy (PowerShell)
+## 7. Recommended Safe Testing Strategy (PowerShell)
 
 ### Helper Function
 
@@ -530,7 +599,7 @@ $response.Headers["X-Body-Parse-Method"]
 
 ---
 
-## 7. Common Mistakes When Testing in Windows PowerShell
+## 8. Common Mistakes When Testing in Windows PowerShell
 
 ### Mistake 1: Using curl
 
@@ -660,7 +729,7 @@ $parsed.success                    # ✅ true/false
 
 ---
 
-## 8. Safe Load Test Profile (With Delays)
+## 9. Safe Load Test Profile (With Delays)
 
 This profile simulates realistic human traffic and stays within rate limits.
 

@@ -380,6 +380,40 @@ Supported error codes:
 
 ---
 
+## Request Lifecycle Observability
+
+### Execution State Machine
+
+```
+queued ───→ processing ───→ completed
+                │
+                └───→ failed
+```
+
+### Request Registry (`lib/request-registry.js`)
+
+In-memory Map (1,000 entries, 5min TTL) storing lifecycle data per requestId.
+
+| Field | Source | Derived |
+|---|---|---|
+| `receivedAt` | `req._lifecycle.startTime` | — |
+| `queuedAt` | `req._lifecycle.queuedAt` | — |
+| `executionStartedAt` | `Date.now()` at handler start | — |
+| `executionFinishedAt` | `Date.now()` after email.sendEnd | — |
+| `queueWaitTimeMs` | — | `executionStartedAt - queuedAt` |
+| `executionDurationMs` | — | `executionFinishedAt - executionStartedAt` |
+| `totalLifecycleTimeMs` | — | `executionFinishedAt - receivedAt` |
+
+### Diagnostic Endpoint
+
+`GET /api/sendContact?id=<requestId>` — returns lifecycle data for requests still in registry (recent 5min, same instance).
+
+### Structured Lifecycle Log
+
+On every request completion, `stage: "lifecycle.complete"` is emitted with full payload including all timestamps and derived metrics.
+
+---
+
 ## Client Retry & Backoff Strategy
 
 The contact form (`index.html`) retries automatically on 429 responses with exponential backoff.

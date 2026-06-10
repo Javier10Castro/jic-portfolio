@@ -357,6 +357,9 @@ Before deployment, verify:
 
 - [ ] Contact form submits successfully (including retry on 429)
 - [ ] Retry UI shows correct language text and attempt counter
+- [ ] Lifecycle observability: `GET /api/sendContact?id=<requestId>` returns `completed` status with all timestamps
+- [ ] Queue health: `/api/health?section=queue` includes `lifecycle` block with aggregate metrics
+- [ ] Structured log: `lifecycle.complete` stage emitted on every request completion
 - [ ] Brief submission sends successfully
 - [ ] PDF attachment generated and attached to admin email
 - [ ] Admin email delivered to `GMAIL_USER`
@@ -951,6 +954,23 @@ INCOMING REQUEST
 | Queue metrics are filtered | Queue depth reflects only admitted traffic, not total ingress |
 | Spikes are handled by the gate | The queue does NOT absorb traffic spikes — rate limiting does |
 | Test the correct layer | Controlled throughput tests queue behavior; burst tests only test gate limits |
+
+### Request Lifecycle Observability
+
+The registry (`lib/request-registry.js`) stores per-requestId lifecycle data in-memory.
+
+| State | Transition |
+|---|---|
+| `queued` | After queue.assign → `processing` |
+| `processing` | Worker starts → `completed` or `failed` |
+| `completed` | Both emails sent (terminal) |
+| `failed` | Email failure after retries (terminal) |
+
+Diagnostic endpoint: `GET /api/sendContact?id=<requestId>` returns `{ requestId, status, receivedAt, queuedAt, executionStartedAt, executionFinishedAt, queueWaitTimeMs, executionDurationMs, totalLifecycleTimeMs }`.
+
+`/api/health?section=queue` includes `lifecycle` aggregate metrics. Default `/api/health` also includes `lifecycle`.
+
+Limitations: in-memory only, per-instance, 1,000 entries, 5min TTL.
 
 ### Client Retry & Backoff Strategy
 

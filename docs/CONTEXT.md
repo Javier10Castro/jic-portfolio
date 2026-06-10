@@ -104,6 +104,40 @@ Stage 2 — Execution Layer (Internal Queue Scheduler)
 
 ---
 
+## Request Lifecycle Observability
+
+Every requestId now traces through 4 explicit lifecycle states with 4 timestamps and 3 derived metrics.
+
+### States
+
+| State | When | Transition |
+|---|---|---|
+| `queued` | After queue.assign, before worker | → processing |
+| `processing` | Worker dequeues and starts | → completed or failed |
+| `completed` | Both emails sent successfully | Terminal |
+| `failed` | Email failure after retries | Terminal |
+
+### Timestamps
+
+- `receivedAt` — HTTP request arrival
+- `queuedAt` — queue entry
+- `executionStartedAt` — worker starts
+- `executionFinishedAt` — processing ends
+
+### Derived Metrics
+
+`queueWaitTimeMs`, `executionDurationMs`, `totalLifecycleTimeMs`
+
+### Diagnostic Endpoint
+
+`GET /api/sendContact?id=<requestId>` — returns full lifecycle record for recent requests (in-memory, 1,000 entries, 5min TTL).
+
+### Queue Health Metrics
+
+`/api/health?section=queue` exposes `lifecycle` block with aggregate stats. `/api/health` (default summary) also includes `lifecycle`.
+
+---
+
 ## Client Retry & Backoff Strategy
 
 The contact form (`index.html`) implements automatic retry with exponential backoff when the API responds with 429 (Rate Limited).

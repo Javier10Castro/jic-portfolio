@@ -35,6 +35,7 @@ module.exports = async (req, res) => {
         ageSec: detailed.oldestRequestAgeSec,
         ageMin: Math.round(detailed.oldestRequestAgeMs / 60000),
       },
+      lifecycle: detailed.lifecycle,
     });
     return res.writeHead(200, { 'Content-Type': 'application/json' }).end(body);
   }
@@ -75,6 +76,7 @@ module.exports = async (req, res) => {
   }
 
   const queueStats = emailQueue.stats();
+  const detailed = emailQueue.getDetailedStats();
   const rlSnapshot = getSnapshot();
 
   const body = JSON.stringify({
@@ -95,6 +97,7 @@ module.exports = async (req, res) => {
       failed: queueStats.failed,
       maxDepth: 100,
     },
+    lifecycle: detailed.lifecycle,
     rateLimit: {
       ipEntries: rlSnapshot.ipEntries,
       emailEntries: rlSnapshot.emailEntries,

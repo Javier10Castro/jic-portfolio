@@ -66,6 +66,51 @@ Debug mode (?debug=true):
 - queue depth visibility
 - rateLimit step visibility
 
+### Execution Lifecycle (requestId-based)
+
+Each requestId traces through 4 explicit states:
+
+| State | Meaning | Transition |
+|---|---|---|
+| `queued` | Request accepted into queue, waiting for worker | After queue.assign, before worker picks up |
+| `processing` | Worker actively executing email delivery | At queue.waitEnd, execution started |
+| `completed` | Both emails sent successfully | After email.sendEnd (adminOk && clientOk) |
+| `failed` | One or both emails failed after retries | After email.sendEnd (partial) or queue retry exhaustion |
+
+### Timestamps tracked per requestId
+
+- `receivedAt` — when HTTP request arrived (`req._lifecycle.startTime`)
+- `queuedAt` — when request entered the queue
+- `executionStartedAt` — when worker started processing
+- `executionFinishedAt` — when processing ended (success or failure)
+
+Derived metrics:
+- `queueWaitTimeMs = executionStartedAt - queuedAt`
+- `executionDurationMs = executionFinishedAt - executionStartedAt`
+- `totalLifecycleTimeMs = executionFinishedAt - receivedAt`
+
+### Structured lifecycle log
+
+On every request completion, a `lifecycle.complete` structured log is emitted:
+
+```json
+{
+  "timestamp": "2026-06-10T12:00:00.000Z",
+  "requestId": "550e8400-e29b-41d4-a716-446655440000",
+  "stage": "lifecycle.complete",
+  "status": "completed",
+  "receivedAt": 1718010000000,
+  "queuedAt": 1718010000050,
+  "executionStartedAt": 1718010000100,
+  "executionFinishedAt": 1718010002500,
+  "queuePosition": 0,
+  "queueDepth": 0,
+  "queueWaitTimeMs": 50,
+  "executionDurationMs": 2400,
+  "totalLifecycleTimeMs": 2500
+}
+```
+
 ---
 
 ## 4. Queue System
@@ -191,3 +236,67 @@ Execution Layer (Internal Queue Scheduler)
 - 429 errors are NOT queued and are rejected immediately — the response returns before any queue interaction
 - Queue metrics only represent successfully admitted requests — queue depth does not reflect total incoming traffic, only filtered traffic
 - Rate limit decisions and queue state are independent — the queue has no influence on rate limit thresholds
+
+---
+
+## 10. Request Lifecycle Observability
+
+### Request Registry (`lib/request-registry.js`)
+
+In-memory registry that stores full lifecycle data per requestId.
+
+| Property | Value |
+|---|---|
+| Max entries | 1,000 |
+| Entry TTL | 5 minutes |
+| Cleanup interval | 1 minute |
+| Persistence | None (in-memory only) |
+
+### Diagnostic Endpoint
+
+`GET /api/sendContact?id=<requestId>`
+
+Returns the full lifecycle record for a requestId if it's still in the registry:
+
+```json
+{
+  "requestId": "550e8400-e29b-41d4-a716-446655440000",
+  "status": "completed",
+  "receivedAt": 1718010000000,
+  "queuedAt": 1718010000050,
+  "executionStartedAt": 1718010000100,
+  "executionFinishedAt": 1718010002500,
+  "queuePosition": 0,
+  "queueDepth": 0,
+  "queueWaitTimeMs": 50,
+  "executionDurationMs": 2400,
+  "totalLifecycleTimeMs": 2500
+}
+```
+
+If not found: `404 { error: "NOT_FOUND" }`.
+
+### Limitations
+
+- **In-memory only** — all data is lost if the Vercel instance terminates. Acceptable for debugging recent requests within the same cold start.
+- **Per-instance** — multiple Vercel instances have independent registries. A request processed by instance A cannot be looked up via instance B.
+- **TTL-bound** — entries older than 5 minutes are evicted.
+- **No history** — the registry does not persist across cold starts. For persistent audit trails, a database-backed store would be required.
+
+### Queue Health Metrics
+
+Exposed via `/api/health?section=queue` under `lifecycle` key:
+
+```json
+{
+  "lifecycle": {
+    "totalRequests": 42,
+    "completedRequests": 38,
+    "failedRequests": 4,
+    "averageExecutionTimeMs": 2450,
+    "averageQueueWaitTimeMs": 320
+  }
+}
+```
+
+Metrics cover the lifetime of the current Vercel instance (in-memory registry).

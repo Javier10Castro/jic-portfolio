@@ -1,5 +1,19 @@
 # Changelog
 
+## [v1.1.0] - 2026-06-10
+
+### Added
+- [2026-06-10] - Request Lifecycle Observability (end-to-end requestId tracking)
+  - **`lib/request-registry.js`** — In-memory request lifecycle registry (MAX_ENTRIES=1000, TTL=5min)
+  - **Execution lifecycle timestamps**: `receivedAt`, `queuedAt`, `executionStartedAt`, `executionFinishedAt`
+  - **Derived metrics**: `queueWaitTimeMs`, `executionDurationMs`, `totalLifecycleTimeMs`
+  - **Execution states**: `queued`, `processing`, `completed`, `failed` with documented transitions
+  - **Structured logging**: `lifecycle.complete` stage with full payload on every request completion
+  - **Diagnostic endpoint**: `GET /api/sendContact?id=<requestId>` — returns full lifecycle data for recent requests
+  - **Queue health metrics**: `totalRequests`, `completedRequests`, `failedRequests`, `averageExecutionTimeMs`, `averageQueueWaitTimeMs` exposed via `/api/health?section=queue`
+  - Reason: ability to reconstruct full request lifecycle from requestId alone
+  - Impact: 1 new module + 3 modified core files (queue, sendContact, health)
+
 ## [v1.0.15] - 2026-06-10
 
 ### Added

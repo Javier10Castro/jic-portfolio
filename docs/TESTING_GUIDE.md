@@ -515,6 +515,66 @@ while (-not $found) {
 | Does NOT test queue performance | Queue only sees requests that pass rate limiting. A burst loop that triggers 429 tells you nothing about queue throughput |
 | Misleading failure rate | A test reporting 80% failure rate due to rate limiting is not a system failure — it is expected gateway behavior |
 
+## Request Lifecycle Observability
+
+### Testing Normal Flow (queued → processing → completed)
+
+1. Submit a valid contact form request and capture the `requestId` from the response.
+2. Wait 3-5 seconds for background processing to complete.
+3. Call `GET /api/sendContact?id=<requestId>` to verify:
+   - `status` is `"completed"`
+   - `receivedAt`, `queuedAt`, `executionStartedAt`, `executionFinishedAt` are all present
+   - `queueWaitTimeMs` ≥ 0
+   - `executionDurationMs` > 0 (should be ~2-5s for SMTP delivery)
+   - `totalLifecycleTimeMs` ≈ `queueWaitTimeMs + executionDurationMs`
+
+### Testing Failed Flow (queued → processing → failed)
+
+Failure can be induced by:
+- Removing `GMAIL_USER`/`GMAIL_APP_PASSWORD` env vars (returns 500 at queue time — item never reaches queue)
+- Triggering SMTP timeout (hard to induce in production, relies on actual timeout behavior)
+
+Expected: after the queue retries (4 attempts), the request should show `status: "failed"` on the diagnostic endpoint.
+
+### Testing Queue Wait Validation
+
+Submit 3+ requests with unique emails in rapid succession (within rate limit bounds). The first request should have `queueWaitTimeMs` near 0. Subsequent requests should show increasing `queueWaitTimeMs` as they wait behind earlier requests.
+
+### Testing Lifecycle Structured Log
+
+After any request completes (success or failure), check Vercel logs for a `lifecycle.complete` structured log entry containing:
+- `stage: "lifecycle.complete"`
+- `status: "completed"` or `"failed"`
+- All 4 timestamps (`receivedAt`, `queuedAt`, `executionStartedAt`, `executionFinishedAt`)
+- All 3 derived metrics (`queueWaitTimeMs`, `executionDurationMs`, `totalLifecycleTimeMs`)
+
+### Testing Diagnostic Endpoint
+
+```powershell
+# Submit a valid request
+$response = Invoke-WebRequest -Uri "https://web-portfolio-kappa-wheat.vercel.app/api/sendContact" `
+  -Method POST -ContentType "application/json" `
+  -Body (@{
+    name="Lifecycle Test"; email="lifecycle-$(Get-Random -Maximum 99999)@test.com"
+    message="Testing lifecycle observability"
+    submittedAt=[DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds()
+  } | ConvertTo-Json)
+
+$requestId = ($response.Content | ConvertFrom-Json).requestId
+Write-Host "requestId: $requestId"
+
+# Wait for processing
+Start-Sleep -Seconds 5
+
+# Query lifecycle
+$status = Invoke-RestMethod -Uri "https://web-portfolio-kappa-wheat.vercel.app/api/sendContact?id=$requestId"
+$status | ConvertTo-Json -Depth 10
+```
+
+**Expected**: `status: "completed"` with all timestamps and derived metrics.
+
+---
+
 ## Client Retry & Backoff Strategy
 
 The contact form retries 429 responses automatically with exponential backoff (0s, 1s, 2s, 4s, max 4 total).

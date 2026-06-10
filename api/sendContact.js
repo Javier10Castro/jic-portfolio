@@ -9,6 +9,7 @@ const {
   validateEmail, sanitizeAndValidateName, clientIp, maskEmail,
 } = require('../lib/rate-limit');
 const log = require('../lib/logger');
+const registry = require('../lib/request-registry');
 
 const VALID_TEST_MODES = ['validation', 'rate-limit', 'queue', 'load'];
 
@@ -89,7 +90,21 @@ async function sendWithTimeout(transporter, mailOptions, timeoutMs, req, label) 
   }
 }
 
+async function handleStatusLookup(req, res) {
+  const rid = ((req.url || '').match(/[?&]id=([^&]+)/) || [])[1] || '';
+  if (!rid) {
+    return json(400, { 'Content-Type': 'application/json' }, { error: 'INVALID_REQUEST', message: 'id query parameter is required' })(res);
+  }
+  const entry = registry.lookupRequest(rid);
+  if (!entry) {
+    return json(404, { 'Content-Type': 'application/json' }, { error: 'NOT_FOUND', message: 'No lifecycle data found for this requestId', requestId: rid })(res);
+  }
+  return json(200, { 'Content-Type': 'application/json' }, entry)(res);
+}
+
 module.exports = async (req, res) => {
+  if (req.method === 'GET') return handleStatusLookup(req, res);
+
   const start = Date.now();
   const ip = clientIp(req);
   req._debugEndpoint = 'sendContact';
@@ -240,6 +255,10 @@ module.exports = async (req, res) => {
       log.addTrace(req, 'queue.waitEnd', 'ok');
       log.structured(req, { stage: 'queue.waitEnd', status: 'ok', queueDepthAtStart: depth });
 
+      const executionStartedAt = Date.now();
+      const rid = log.requestId(req);
+      registry.registerLifecycle(rid, { status: 'processing', executionStartedAt });
+
       log.addTrace(req, 'email.admin.start', 'ok');
       log.structured(req, { stage: 'email.admin.start', status: 'ok' });
       const adminOk = await sendWithTimeout(transporter, {
@@ -269,8 +288,26 @@ module.exports = async (req, res) => {
 
       stage(req, 'after_email_send');
       const sendStatus = adminOk && clientOk ? 'ok' : 'partial';
+      const finalLifecycleStatus = adminOk && clientOk ? 'completed' : 'failed';
+      const executionFinishedAt = Date.now();
+
+      registry.registerLifecycle(rid, { status: finalLifecycleStatus, executionFinishedAt });
+
       log.addTrace(req, 'email.sendEnd', sendStatus);
       log.structured(req, { stage: 'email.sendEnd', status: sendStatus });
+      log.structured(req, {
+        stage: 'lifecycle.complete',
+        status: finalLifecycleStatus,
+        receivedAt: req._lifecycle.startTime,
+        queuedAt: req._lifecycle.queuedAt,
+        executionStartedAt,
+        executionFinishedAt,
+        queuePosition: position,
+        queueDepth: depth,
+        queueWaitTimeMs: Math.round(executionStartedAt - req._lifecycle.queuedAt),
+        executionDurationMs: Math.round(executionFinishedAt - executionStartedAt),
+        totalLifecycleTimeMs: Math.round(executionFinishedAt - req._lifecycle.startTime),
+      });
       log.info(req, 'Contact emails sent', { name: safeName, email: maskEmail(email), adminOk, clientOk });
     },
     req,
@@ -286,6 +323,15 @@ module.exports = async (req, res) => {
   }
 
   const { queueId, position, depth } = queueResult;
+  const queuedAt = Date.now();
+  req._lifecycle.queuedAt = queuedAt;
+  registry.registerLifecycle(log.requestId(req), {
+    status: 'queued',
+    receivedAt: req._lifecycle.startTime,
+    queuedAt,
+    queuePosition: position,
+    queueDepth: depth,
+  });
   log.event('queue.queued', req, { queueId, position, depth, endpoint: 'sendContact' });
   log.debugLog(req, 'Emails queued', { queueId, position, depth });
   log.addTrace(req, 'queue.assign', 'ok');
