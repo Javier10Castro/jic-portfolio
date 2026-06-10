@@ -10,6 +10,8 @@ const {
 } = require('../lib/rate-limit');
 const log = require('../lib/logger');
 
+const VALID_TEST_MODES = ['validation', 'rate-limit', 'queue', 'load'];
+
 function json(status, headers, payload) {
   return res => { res.writeHead(status, headers).end(JSON.stringify(payload)); };
 }
@@ -59,7 +61,11 @@ function resPayload(req, extra) {
     processingTimeMs: elapsedMs,
     ...extra,
   };
-  if (req._debugMode) payload.lifecycle = log.getTrace(req);
+  if (req._testMode) payload.testMode = req._testMode;
+  if (req._debugMode) {
+    payload.lifecycle = log.getTraceWithDeltas(req);
+    if (req._testMode) payload.testMode = req._testMode;
+  }
   return payload;
 }
 
@@ -91,8 +97,12 @@ module.exports = async (req, res) => {
   log.requestId(req);
   log.initTrace(req);
   log.addTrace(req, 'request.received', 'ok', 0);
-  log.structured(req, { stage: 'request.received', status: 'ok', durationMs: 0, method: req.method, ip });
-  log.event('request.start', req, { ip, method: req.method, endpoint: 'sendContact' });
+
+  const rawTestMode = (req.headers['x-test-mode'] || '').trim().toLowerCase();
+  req._testMode = VALID_TEST_MODES.includes(rawTestMode) ? rawTestMode : null;
+
+  log.structured(req, { stage: 'request.received', status: 'ok', durationMs: 0, method: req.method, ip, testMode: req._testMode });
+  log.event('request.start', req, { ip, method: req.method, endpoint: 'sendContact', testMode: req._testMode });
   stage(req, 'start');
   const di = deployInfo();
   log.info(req, 'deploy_context', { sha: di.sha, env: di.env, region: di.region });

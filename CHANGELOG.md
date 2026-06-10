@@ -1,5 +1,47 @@
 # Changelog
 
+## [v1.9.0] - 2026-06-10
+
+### Added
+- [2026-06-10T06:45:00Z] - `x-test-mode` header support (validation | rate-limit | queue | load)
+  Reason: enable test-aware instrumentation without breaking production flow
+  Impact: test classifiers appear in lifecycle traces, structured logs, events, and debug responses
+- [2026-06-10T06:45:00Z] - `GET /api/rate-limit-status` endpoint
+  Reason: expose current IP usage, email dedup cache size, window reset times, and hard limit thresholds for production observability
+  Impact: enables real-time rate limit introspection without touching core rate limiter logic
+- [2026-06-10T06:45:00Z] - `GET /api/queue-status` endpoint
+  Reason: expose queue depth, active worker count, oldest request age for backlog diagnostics
+  Impact: allows monitoring of queue pressure under load without modifying the queue engine
+- [2026-06-10T06:45:00Z] - `log.getTraceWithDeltas()` — per-stage ms delta computation
+  Reason: improve debug mode with precise timing deltas between lifecycle steps (not just cumulative ms)
+  Impact: developers can see exactly how many ms each stage takes, not just position from start
+- [2026-06-10T06:45:00Z] - `rate-limit.getDetailedSnapshot()` — expanded rate limit state
+  Reason: expose oldest entry age and window reset times alongside existing counters
+  Impact: health and rate-limit-status endpoints show when windows will actually reset
+- [2026-06-10T06:45:00Z] - `queue.getDetailedStats()` — oldest request tracking
+  Reason: capture enqueue timestamps on every item to compute oldest request age
+  Impact: queue-status endpoint reports backlog age in ms, sec, and min
+
+### Changed
+- [2026-06-10T06:45:00Z] - Debug mode lifecycle output: cumulative `ms` now paired with `deltaMs` per step
+  Reason: developers need stage-level granularity, not just position-in-pipeline
+  Impact: `?debug=true` response now includes `deltaMs` on every lifecycle entry (backward-compatible: `ms` preserved)
+- [2026-06-10T06:45:00Z] - `log.structured()` and `log.event()` automatically include `testMode` when `req._testMode` is set
+  Reason: eliminate repetitive parameter passing — test mode classification propagates naturally through all observability channels
+  Impact: every structured log and event for test-mode requests carries `testMode` field automatically
+- [2026-06-10T06:45:00Z] - `BackgroundQueue._process()` tracks `_activeItems` for accurate oldest-request computation
+  Reason: without active-item tracking, items currently being processed are invisible to `getDetailedStats()`
+  Impact: oldest request age now correctly reflects items in-flight, not just queued
+
+### Backward Compatibility
+- No existing response fields removed
+- No existing logging APIs changed — `getTraceWithDeltas()` is a new export, `getTrace()` unchanged
+- New endpoints (`/api/rate-limit-status`, `/api/queue-status`) are additive
+- `x-test-mode` header is fully optional — absent header = `req._testMode = null`, no behavioral change
+- `_activeItems` is internal state — no public API change to BackgroundQueue
+
+---
+
 ## [v1.8.0] - 2026-06-10
 
 ### Added
