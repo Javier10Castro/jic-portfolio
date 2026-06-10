@@ -220,13 +220,18 @@ async function smoke() {
   console.log('\n⏱  RATE LIMITING');
   const rateChecks = [];
   for (let i = 0; i < 12; i++) {
-    const r = await request('POST', '/api/sendContact', { body: { name: 'T', email: 't@t.com', message: 'Hi' } });
+    const r = await request('POST', '/api/sendContact', {
+      body: { name: 'T', email: 'ratelimit-test@t.com', message: 'Hi', submittedAt: Date.now() }
+    });
     rateChecks.push(r.status);
   }
-  const hasRateLimit = rateChecks.includes(429);
-  await test(`Rate limiting active (429 seen after ${rateChecks.filter(s => s === 429).length}/${rateChecks.length} rapid requests)`, async () => {
-    if (!hasRateLimit) console.log('      ⚠️  No 429 detected — rate limit may not be hit (depends on concurrent instances)');
-    return hasRateLimit;
+  const rateLimitHits = rateChecks.filter(s => s === 429).length;
+  await test(`Rate limiting active (429 seen in ${rateLimitHits}/${rateChecks.length} rapid requests)`, async () => {
+    if (!rateLimitHits) {
+      console.log('      ⚠️  No 429 detected — may not hit edge limit with 12 reqs alone');
+      console.log('      (soft=30, hard=60 — dedup should block after 1st with same email)');
+    }
+    return rateLimitHits > 0;
   });
 
   // ─── 7. RESPONSE STRUCTURE VALIDATION ────────────────────────
