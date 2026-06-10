@@ -48,10 +48,15 @@ function reqHeaders(req) {
 }
 
 function resPayload(req, extra) {
+  const now = Date.now();
+  const elapsedMs = req._lifecycle ? Math.round(now - req._lifecycle.startTime) : 0;
   const payload = {
     requestId: log.requestId(req),
     processingStage: log.getProcessingStage(req),
     timestamp: new Date().toISOString(),
+    totalRequestTimeMs: elapsedMs,
+    queueWaitTimeMs: 0,
+    processingTimeMs: elapsedMs,
     ...extra,
   };
   if (req._debugMode) payload.lifecycle = log.getTrace(req);
@@ -86,6 +91,7 @@ module.exports = async (req, res) => {
   log.requestId(req);
   log.initTrace(req);
   log.addTrace(req, 'request.received', 'ok', 0);
+  log.structured(req, { stage: 'request.received', status: 'ok', durationMs: 0, method: req.method, ip });
   log.event('request.start', req, { ip, method: req.method, endpoint: 'sendContact' });
   stage(req, 'start');
   const di = deployInfo();
@@ -94,6 +100,7 @@ module.exports = async (req, res) => {
   if (req.method !== 'POST') {
     log.warn(req, 'Method not allowed', { ip, method: req.method, reason: RATE_LIMIT_REASON.VALIDATION });
     log.addTrace(req, 'validation', 'fail');
+    log.structured(req, { stage: 'validation', status: 'fail', reason: 'method_not_allowed' });
     return json(405, { 'Content-Type': 'application/json', ...deployHeaders(req), ...reqHeaders(req) }, resPayload(req, { success: false, status: 'rejected', error: 'Method Not Allowed', queuePosition: 0, queueDepth: 0 }))(res);
   }
 
@@ -103,16 +110,19 @@ module.exports = async (req, res) => {
   if (!parsed) {
     log.event('body_parse.fail', req, { bodyType: bt, parseMethod: req._bodyParseMethod || 'unknown' });
     log.addTrace(req, 'body.parse', 'fail');
+    log.structured(req, { stage: 'body.parse', status: 'fail', bodyType: bt, parseMethod: req._bodyParseMethod });
     return json(400, { 'Content-Type': 'application/json', ...deployHeaders(req), ...reqHeaders(req) }, resPayload(req, { success: false, status: 'rejected', error: 'INVALID_BODY', queuePosition: 0, queueDepth: 0 }))(res);
   }
   log.event('body_parse.ok', req, { bodyType: bt, parseMethod: req._bodyParseMethod || 'unknown' });
   log.addTrace(req, 'body.parse', 'ok');
+  log.structured(req, { stage: 'body.parse', status: 'ok', bodyType: bt, parseMethod: req._bodyParseMethod });
 
   const hp = honeypotCheck(parsed);
   if (hp.triggered) {
     log.warn(req, 'Honeypot triggered', { ip, field: hp.field, reason: RATE_LIMIT_REASON.BOT });
     log.event('honeypot.triggered', req, { field: hp.field });
     log.addTrace(req, 'validation', 'blocked');
+    log.structured(req, { stage: 'validation', status: 'blocked', reason: 'honeypot', field: hp.field });
     return json(200, { 'Content-Type': 'application/json', ...deployHeaders(req), ...reqHeaders(req), ...debugHeaders({ allowed: false }, RATE_LIMIT_REASON.BOT) }, resPayload(req, { success: true, status: 'processed', queuePosition: 0, queueDepth: 0 }))(res);
   }
 
@@ -121,6 +131,7 @@ module.exports = async (req, res) => {
     log.warn(req, 'Timing check failed', { ip, reason: tc.reason });
     log.event('timing_check.blocked', req, { reason: tc.reason });
     log.addTrace(req, 'validation', 'blocked');
+    log.structured(req, { stage: 'validation', status: 'blocked', reason: 'timing', detail: tc.reason });
     return json(400, { 'Content-Type': 'application/json', ...deployHeaders(req), ...reqHeaders(req) }, resPayload(req, { success: false, status: 'rejected', error: 'INVALID_REQUEST', queuePosition: 0, queueDepth: 0 }))(res);
   }
   log.event('timing_check.ok', req, { elapsedMs: tc.elapsedMs });
@@ -132,6 +143,7 @@ module.exports = async (req, res) => {
     log.debugLog(req, 'Name validation failed', { ip, reason: nameCheck.reason });
     log.event('validation.fail', req, { field: 'name', reason: nameCheck.reason });
     log.addTrace(req, 'validation', 'fail');
+    log.structured(req, { stage: 'validation', status: 'fail', field: 'name', reason: nameCheck.reason });
     return json(400, { 'Content-Type': 'application/json', ...deployHeaders(req), ...reqHeaders(req) }, resPayload(req, { success: false, status: 'rejected', error: 'INVALID_REQUEST', queuePosition: 0, queueDepth: 0 }))(res);
   }
   const safeName = nameCheck.value;
@@ -140,6 +152,7 @@ module.exports = async (req, res) => {
     log.warn(req, 'Invalid email', { ip, email: maskEmail(email), reason: RATE_LIMIT_REASON.VALIDATION });
     log.event('validation.fail', req, { field: 'email' });
     log.addTrace(req, 'validation', 'fail');
+    log.structured(req, { stage: 'validation', status: 'fail', field: 'email' });
     return json(400, { 'Content-Type': 'application/json', ...deployHeaders(req), ...reqHeaders(req) }, resPayload(req, { success: false, status: 'rejected', error: 'INVALID_REQUEST', queuePosition: 0, queueDepth: 0 }))(res);
   }
 
@@ -147,15 +160,18 @@ module.exports = async (req, res) => {
     log.debugLog(req, 'Message missing', { ip });
     log.event('validation.fail', req, { field: 'message', reason: 'empty' });
     log.addTrace(req, 'validation', 'fail');
+    log.structured(req, { stage: 'validation', status: 'fail', field: 'message', reason: 'empty' });
     return json(400, { 'Content-Type': 'application/json', ...deployHeaders(req), ...reqHeaders(req) }, resPayload(req, { success: false, status: 'rejected', error: 'INVALID_REQUEST', queuePosition: 0, queueDepth: 0 }))(res);
   }
   if (message.length > 100000) {
     log.debugLog(req, 'Message too long', { ip, length: message.length });
     log.event('validation.fail', req, { field: 'message', reason: 'too_long', length: message.length });
     log.addTrace(req, 'validation', 'fail');
+    log.structured(req, { stage: 'validation', status: 'fail', field: 'message', reason: 'too_long', length: message.length });
     return json(400, { 'Content-Type': 'application/json', ...deployHeaders(req), ...reqHeaders(req) }, resPayload(req, { success: false, status: 'rejected', error: 'INVALID_REQUEST', queuePosition: 0, queueDepth: 0 }))(res);
   }
   log.addTrace(req, 'validation', 'ok');
+  log.structured(req, { stage: 'validation', status: 'ok' });
 
   const rlKey = rateLimitKey('contact', req);
   const edge = edgeCheck(rlKey);
@@ -164,7 +180,9 @@ module.exports = async (req, res) => {
     log.warn(req, 'Edge blocked', { ip, retryAfter: edge.retryAfter, reason: RATE_LIMIT_REASON.IP_BURST });
     log.event('rate_limit.blocked', req, { layer: 'edge', reason: RATE_LIMIT_REASON.IP_BURST, retryAfter: edge.retryAfter, remaining: edge.remaining });
     log.addTrace(req, 'rateLimit', 'blocked');
-    return json(429, { ...deployHeaders(req), ...reqHeaders(req), ...rateLimitHeaders(edge), ...debugHeaders(edge, RATE_LIMIT_REASON.IP_BURST) }, resPayload(req, { success: false, status: 'rate_limited', error: 'RATE_LIMITED', retryAfterMs: Math.max(1, edge.retryAfter) * 1000, limitType: 'ip', currentUsage: edge.currentUsage, limitThreshold: edge.limit, queuePosition: 0, queueDepth: 0 }))(res);
+    log.structured(req, { stage: 'rateLimit', status: 'blocked', layer: 'edge', retryAfter: edge.retryAfter, limit: edge.limit });
+    const nowMs = Date.now();
+    return json(429, { ...deployHeaders(req), ...reqHeaders(req), ...rateLimitHeaders(edge), ...debugHeaders(edge, RATE_LIMIT_REASON.IP_BURST) }, resPayload(req, { success: false, status: 'rate_limited', error: 'RATE_LIMITED', retryAfterMs: Math.max(1, edge.retryAfter) * 1000, retryAfterSeconds: Math.max(1, edge.retryAfter), resetTime: new Date(nowMs + Math.max(1, edge.retryAfter) * 1000).toISOString(), limitType: 'ip', currentUsage: edge.currentUsage, limitThreshold: edge.limit, queuePosition: 0, queueDepth: 0 }))(res);
   }
 
   const dedupCheck = emailDedup(email);
@@ -172,11 +190,14 @@ module.exports = async (req, res) => {
     log.warn(req, 'Email dedup blocked', { email: maskEmail(email), retryAfter: dedupCheck.retryAfter, reason: RATE_LIMIT_REASON.EMAIL_DUP });
     log.event('rate_limit.blocked', req, { layer: 'dedup', reason: RATE_LIMIT_REASON.EMAIL_DUP, retryAfter: dedupCheck.retryAfter, email: maskEmail(email) });
     log.addTrace(req, 'rateLimit', 'blocked');
-    return json(429, { ...deployHeaders(req), ...reqHeaders(req), ...rateLimitHeaders(dedupCheck), ...debugHeaders(dedupCheck, RATE_LIMIT_REASON.EMAIL_DUP) }, resPayload(req, { success: false, status: 'rate_limited', error: 'RATE_LIMITED', retryAfterMs: Math.max(1, dedupCheck.retryAfter) * 1000, limitType: 'email', currentUsage: dedupCheck.currentUsage, limitThreshold: dedupCheck.limit, queuePosition: 0, queueDepth: 0 }))(res);
+    log.structured(req, { stage: 'rateLimit', status: 'blocked', layer: 'dedup', retryAfter: dedupCheck.retryAfter, limit: dedupCheck.limit });
+    const nowMs = Date.now();
+    return json(429, { ...deployHeaders(req), ...reqHeaders(req), ...rateLimitHeaders(dedupCheck), ...debugHeaders(dedupCheck, RATE_LIMIT_REASON.EMAIL_DUP) }, resPayload(req, { success: false, status: 'rate_limited', error: 'RATE_LIMITED', retryAfterMs: Math.max(1, dedupCheck.retryAfter) * 1000, retryAfterSeconds: Math.max(1, dedupCheck.retryAfter), resetTime: new Date(nowMs + Math.max(1, dedupCheck.retryAfter) * 1000).toISOString(), limitType: 'email', currentUsage: dedupCheck.currentUsage, limitThreshold: dedupCheck.limit, queuePosition: 0, queueDepth: 0 }))(res);
   }
 
   log.event('rate_limit.ok', req, { edgeRemaining: edge.remaining });
   log.addTrace(req, 'rateLimit', 'ok');
+  log.structured(req, { stage: 'rateLimit', status: 'ok', remaining: edge.remaining });
   stage(req, 'after_validation');
 
   const GMAIL_USER = process.env.GMAIL_USER;
@@ -186,6 +207,7 @@ module.exports = async (req, res) => {
     log.error(req, 'Missing GMAIL_USER or GMAIL_APP_PASSWORD', null, { ip });
     log.event('smtp.misconfigured', req, { ip });
     log.addTrace(req, 'smtp', 'fail');
+    log.structured(req, { stage: 'smtp', status: 'fail', reason: 'missing_credentials' });
     return json(500, { 'Content-Type': 'application/json', ...deployHeaders(req), ...reqHeaders(req) }, resPayload(req, { success: false, status: 'rejected', error: 'Email service misconfigured', queuePosition: 0, queueDepth: 0 }))(res);
   }
 
@@ -205,7 +227,10 @@ module.exports = async (req, res) => {
   stage(req, 'before_email_send');
   const queueResult = emailQueue.enqueue({
     handler: async () => {
-      log.addTrace(req, 'background.start', 'ok');
+      log.addTrace(req, 'queue.waitEnd', 'ok');
+      log.structured(req, { stage: 'queue.waitEnd', status: 'ok', queueDepthAtStart: depth });
+      log.addTrace(req, 'email.sendStart', 'ok');
+      log.structured(req, { stage: 'email.sendStart', status: 'ok' });
       await sendWithTimeout(transporter, {
         from: `"Javier Ibrahim — Portfolio" <${GMAIL_USER}>`,
         to: GMAIL_USER,
@@ -226,7 +251,8 @@ module.exports = async (req, res) => {
       }, EMAIL_TIMEOUT_MS, req, 'client');
 
       stage(req, 'after_email_send');
-      log.addTrace(req, 'email.sent', 'ok');
+      log.addTrace(req, 'email.sendEnd', 'ok');
+      log.structured(req, { stage: 'email.sendEnd', status: 'ok' });
       log.info(req, 'Contact emails sent', { name: safeName, email: maskEmail(email) });
     },
     req,
@@ -237,6 +263,7 @@ module.exports = async (req, res) => {
     log.warn(req, 'Queue overflow', { ip });
     log.event('queue.overflow', req, { ip, endpoint: 'sendContact' });
     log.addTrace(req, 'queue.assign', 'overflow');
+    log.structured(req, { stage: 'queue.assign', status: 'overflow' });
     return json(503, { 'Content-Type': 'application/json', ...deployHeaders(req), ...reqHeaders(req) }, resPayload(req, { success: false, status: 'rejected', error: 'QUEUE_OVERFLOW', queuePosition: 0, queueDepth: 0 }))(res);
   }
 
@@ -244,6 +271,9 @@ module.exports = async (req, res) => {
   log.event('queue.queued', req, { queueId, position, depth, endpoint: 'sendContact' });
   log.debugLog(req, 'Emails queued', { queueId, position, depth });
   log.addTrace(req, 'queue.assign', 'ok');
+  log.structured(req, { stage: 'queue.assign', status: 'ok', queueId, position, depth });
+  log.addTrace(req, 'queue.waitStart', 'ok');
+  log.structured(req, { stage: 'queue.waitStart', status: 'ok', position, depth });
   return json(202, withSoftHeaders(req, {
     'Content-Type': 'application/json',
     ...deployHeaders(req),

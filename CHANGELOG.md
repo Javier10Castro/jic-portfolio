@@ -1,5 +1,35 @@
 # Changelog
 
+## [v1.8.0] - 2026-06-10
+
+### Added
+- [2026-06-10T00:00:00Z] - Global structured logging via `log.structured()`
+  Reason: production-grade observability with consistent timestamp, requestId, stage, status, durationMs across all lifecycle events
+- [2026-06-10T00:00:00Z] - Lifecycle stage `queue.waitStart`
+  Reason: measure queue entry latency (time between queue.assign and worker pickup)
+- [2026-06-10T00:00:00Z] - Lifecycle stage `queue.waitEnd`
+  Reason: measure queue wait duration (time spent in queue before processing)
+- [2026-06-10T00:00:00Z] - Lifecycle stage `email.sendStart`
+  Reason: track when SMTP transmission begins for performance monitoring
+- [2026-06-10T00:00:00Z] - Lifecycle stage `email.sendEnd`
+  Reason: track SMTP completion and detect silent failures
+- [2026-06-10T00:00:00Z] - Performance metrics per response: `totalRequestTimeMs`, `queueWaitTimeMs`, `processingTimeMs`
+  Reason: expose request timing to clients for latency diagnostics
+- [2026-06-10T00:00:00Z] - Rate limit response fields: `resetTime` (ISO timestamp), `retryAfterSeconds`
+  Reason: give clients precise timing information for retry scheduling
+- [2026-06-10T00:00:00Z] - Health endpoint `GET /api/health`
+  Reason: expose queue state, rate limit snapshot, instance metadata, and memory usage for production monitoring
+- [2026-06-10T00:00:00Z] - `rate-limit.getSnapshot()` for health endpoint data
+  Reason: expose internal rate limiter state without breaking encapsulation
+
+### Backward Compatibility
+- No existing response fields removed
+- No existing logging APIs changed
+- New fields additive to existing response payloads
+- `log.event()` unchanged — `log.structured()` is an additional output channel
+
+---
+
 ## [v1.7.0] - 2026-06-08
 
 ### Added
