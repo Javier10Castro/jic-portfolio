@@ -37,6 +37,31 @@
   - Verified: `node --check` passes, `window.runBriefE2E` exports correctly,
     file is pure ASCII (0 non-ASCII printable chars), 285 lines, proper `})();` closure
   - Files: `scripts/e2e-brief-bypass-wizard.js`
+- [2026-06-10] - E2E script not accessible in production (404)
+  - Script existed only in `scripts/` directory; Vercel does not serve from there
+  - Copied to `public/scripts/e2e-brief-bypass-wizard.js` for Vercel static serving
+  - Verified: `GET /scripts/e2e-brief-bypass-wizard.js` returns HTTP 200 (via `vercel curl`)
+  - Files: `public/scripts/e2e-brief-bypass-wizard.js` (new)
+  - Reason: Vercel only serves static assets from root and `public/` directory
+
+### Added
+- [2026-06-10] - Production deployment documentation suite
+  - `AGENT-BOOT-MANIFEST.md` — formal production-grade system spec (10 sections)
+  - `docs/DEPLOYMENT-RECOVERY.md` — runbook for deployment recovery (7 procedures)
+  - `docs/CI-CD-VERCEL-GITHUB.md` — step-by-step reconnect guide for GitHub ↔ Vercel
+  - Reason: Git integration was never connected; deployment pipeline was manual only;
+    recovery procedures were undocumented
+  - Impact: zero — documentation only, no business logic changes
+
+### Changed
+- [2026-06-10] - Architecture audit: Git integration status confirmed NOT connected
+  - Vercel project `web-portfolio` under `javier-ibrahim-s-projects` has no Git provider linked
+  - GitHub repo `Javier10Castro/jic-portfolio` is public and accessible
+  - `vercel git connect` fails with "Failed to connect" — Vercel GitHub App not installed
+  - All deploys are manual via `vercel --prod` by user `javiercastro9912-1887`
+  - Latest production deploy at commit `befbed6` ("test public file")
+  - No CI/CD pipeline exists; Git pushes do NOT trigger deployments
+  - Reconnection requires Vercel Dashboard (Settings → Git → Configure Git Provider)
 
 ## [v1.2.0] - 2026-06-10
 
