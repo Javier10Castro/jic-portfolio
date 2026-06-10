@@ -44,6 +44,78 @@
   Reason: unused experimental variant occupying a function slot
   Impact: frees 1 function slot, no production effect
 
+## [v1.9.1] - 2026-06-10
+
+### Added
+- [2026-06-10T07:10:00Z] - Per-email progress stages: `email.admin.start`, `email.admin.complete`, `email.client.start`, `email.client.complete`
+  Reason: long-running SMTP sends for admin + client emails had no intermediate progress indicators — failures in one email masked the other's status
+  Impact: four new lifecycle stages with per-email ok/timeout status; `email.sendEnd` now reports `ok` (both succeeded) or `partial` (at least one timed out)
+- [2026-06-10T07:10:00Z] - `email.retry` lifecycle traces on SMTP failure with attempt tracking
+  Reason: retries were logged via `log.warn` but invisible in lifecycle traces — structured logs now capture each retry attempt with attempt number, delay, and error
+  Impact: `email.retry` lifecycle stage with `attempt_1|2|3`, `success_attempt_N`, `fail_attempt_N`, `failover_attempt_N` statuses; structured log entries at every retry stage
+- [2026-06-10T07:10:00Z] - `X-RateLimit-Remaining` and `X-RateLimit-Limit` headers on 202 success responses
+  Reason: clients need to know their remaining rate limit budget after a successful submission, not just after a 429 block
+  Impact: every 202 response now includes `X-RateLimit-Limit: 60` and `X-RateLimit-Remaining: <N>` headers (backward-compatible, additive)
+
+### Changed
+- [2026-06-10T07:10:00Z] - Background email sending: replaced single `email.sendStart`/`email.sendEnd` with per-email progress (admin → client)
+  Reason: two sequential SMTP operations with different timeouts — granular tracking isolates which email fails
+  Impact: `email.sendEnd` is now the terminal summary after both emails complete; `email.sendStart` removed (replaced by `email.admin.start`)
+- [2026-06-10T07:10:00Z] - `sendWithTimeout` return value now used to determine per-email status in lifecycle traces
+  Reason: previous code ignored the boolean return of `sendWithTimeout` — timed-out emails were invisible in traces
+  Impact: `email.admin.complete` and `email.client.complete` report `ok` or `timeout` based on actual send result
+
+### Backward Compatibility
+- `email.sendStart` trace removed (replaced by `email.admin.start`) — only affects background debug traces, never part of HTTP response contract
+- All existing response fields, headers, and error codes preserved
+- `email.sendEnd` still present but now reports `ok` or `partial` instead of always `ok`
+
+---
+
+## [v1.9.0] - 2026-06-10
+
+### Added
+- [2026-06-10T06:45:00Z] - `x-test-mode` header support (validation | rate-limit | queue | load)
+  Reason: enable test-aware instrumentation without breaking production flow
+  Impact: test classifiers appear in lifecycle traces, structured logs, events, and debug responses
+- [2026-06-10T06:45:00Z] - `GET /api/health?section=rate-limit` — detailed rate limit introspection
+  Reason: expose current IP usage, email dedup cache size, window reset times, and hard limit thresholds for production observability (consolidated into health endpoint to respect Vercel Hobby 12-function cap)
+  Impact: same data as a dedicated endpoint, zero additional functions
+- [2026-06-10T06:45:00Z] - `GET /api/health?section=queue` — queue health with oldest request age
+  Reason: expose queue depth, active worker count, oldest request age for backlog diagnostics (consolidated into health endpoint)
+  Impact: same data as a dedicated endpoint, zero additional functions
+- [2026-06-10T06:45:00Z] - `log.getTraceWithDeltas()` — per-stage ms delta computation
+  Reason: improve debug mode with precise timing deltas between lifecycle steps (not just cumulative ms)
+  Impact: developers can see exactly how many ms each stage takes, not just position from start
+- [2026-06-10T06:45:00Z] - `rate-limit.getDetailedSnapshot()` — expanded rate limit state
+  Reason: expose oldest entry age and window reset times alongside existing counters
+  Impact: health and rate-limit-status endpoints show when windows will actually reset
+- [2026-06-10T06:45:00Z] - `queue.getDetailedStats()` — oldest request tracking
+  Reason: capture enqueue timestamps on every item to compute oldest request age
+  Impact: queue-status endpoint reports backlog age in ms, sec, and min
+
+### Changed
+- [2026-06-10T06:45:00Z] - Debug mode lifecycle output: cumulative `ms` now paired with `deltaMs` per step
+  Reason: developers need stage-level granularity, not just position-in-pipeline
+  Impact: `?debug=true` response now includes `deltaMs` on every lifecycle entry (backward-compatible: `ms` preserved)
+- [2026-06-10T06:45:00Z] - `log.structured()` and `log.event()` automatically include `testMode` when `req._testMode` is set
+  Reason: eliminate repetitive parameter passing — test mode classification propagates naturally through all observability channels
+  Impact: every structured log and event for test-mode requests carries `testMode` field automatically
+- [2026-06-10T06:45:00Z] - `BackgroundQueue._process()` tracks `_activeItems` for accurate oldest-request computation
+  Reason: without active-item tracking, items currently being processed are invisible to `getDetailedStats()`
+  Impact: oldest request age now correctly reflects items in-flight, not just queued
+
+### Removed
+- [2026-06-10T06:45:00Z] - `api/rate-limit-status.js` — consolidated into `api/health.js?section=rate-limit`
+  Reason: Vercel Hobby plan caps at 12 Serverless Functions; consolidation avoids plan upgrade
+  Impact: zero data loss — same fields, same structure, accessed via `/api/health?section=rate-limit`
+- [2026-06-10T06:45:00Z] - `api/queue-status.js` — consolidated into `api/health.js?section=queue`
+  Reason: same consolidation strategy
+  Impact: zero data loss — accessed via `/api/health?section=queue`
+- [2026-06-10T06:45:00Z] - `api/sendBrief-upstash.js` — dead code (requires `@upstash/redis`, never installed)
+  Reason: unused experimental variant occupying a function slot
+  Impact: frees 1 function slot, no production effect
+
 ### Backward Compatibility
 - `/api/health` default response (no `?section=`) is identical to v1.8.0 — zero breaking changes
 - `?section=queue` and `?section=rate-limit` are additive query params on existing endpoint
@@ -53,8 +125,6 @@
 - `_activeItems` is internal state — no public API change to BackgroundQueue
 
 ---
-
-## [v1.8.0] - 2026-06-10
 
 ### Added
 - [2026-06-10T00:00:00Z] - Global structured logging via `log.structured()`

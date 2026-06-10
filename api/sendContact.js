@@ -239,9 +239,10 @@ module.exports = async (req, res) => {
     handler: async () => {
       log.addTrace(req, 'queue.waitEnd', 'ok');
       log.structured(req, { stage: 'queue.waitEnd', status: 'ok', queueDepthAtStart: depth });
-      log.addTrace(req, 'email.sendStart', 'ok');
-      log.structured(req, { stage: 'email.sendStart', status: 'ok' });
-      await sendWithTimeout(transporter, {
+
+      log.addTrace(req, 'email.admin.start', 'ok');
+      log.structured(req, { stage: 'email.admin.start', status: 'ok' });
+      const adminOk = await sendWithTimeout(transporter, {
         from: `"Javier Ibrahim — Portfolio" <${GMAIL_USER}>`,
         to: GMAIL_USER,
         replyTo: email,
@@ -250,20 +251,27 @@ module.exports = async (req, res) => {
           : `New message from ${safeName}${company ? ` — ${company}` : ''}`,
         html: buildContactHTML(templateData, 'admin'),
       }, EMAIL_TIMEOUT_MS, req, 'admin');
+      log.addTrace(req, 'email.admin.complete', adminOk ? 'ok' : 'timeout');
+      log.structured(req, { stage: 'email.admin.complete', status: adminOk ? 'ok' : 'timeout' });
 
       stage(req, 'before_email_client');
-      await sendWithTimeout(transporter, {
+      log.addTrace(req, 'email.client.start', 'ok');
+      log.structured(req, { stage: 'email.client.start', status: 'ok' });
+      const clientOk = await sendWithTimeout(transporter, {
         from: `"Javier Ibrahim" <${GMAIL_USER}>`,
         to: [email, GMAIL_USER],
         replyTo: GMAIL_USER,
         subject: isES ? 'Hemos recibido tu mensaje ✅' : 'We received your message ✅',
         html: buildContactHTML(templateData, 'client'),
       }, EMAIL_TIMEOUT_MS, req, 'client');
+      log.addTrace(req, 'email.client.complete', clientOk ? 'ok' : 'timeout');
+      log.structured(req, { stage: 'email.client.complete', status: clientOk ? 'ok' : 'timeout' });
 
       stage(req, 'after_email_send');
-      log.addTrace(req, 'email.sendEnd', 'ok');
-      log.structured(req, { stage: 'email.sendEnd', status: 'ok' });
-      log.info(req, 'Contact emails sent', { name: safeName, email: maskEmail(email) });
+      const sendStatus = adminOk && clientOk ? 'ok' : 'partial';
+      log.addTrace(req, 'email.sendEnd', sendStatus);
+      log.structured(req, { stage: 'email.sendEnd', status: sendStatus });
+      log.info(req, 'Contact emails sent', { name: safeName, email: maskEmail(email), adminOk, clientOk });
     },
     req,
     label: 'sendContact',
@@ -292,6 +300,8 @@ module.exports = async (req, res) => {
     'X-Queue-Depth': String(depth),
     'X-Queue-Position': String(position),
     'X-Processing-Mode': depth > 0 ? 'queued' : 'immediate',
+    'X-RateLimit-Limit': String(edge.limit),
+    'X-RateLimit-Remaining': String(Math.max(0, edge.remaining)),
   }), resPayload(req, { success: true, status: 'queued', queued: true, position, depth, queuePosition: position, queueDepth: depth }))(res);
 };
 

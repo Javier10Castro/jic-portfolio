@@ -39,8 +39,24 @@ Client → Vercel Function → safeBodyParser → honeypot + timing checks
 | `queue.assign` | Enqueued | ✅ |
 | `queue.waitStart` | Entered queue | ✅ |
 | `queue.waitEnd` | Worker picked up | ❌ (background) |
-| `email.sendStart` | SMTP starts | ❌ (background) |
-| `email.sendEnd` | SMTP completes | ❌ (background) |
+| `email.admin.start` | Admin notification SMTP begins | ❌ (background) |
+| `email.admin.complete` | Admin notification sent/timeout | ❌ (background) |
+| `email.client.start` | Client confirmation SMTP begins | ❌ (background) |
+| `email.client.complete` | Client confirmation sent/timeout | ❌ (background) |
+| `email.sendEnd` | Both emails finished (ok or partial) | ❌ (background) |
+| `email.retry` | SMTP retry attempt (N of 3) | ❌ (background) |
+
+## Response Headers (202)
+
+| Header | Value | Purpose |
+|---|---|---|
+| `X-Queue-Id` | numeric ID | Queue entry identifier for trace correlation |
+| `X-Queue-Depth` | number | Total items in queue (including this one) |
+| `X-Queue-Position` | number | This item's position in queue (0 = immediate) |
+| `X-Processing-Mode` | `queued` or `immediate` | Whether request waits or processes right away |
+| `X-RateLimit-Limit` | number | IP rate limit hard threshold (60) |
+| `X-RateLimit-Remaining` | number | Remaining requests in current window |
+| `X-RateLimit-Soft` | `1` | Present only when soft limit reached (warning) |
 
 ## Debug Mode
 
@@ -114,4 +130,25 @@ Invoke-RestMethod -Uri 'https://web-portfolio-kappa-wheat.vercel.app/api/health?
 
 # Rate limit status (consolidated into health endpoint)
 Invoke-RestMethod -Uri 'https://web-portfolio-kappa-wheat.vercel.app/api/health?section=rate-limit'
+```
+
+---
+
+## Changelog
+
+[2026-06-10T07:10:00Z] - Split `email.sendStart`/`email.sendEnd` into per-email progress stages
+Reason: long-running SMTP sends for admin + client emails had no intermediate progress indicators — failures in one email masked the other's status
+Impact: four new lifecycle stages (`email.admin.start`, `email.admin.complete`, `email.client.start`, `email.client.complete`) with per-email ok/timeout status
+
+[2026-06-10T07:10:00Z] - Added `email.sendEnd` status distinction (`ok` vs `partial`)
+Reason: if only one of two emails succeeds, `email.sendEnd: partial` signals the issue without losing the successful delivery
+Impact: `email.sendEnd` now reports `ok` (both succeeded) or `partial` (at least one timed out)
+
+[2026-06-10T07:10:00Z] - Added `email.retry` lifecycle traces on SMTP failure
+Reason: retries were logged via `log.warn` but invisible in lifecycle traces — structured logs now capture each retry attempt with attempt number, delay, and error
+Impact: `email.retry` lifecycle stage with `attempt_1|2|3`, `success_attempt_N`, `fail_attempt_N`, `failover_attempt_N` statuses
+
+[2026-06-10T07:10:00Z] - Added `X-RateLimit-Remaining` and `X-RateLimit-Limit` headers on 202 success responses
+Reason: clients need to know their remaining rate limit budget after a successful submission, not just after a 429 block
+Impact: every 202 response now includes `X-RateLimit-Limit: 60` and `X-RateLimit-Remaining: <N>` headers (backward-compatible, additive)
 ```
