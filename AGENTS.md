@@ -894,6 +894,63 @@ The system has been extended with a full multi-tenant SaaS architecture design. 
 | `lib/queue/` (planned) | Bull/Redis job queue adapter |
 | `lib/billing/` (planned) | Stripe subscription adapter |
 
+## System Execution Model (Two-Layer Architecture)
+
+The sendContact API uses a strict **two-layer pipeline** with an ingestion boundary between them. This is critical for correct testing and debugging.
+
+### Layer 1: Network Gate (Rate Limit / Edge Protection)
+
+```
+Pre-boundary — operates BEFORE any queue or execution state
+├── IP sliding window (soft 30, hard 60 req/60s)
+├── Email dedup (1 req/300s per address)
+├── Honeypot detection (silent 200 for bots)
+└── Timing check (submittedAt validation)
+```
+
+- **Failure mode**: 429 RATE_LIMITED — immediate response, no queue allocation
+- **State**: Per-instance in-memory Map (sliding window)
+- **Observability**: `X-RateLimit-*` headers, `/api/health?section=rate-limit`
+
+### Layer 2: Execution Layer (Internal Queue Scheduler)
+
+```
+Post-boundary — only receives requests that passed Layer 1
+├── FIFO in-memory queue (max depth 100, concurrency 1)
+├── Background SMTP worker (admin + client emails)
+├── Retry logic (3 attempts, exponential backoff 2s/4s/8s)
+└── Lifecycle tracing (7+ stages with deltaMs)
+```
+
+- **Failure mode**: 503 QUEUE_OVERFLOW (rare, depth > 100)
+- **State**: Per-instance FIFO array
+- **Observability**: `X-Queue-*` headers, `?debug=true` lifecycle, `/api/health?section=queue`
+
+### Ingestion Boundary Principle
+
+```
+INCOMING REQUEST
+       │
+       ▼
+┌──────────────────────────┐
+│   INGESTION BOUNDARY     │
+│   (Rate Limit Gate)      │
+│                          │
+│   ALLOWED ──► Queue      │
+│   REJECTED ──► 429       │
+└──────────────────────────┘
+```
+
+**Key rules for AI agents modifying this system:**
+
+| Rule | Why |
+|---|---|
+| Rate limit is independent of queue | Adding queue features must NOT change rate limit logic |
+| 429 is NOT queued | A 429 response means the request was rejected before any queue state was allocated |
+| Queue metrics are filtered | Queue depth reflects only admitted traffic, not total ingress |
+| Spikes are handled by the gate | The queue does NOT absorb traffic spikes — rate limiting does |
+| Test the correct layer | Controlled throughput tests queue behavior; burst tests only test gate limits |
+
 ### Known Issues
 
 - Gmail App Password may expire — must regenerate if email sending fails.

@@ -217,6 +217,36 @@ CLIENT (PowerShell / Browser)
 │                                                              │
 │  active-- → drain() again (process next queued item)        │
 └─────────────────────────────────────────────────────────────┘
+
+---
+
+## Ingestion Boundary Principle
+
+The rate limit layer acts as an **ingestion boundary** — it gates admission before any queue or execution state is allocated.
+
+### The Boundary in the Lifecycle
+
+Steps 1–8 (body.parse → validation → rateLimit) occur **before** the ingestion boundary. Steps 10–11 (queue → worker) occur **after**.
+
+```
+ Pre-Boundary (Steps 1–8)           Post-Boundary (Steps 10–11)
+ ┌────────────────────────┐         ┌──────────────────────────┐
+ │ body.parse             │         │ Queue.enqueue            │
+ │ honeypotCheck          │  429    │ FIFO worker              │
+ │ timingCheck            │◄────    │ SMTP delivery            │
+ │ field validation       │         │ Retry logic              │
+ │ rateLimit (edge+dedup) │         │ Lifecycle traces         │
+ └────────────────────────┘         └──────────────────────────┘
+         │                                    ▲
+         └─────── only if ALLOWED ────────────┘
+```
+
+### Implications for Testing
+
+- **A 429 response proves the boundary is working** — it is not a system failure
+- **Queue depth is always ≤ admitted traffic** — it is not a proxy for total request volume
+- **Burst loops (no delay) exclusively test the boundary** — they provide zero data about queue throughput or SMTP performance
+- **To observe queue behavior, stay below the rate limit threshold** — use unique emails per request and ≥250ms spacing
 ```
 
 ---

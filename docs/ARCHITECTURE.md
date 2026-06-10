@@ -107,6 +107,43 @@ Queue worker                                     │
 
 ---
 
+## Ingestion Boundary Principle
+
+The system enforces a strict **ingestion boundary**: rate limiting is a pre-admission gate, not a queue management feature.
+
+```
+                    ┌─────────────────────────────────┐
+                    │     INGESTION BOUNDARY           │
+                    │  (Rate Limit / Edge Protection)  │
+                    │                                  │
+  INCOMING TRAFFIC  │  • IP sliding window (soft/hard) │  ADMITTED
+  ─────────────────►│  • Email dedup window            │────────────►
+                    │  • Honeypot detection            │  (to queue)
+                    │  • Timing check (submittedAt)    │
+                    │                                  │
+                    │  REJECTED (429)                  │
+                    │  ──► Never reaches queue         │
+                    └─────────────────────────────────┘
+```
+
+### Rules
+
+| # | Rule | Rationale |
+|---|---|---|
+| 1 | Rate limit decisions are independent of queue state | Queue depth does NOT influence rate limit thresholds |
+| 2 | 429 responses are immediate — no queue allocation | A rate-limited request never consumes queue memory |
+| 3 | Queue metrics only reflect admitted traffic | Queue depth = filtered throughput, not total ingress |
+| 4 | The queue does NOT absorb traffic spikes | Spikes are absorbed by the rate limit gate; the queue only sees the filtered steady-state flow |
+| 5 | Fail-fast loops test the gate, not the queue | A burst of 429 responses is expected gateway behavior, not a system failure |
+
+### Why This Matters
+
+- **Queue depth is NOT a load indicator.** A queue depth of 0 during a traffic spike does not mean the system is idle — it means the rate limit gate is doing its job.
+- **429 rate ≠ system failure rate.** A 50% 429 rate under burst is correct gateway behavior, not a degradation.
+- **Testing strategy must target the correct layer.** Controlled throughput (>250ms spacing) tests queue behavior. Rapid-fire tests test rate limit thresholds.
+
+---
+
 ## Component Details
 
 ### safeBodyParser (`lib/safeBodyParser.js`)
