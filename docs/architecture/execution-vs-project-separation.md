@@ -95,6 +95,39 @@ Project: [preview]
 
 The project milestone remains `preview` regardless of execution outcomes until a user calls `approveProject()`.
 
+## Network vs Execution Layer Separation
+
+The sendContact system demonstrates the same separation principle at a different level of the stack.
+
+### Two Independent Layers
+
+```
+Network Gate (Rate Limit / Edge Protection)
+  ─── operates BEFORE queue admission
+  ─── 429 responses never reach the execution layer
+  ─── per-instance sliding window (IP + email dedup)
+
+Execution Layer (Internal Queue Scheduler)
+  ─── operates AFTER gateway checks pass
+  ─── FIFO in-memory queue within the Vercel instance
+  ─── background SMTP workers with retry logic
+```
+
+### Key Rules
+
+- **These systems are independent.** The queue does NOT influence rate limit decisions. Rate limit failures never reach the execution layer.
+- **Queue metrics only represent admitted traffic.** Queue depth is not a proxy for total incoming request rate — it is the filtered rate after rate limiting.
+- **429 errors are immediate.** The response returns before any queue state is allocated. No execution record, no queue entry, no background processing.
+
+### Analogy: Airport Security
+
+| Layer | Airport | sendContact |
+|---|---|---|
+| Gate check | Security checkpoint (documents + screening) | Rate limit (IP + email validation) |
+| Execution | Boarding + flight | Queue + SMTP delivery |
+| Rejected at gate | Passenger turned away, never boards | 429 returned, never queued |
+| Misleading metric | Counting "people turned away at security" as "flight capacity" | Counting 429 responses as "queue pressure" |
+
 ## What Problems This Solves
 
 ### 1. No State Machine Coupling

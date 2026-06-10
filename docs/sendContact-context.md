@@ -166,3 +166,28 @@ Impact: improved clarity in repo structure handling
 [2026-06-10T16:00:00Z] - Observed system operates in queued execution model under burst traffic
 Reason: validate production behavior with PowerShell burst sequence
 Impact: confirmed queue depth grows linearly under sustained load without message loss or order violation
+
+---
+
+## 9. Rate Limit vs Queue Interaction Model (CRITICAL)
+
+Rate limit operates BEFORE queue admission. Queue only applies AFTER request passes gateway checks.
+
+### Two-Layer Pipeline
+
+```
+Network Gate (Rate Limit / Edge Protection)
+  → 429: rejected immediately, never reaches queue
+  → allowed: passes to execution layer
+Execution Layer (Internal Queue Scheduler)
+  → queue.assign: request enters FIFO queue
+  → queue.waitStart: waits for worker
+  → email delivery: background SMTP
+```
+
+### Implications
+
+- Burst traffic may result in partial queue starvation — rate limit caps how many requests reach the queue per window
+- 429 errors are NOT queued and are rejected immediately — the response returns before any queue interaction
+- Queue metrics only represent successfully admitted requests — queue depth does not reflect total incoming traffic, only filtered traffic
+- Rate limit decisions and queue state are independent — the queue has no influence on rate limit thresholds

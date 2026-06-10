@@ -399,4 +399,127 @@ A `202` response means the request was accepted and queued. Emails send in the b
    $env:DEBUG_API="true"
    ```
    This logs queue lifecycle: `queue_enter`, `queue_exit`, `smtp_attempt`, `smtp_success`, `smtp_retry`.
-3. Check Vercel Function logs via `vercel logs --follow`.
+ 3. Check Vercel Function logs via `vercel logs --follow`.
+
+---
+
+## Load Testing Strategy
+
+### Rules of engagement
+
+Rate limit operates BEFORE queue admission. 429 errors are NOT queued. A load test that triggers rate limiting never tests queue performance — it only tests gateway limits.
+
+### Baseline Test — Single Request Validation
+
+```powershell
+$body = @{
+  name        = "Load Baseline"
+  email       = "baseline-$([DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds())@test.com"
+  message     = "Single request validation"
+  submittedAt = [DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds()
+} | ConvertTo-Json
+
+Invoke-RestMethod -Uri "https://web-portfolio-kappa-wheat.vercel.app/api/sendContact" `
+  -Method POST -ContentType "application/json" -Body $body
+```
+
+**Expected:** 202, position 0, depth 0.
+
+### Controlled Throughput Test — Queue Stability (250ms delay)
+
+```powershell
+1..10 | ForEach-Object {
+  $body = @{
+    name        = "Controlled Load"
+    email       = "load-$([DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds())@test.com"
+    message     = "Request $_"
+    submittedAt = [DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds()
+  } | ConvertTo-Json
+
+  try {
+    $r = Invoke-RestMethod -Uri "https://web-portfolio-kappa-wheat.vercel.app/api/sendContact" `
+      -Method POST -ContentType "application/json" -Body $body
+    Write-Host "$_ — 202 (position=$($r.position), depth=$($r.depth))"
+  } catch {
+    $code = $_.Exception.Response.StatusCode.value__
+    Write-Host "$_ — $code"
+  }
+
+  Start-Sleep -Milliseconds 250
+}
+```
+
+**Expected:** All 202. Position increases with queue depth, depth returns to 0 as workers drain. Validates queue stability without triggering rate limit.
+
+### Progressive Stress Test — Rate Limit Threshold Discovery
+
+```powershell
+$found = $false
+$i = 1
+while (-not $found) {
+  $body = @{
+    name        = "Stress Test"
+    email       = "stress-$([DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds())@test.com"
+    message     = "Request $i"
+    submittedAt = [DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds()
+  } | ConvertTo-Json
+
+  try {
+    $r = Invoke-RestMethod -Uri "https://web-portfolio-kappa-wheat.vercel.app/api/sendContact" `
+      -Method POST -ContentType "application/json" -Body $body
+    Write-Host "$i — 202"
+    $i++
+  } catch {
+    $code = $_.Exception.Response.StatusCode.value__
+    Write-Host "$i — $code (rate limit reached)"
+    $found = $true
+  }
+
+  Start-Sleep -Milliseconds 100
+}
+```
+
+**Expected:** First N requests succeed (202), then a 429 appears when the hard limit is reached. The count before 429 reveals the effective per-instance window capacity.
+
+### Fail-Fast Test — Gateway Limit Discovery (WARNING)
+
+```powershell
+# WARNING: This WILL trigger 429 errors rapidly.
+# This does NOT test queue performance — it tests gateway limits only.
+1..20 | ForEach-Object {
+  $body = @{
+    name        = "Fail Fast"
+    email       = "fast-$([DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds())@test.com"
+    message     = "Request $_"
+    submittedAt = [DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds()
+  } | ConvertTo-Json
+
+  try {
+    $r = Invoke-RestMethod -Uri "https://web-portfolio-kappa-wheat.vercel.app/api/sendContact" `
+      -Method POST -ContentType "application/json" -Body $body
+    Write-Host "$_ — 202"
+  } catch {
+    $code = $_.Exception.Response.StatusCode.value__
+    Write-Host "$_ — $code"
+  }
+}
+```
+
+**Expected:** Saturation within the first few requests. Most return 429. Queue depth stays near 0 because rate limiting blocks admission.
+
+### Why Uncontrolled Loops Are Harmful
+
+| Problem | Explanation |
+|---|---|
+| Immediate 429 saturation | First requests consume the window, remainder are rejected — no meaningful data on queue behavior |
+| Does NOT test queue performance | Queue only sees requests that pass rate limiting. A burst loop that triggers 429 tells you nothing about queue throughput |
+| Misleading failure rate | A test reporting 80% failure rate due to rate limiting is not a system failure — it is expected gateway behavior |
+
+### Summary
+
+| Test Type | Delay | Goal | Expected Result |
+|---|---|---|---|
+| Baseline | none | Single request validation | 202 |
+| Controlled throughput | 250ms | Queue stability | All 202, depth varies |
+| Progressive stress | 100ms | Rate limit threshold | N×202, then 429 |
+| Fail-fast (WARNING) | none | Gateway limit discovery | Mostly 429 |
