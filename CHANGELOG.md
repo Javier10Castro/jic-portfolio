@@ -16,6 +16,18 @@
   - Reason: expired entries inflated `totalRequests` until next periodic cleanup (up to 60s)
   - Impact: aggregates always reflect only non-expired entries, consistent with `lookupRequest()` behavior
 
+### Added
+- [2026-06-10] - Brief Maestro frontend audit + E2E bypass script
+  - Full frontend flow audit: `docs/audits/brief-maestro-frontend-audit.md`
+    - Identifies all key functions and line numbers (SECTIONS, formData, submitContact, generatePrompt)
+    - Maps complete flow: wizard → contact page → POST /api/sendBrief → response handling
+    - Documents risks: requestId ignored, no fetch timeout, missing honeypot
+  - E2E test script: `scripts/e2e-brief-bypass-wizard.js`
+    - Mode 1: invokes internal `submitContact()` after populating formData directly
+    - Mode 2: pure API bypass — builds payload, calls fetch, logs requestId/queuePosition/queueDepth
+    - No manual wizard navigation required
+  - Reason: enable rapid testing of /api/sendBrief without clicking through 14 sections
+
 ## [v1.2.0] - 2026-06-10
 
 ### Fixed
