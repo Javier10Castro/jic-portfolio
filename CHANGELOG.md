@@ -6,12 +6,12 @@
 - [2026-06-10T06:45:00Z] - `x-test-mode` header support (validation | rate-limit | queue | load)
   Reason: enable test-aware instrumentation without breaking production flow
   Impact: test classifiers appear in lifecycle traces, structured logs, events, and debug responses
-- [2026-06-10T06:45:00Z] - `GET /api/rate-limit-status` endpoint
-  Reason: expose current IP usage, email dedup cache size, window reset times, and hard limit thresholds for production observability
-  Impact: enables real-time rate limit introspection without touching core rate limiter logic
-- [2026-06-10T06:45:00Z] - `GET /api/queue-status` endpoint
-  Reason: expose queue depth, active worker count, oldest request age for backlog diagnostics
-  Impact: allows monitoring of queue pressure under load without modifying the queue engine
+- [2026-06-10T06:45:00Z] - `GET /api/health?section=rate-limit` — detailed rate limit introspection
+  Reason: expose current IP usage, email dedup cache size, window reset times, and hard limit thresholds for production observability (consolidated into health endpoint to respect Vercel Hobby 12-function cap)
+  Impact: same data as a dedicated endpoint, zero additional functions
+- [2026-06-10T06:45:00Z] - `GET /api/health?section=queue` — queue health with oldest request age
+  Reason: expose queue depth, active worker count, oldest request age for backlog diagnostics (consolidated into health endpoint)
+  Impact: same data as a dedicated endpoint, zero additional functions
 - [2026-06-10T06:45:00Z] - `log.getTraceWithDeltas()` — per-stage ms delta computation
   Reason: improve debug mode with precise timing deltas between lifecycle steps (not just cumulative ms)
   Impact: developers can see exactly how many ms each stage takes, not just position from start
@@ -33,10 +33,22 @@
   Reason: without active-item tracking, items currently being processed are invisible to `getDetailedStats()`
   Impact: oldest request age now correctly reflects items in-flight, not just queued
 
+### Removed
+- [2026-06-10T06:45:00Z] - `api/rate-limit-status.js` — consolidated into `api/health.js?section=rate-limit`
+  Reason: Vercel Hobby plan caps at 12 Serverless Functions; consolidation avoids plan upgrade
+  Impact: zero data loss — same fields, same structure, accessed via `/api/health?section=rate-limit`
+- [2026-06-10T06:45:00Z] - `api/queue-status.js` — consolidated into `api/health.js?section=queue`
+  Reason: same consolidation strategy
+  Impact: zero data loss — accessed via `/api/health?section=queue`
+- [2026-06-10T06:45:00Z] - `api/sendBrief-upstash.js` — dead code (requires `@upstash/redis`, never installed)
+  Reason: unused experimental variant occupying a function slot
+  Impact: frees 1 function slot, no production effect
+
 ### Backward Compatibility
+- `/api/health` default response (no `?section=`) is identical to v1.8.0 — zero breaking changes
+- `?section=queue` and `?section=rate-limit` are additive query params on existing endpoint
 - No existing response fields removed
 - No existing logging APIs changed — `getTraceWithDeltas()` is a new export, `getTrace()` unchanged
-- New endpoints (`/api/rate-limit-status`, `/api/queue-status`) are additive
 - `x-test-mode` header is fully optional — absent header = `req._testMode = null`, no behavioral change
 - `_activeItems` is internal state — no public API change to BackgroundQueue
 

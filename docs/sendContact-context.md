@@ -109,9 +109,9 @@ Invoke-RestMethod -Method Post -Uri 'https://web-portfolio-kappa-wheat.vercel.ap
 $body = @{ name='Test'; email='test@example.com'; message='load test'; submittedAt=([DateTimeOffset]::Now.ToUnixTimeMilliseconds()) } | ConvertTo-Json
 1..10 | ForEach-Object { Invoke-RestMethod -Method Post -Uri 'https://web-portfolio-kappa-wheat.vercel.app/api/sendContact' -Body $body -ContentType 'application/json' -Headers @{ 'x-test-mode' = 'rate-limit' } }
 
-# Queue status
-Invoke-RestMethod -Uri 'https://web-portfolio-kappa-wheat.vercel.app/api/queue-status'
+# Queue status (consolidated into health endpoint)
+Invoke-RestMethod -Uri 'https://web-portfolio-kappa-wheat.vercel.app/api/health?section=queue'
 
-# Rate limit status
-Invoke-RestMethod -Uri 'https://web-portfolio-kappa-wheat.vercel.app/api/rate-limit-status'
+# Rate limit status (consolidated into health endpoint)
+Invoke-RestMethod -Uri 'https://web-portfolio-kappa-wheat.vercel.app/api/health?section=rate-limit'
 ```
