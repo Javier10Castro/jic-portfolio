@@ -530,11 +530,29 @@ while (-not $found) {
 
 ### Testing Failed Flow (queued → processing → failed)
 
-Failure can be induced by:
-- Removing `GMAIL_USER`/`GMAIL_APP_PASSWORD` env vars (returns 500 at queue time — item never reaches queue)
-- Triggering SMTP timeout (hard to induce in production, relies on actual timeout behavior)
+Failure can be induced by SMTP timeout (hard to induce in production, relies on actual timeout behavior). The queue retries 4 times, then the registry shows `status: "failed"`.
 
-Expected: after the queue retries (4 attempts), the request should show `status: "failed"` on the diagnostic endpoint.
+### Testing Pre-Queue Rejection (rejected state)
+
+Pre-queue rejections (validation, rate-limit, bad-request) now register with `status: "rejected"`.
+
+```powershell
+# Send a request without required fields
+try {
+  $response = Invoke-WebRequest -Uri "https://web-portfolio-kappa-wheat.vercel.app/api/sendContact" `
+    -Method POST -ContentType "application/json" `
+    -Body (@{ submittedAt = [DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds() } | ConvertTo-Json)
+} catch {
+  $requestId = ($_.Exception.Response.Headers['X-Request-Id'])
+  Write-Host "requestId: $requestId"
+}
+
+# Query rejection status
+$status = Invoke-RestMethod -Uri "https://web-portfolio-kappa-wheat.vercel.app/api/sendContact?id=$requestId"
+$status | ConvertTo-Json -Depth 10
+```
+
+Expected: `status: "rejected"` with `reason: "validation"` (or `rate_limit`/`bad_request`). No queue timestamps — only `receivedAt` is present.
 
 ### Testing Queue Wait Validation
 
@@ -600,3 +618,29 @@ The contact form retries 429 responses automatically with exponential backoff (0
 | Controlled throughput | 250ms | Queue stability | All 202, depth varies |
 | Progressive stress | 100ms | Rate limit threshold | N×202, then 429 |
 | Fail-fast (WARNING) | none | Gateway limit discovery | Mostly 429 |
+
+---
+
+## Known Limitation — Health Endpoint Lifecycle Metrics
+
+The `lifecycle` block exposed by `/api/health` and `/api/health?section=queue` shows **always 0** in production.
+
+**Reason**: Vercel isolates each API route into separate serverless functions. `api/health.js` runs in a different process than `api/sendContact.js`, so it cannot access the in-memory `request-registry` Map or `BackgroundQueue` instance that contains the actual request data.
+
+**Individual metrics**:
+
+| Metric | In health endpoint | In `GET /api/sendContact?id=X` |
+|---|---|---|
+| `totalRequests` | Always 0 (cross-function) | ✅ Correct within same instance |
+| `completedRequests` | Always 0 | ✅ Correct |
+| `failedRequests` | Always 0 | ✅ Correct |
+| `averageExecutionTimeMs` | Always 0 | ✅ Correct (persisted since v1.2.1) |
+| `averageQueueWaitTimeMs` | Always 0 | ✅ Correct (persisted since v1.2.1) |
+
+**Use instead**:
+
+```
+GET /api/sendContact?id=<requestId>
+```
+
+This provides per-request lifecycle diagnostics when the lookup runs on the same Vercel instance that processed the request. Individual metrics are accurate — the limitation only affects cross-function aggregation in the health endpoint.

@@ -1,5 +1,33 @@
 # Changelog
 
+## [v1.2.1] - 2026-06-10
+
+### Fixed
+- [2026-06-10] - C2: Derived metrics now persisted in registry Map (audit finding)
+  - `registerLifecycle()` stores `executionDurationMs`, `queueWaitTimeMs`, `totalLifecycleTimeMs` alongside raw fields
+  - `getAggregateMetrics()` now computes correct `averageExecutionTimeMs` and `averageQueueWaitTimeMs` instead of always 0
+  - `lookupRequest()` and diagnostic endpoint continue to work identically (both use `_computeDerived`)
+  - Files: `lib/request-registry.js`
+  - Reason: derived fields were computed on return copy but never persisted — aggregates always returned 0
+  - Impact: `averageExecutionTimeMs` and `averageQueueWaitTimeMs` now reflect actual averages within the same instance
+- [2026-06-10] - M1: TTL purge in `getAggregateMetrics()` (audit finding)
+  - `getAggregateMetrics()` now calls `_evictExpired()` at start, so stale entries are excluded from aggregates
+  - Files: `lib/request-registry.js`
+  - Reason: expired entries inflated `totalRequests` until next periodic cleanup (up to 60s)
+  - Impact: aggregates always reflect only non-expired entries, consistent with `lookupRequest()` behavior
+
+## [v1.2.0] - 2026-06-10
+
+### Fixed
+- [2026-06-10] - Observability hardening (audit findings F1, F2, F3, F13)
+  - **F13 — TTL enforcement**: TTL now applied independently of registry size. Periodic cleanup via `setInterval` (60s). `lookupRequest()` invalidates expired entries (deletes + returns null).
+  - **F2 — lifecycle.complete unified source**: Moved structured log emission from `sendContact.js` handler to `queue.js:_process()`. Guarantees terminal event even on retry exhaustion, queue exception, or handler throw.
+  - **F1 — Single executionStartedAt**: Removed duplicate `executionStartedAt` capture in `sendContact.js` handler. Queue's `queue.js:52` is the sole source of truth (moment work leaves queue).
+  - **F3 — Pre-queue failure registration**: All 12 early-return points (405/400/429/500/503) now register with `{ status: 'rejected', reason: 'validation'|'rate_limit'|'bad_request', receivedAt }`.
+  - Files: `lib/request-registry.js` (rewritten), `lib/queue.js` (modified), `api/sendContact.js` (modified)
+  - Reason: audit findings from `docs/audits/request-lifecycle-observability-audit.md`
+  - Impact: deterministic TTL, no gap in lifecycle.complete, single source of truth for executionStartedAt, pre-queue visibility in diagnostic endpoint
+
 ## [v1.1.0] - 2026-06-10
 
 ### Added

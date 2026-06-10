@@ -402,6 +402,8 @@ The Agent Pack follows semantic versioning:
 
 - `v1.0.0` — Initial stable system
 - `v1.1.0` — Improvements without breaking changes
+- `v1.2.0` — Observability hardening (TTL enforcement, single executionStartedAt, unified lifecycle.complete, pre-queue rejection tracking)
+- `v1.2.1` — Derived metric persistence + aggregate TTL purge (fixed averageExecutionTimeMs and averageQueueWaitTimeMs always being 0; getAggregateMetrics now evicts expired entries)
 - `v1.6.0` — SaaS multi-tenant architecture design (design phase)
 - `v1.7.0` — SaaS Runtime Layer v1 + API v1 implementation
 - `v2.0.0` — Architecture changes or new agent system
@@ -959,14 +961,23 @@ INCOMING REQUEST
 
 The registry (`lib/request-registry.js`) stores per-requestId lifecycle data in-memory.
 
+**TTL enforcement**: Entries expire after 5 minutes regardless of registry size. Periodic cleanup every 60s via `setInterval`. `lookupRequest()` checks TTL on every call — expired entries are deleted and return `null`. `getAggregateMetrics()` also purges expired entries before computing aggregates.
+
+**Derived field persistence**: `queueWaitTimeMs`, `executionDurationMs`, and `totalLifecycleTimeMs` are stored alongside raw timestamps in the registry Map. `getAggregateMetrics()` reads persisted derived fields, so `averageExecutionTimeMs` and `averageQueueWaitTimeMs` reflect real averages (fixed in v1.2.1 — previously always 0).
+
 | State | Transition |
 |---|---|
 | `queued` | After queue.assign → `processing` |
 | `processing` | Worker starts → `completed` or `failed` |
 | `completed` | Both emails sent (terminal) |
 | `failed` | Email failure after retries (terminal) |
+| `rejected` | Pre-queue failure (validation/rate-limit/bad-request) — terminal |
 
-Diagnostic endpoint: `GET /api/sendContact?id=<requestId>` returns `{ requestId, status, receivedAt, queuedAt, executionStartedAt, executionFinishedAt, queueWaitTimeMs, executionDurationMs, totalLifecycleTimeMs }`.
+**`lifecycle.complete` emission**: Single source in `queue.js:_process()` — always fires on retry exhaustion, queue exception, or handler completion. Covers both `completed` and `failed` terminal states. Previously gated behind handler success.
+
+**`executionStartedAt`**: Single source of truth at `queue.js:52` (moment work leaves queue). No longer duplicated by handler. `queueWaitTimeMs = executionStartedAt - queuedAt` reflects true queue wait time.
+
+Diagnostic endpoint: `GET /api/sendContact?id=<requestId>` returns `{ requestId, status, receivedAt, queuedAt, executionStartedAt, executionFinishedAt, queueWaitTimeMs, executionDurationMs, totalLifecycleTimeMs }`. Entries with `rejected` status include `reason` field.
 
 `/api/health?section=queue` includes `lifecycle` aggregate metrics. Default `/api/health` also includes `lifecycle`.
 

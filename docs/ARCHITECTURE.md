@@ -394,23 +394,70 @@ queued ───→ processing ───→ completed
 
 In-memory Map (1,000 entries, 5min TTL) storing lifecycle data per requestId.
 
+**TTL enforcement**: Entries expire after 5 minutes regardless of registry size. Periodic cleanup via `setInterval` (60s). `lookupRequest()` checks TTL on every call — expired entries are deleted and return `null`. `getAggregateMetrics()` also purges expired entries before computing aggregates.
+
+**Derived field persistence**: Derived metrics (`queueWaitTimeMs`, `executionDurationMs`, `totalLifecycleTimeMs`) are stored alongside raw timestamps in the Map, enabling accurate aggregate queries (`averageExecutionTimeMs`, `averageQueueWaitTimeMs`).
+
 | Field | Source | Derived |
 |---|---|---|
 | `receivedAt` | `req._lifecycle.startTime` | — |
 | `queuedAt` | `req._lifecycle.queuedAt` | — |
-| `executionStartedAt` | `Date.now()` at handler start | — |
-| `executionFinishedAt` | `Date.now()` after email.sendEnd | — |
-| `queueWaitTimeMs` | — | `executionStartedAt - queuedAt` |
-| `executionDurationMs` | — | `executionFinishedAt - executionStartedAt` |
-| `totalLifecycleTimeMs` | — | `executionFinishedAt - receivedAt` |
+| `executionStartedAt` | `Date.now()` at `queue.js:52` (dequeue) | — |
+| `executionFinishedAt` | `Date.now()` after retry loop | — |
+| `queueWaitTimeMs` | — | `executionStartedAt - queuedAt` (persisted) |
+| `executionDurationMs` | — | `executionFinishedAt - executionStartedAt` (persisted) |
+| `totalLifecycleTimeMs` | — | `executionFinishedAt - receivedAt` (persisted) |
+
+### Lifecycle States
+
+| State | Meaning | Terminal |
+|---|---|---|
+| `queued` | Request accepted into FIFO queue | No |
+| `processing` | Worker dequeued, retry loop active | No |
+| `completed` | Both emails sent successfully | Yes |
+| `failed` | Email failure after retries | Yes |
+| `rejected` | Pre-queue failure (validation/rate-limit/bad-request) | Yes |
 
 ### Diagnostic Endpoint
 
-`GET /api/sendContact?id=<requestId>` — returns lifecycle data for requests still in registry (recent 5min, same instance).
+`GET /api/sendContact?id=<requestId>` — returns lifecycle data for requests still in registry. Entries past TTL return 404. Entries with `rejected` status include `reason` field.
 
 ### Structured Lifecycle Log
 
-On every request completion, `stage: "lifecycle.complete"` is emitted with full payload including all timestamps and derived metrics.
+On every request completion, `stage: "lifecycle.complete"` is emitted from `queue.js:_process()` (single source). Covers all terminal states: `completed`, `failed`, and retry exhaustion. Payload includes all timestamps and derived metrics.
+
+---
+
+## Serverless Memory Isolation (Critical)
+
+Each `api/*.js` file is a separate Vercel Serverless Function. They do not share memory, state, or module instances.
+
+```
+┌────────────────────────────────┐
+│ api/sendContact.js             │
+│   registry Map                 │
+│   queue instance               │
+│   rate-limit Maps               │
+└────────────────────────────────┘
+
+            NOT SHARED
+
+┌────────────────────────────────┐
+│ api/health.js                  │
+│   registry Map (empty)         │
+│   queue instance (empty)       │
+│   rate-limit Maps (empty)      │
+└────────────────────────────────┘
+
+            NOT SHARED
+
+┌────────────────────────────────┐
+│ api/sendBrief.js               │
+│   (no registry/queue)          │
+└────────────────────────────────┘
+```
+
+In-memory observability is **request-local** and **instance-local**. Do not assume shared memory between API routes.
 
 ---
 

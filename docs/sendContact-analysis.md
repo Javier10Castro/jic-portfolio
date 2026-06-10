@@ -386,18 +386,18 @@ All field failures return the same error code: `INVALID_REQUEST`. The specific f
 |---|---|---|
 | `receivedAt` | `req._lifecycle.startTime` | Line 98: `log.initTrace(req)` |
 | `queuedAt` | `Date.now()` after `queue.enqueue` | Line 291: `req._lifecycle.queuedAt` |
-| `executionStartedAt` | `Date.now()` at handler start | Line 243: handler entry |
-| `executionFinishedAt` | `Date.now()` after email.sendEnd | Line 275: after emails |
+| `executionStartedAt` | `Date.now()` at `queue.js:52` (dequeue) | Single source of truth |
+| `executionFinishedAt` | `Date.now()` after retry loop | `queue.js:87` |
 
 ### Derived Metrics
 
-- `queueWaitTimeMs = executionStartedAt - queuedAt`
+- `queueWaitTimeMs = executionStartedAt - queuedAt` (reflects true queue wait time)
 - `executionDurationMs = executionFinishedAt - executionStartedAt`
 - `totalLifecycleTimeMs = executionFinishedAt - receivedAt`
 
 ### Diagnostic Endpoint
 
-`GET /api/sendContact?id=<requestId>` — returns full lifecycle record:
+`GET /api/sendContact?id=<requestId>` — returns full lifecycle record (TTL-checked on lookup):
 
 ```json
 {
@@ -415,8 +415,10 @@ All field failures return the same error code: `INVALID_REQUEST`. The specific f
 }
 ```
 
+Rejected requests return additional `reason` field (`validation`/`rate_limit`/`bad_request`).
+
 Limitations:
-- In-memory only (1,000 entries, 5min TTL) — lost on instance termination
+- In-memory only (1,000 entries, 5min TTL enforced) — lost on instance termination
 - Per-instance — cannot query across Vercel instances
 - No persistence — not suitable for audit trails
 

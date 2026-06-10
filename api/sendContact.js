@@ -126,6 +126,7 @@ module.exports = async (req, res) => {
     log.warn(req, 'Method not allowed', { ip, method: req.method, reason: RATE_LIMIT_REASON.VALIDATION });
     log.addTrace(req, 'validation', 'fail');
     log.structured(req, { stage: 'validation', status: 'fail', reason: 'method_not_allowed' });
+    registry.registerLifecycle(log.requestId(req), { status: 'rejected', reason: 'validation', receivedAt: req._lifecycle.startTime });
     return json(405, { 'Content-Type': 'application/json', ...deployHeaders(req), ...reqHeaders(req) }, resPayload(req, { success: false, status: 'rejected', error: 'Method Not Allowed', queuePosition: 0, queueDepth: 0 }))(res);
   }
 
@@ -136,6 +137,7 @@ module.exports = async (req, res) => {
     log.event('body_parse.fail', req, { bodyType: bt, parseMethod: req._bodyParseMethod || 'unknown' });
     log.addTrace(req, 'body.parse', 'fail');
     log.structured(req, { stage: 'body.parse', status: 'fail', bodyType: bt, parseMethod: req._bodyParseMethod });
+    registry.registerLifecycle(log.requestId(req), { status: 'rejected', reason: 'bad_request', receivedAt: req._lifecycle.startTime });
     return json(400, { 'Content-Type': 'application/json', ...deployHeaders(req), ...reqHeaders(req) }, resPayload(req, { success: false, status: 'rejected', error: 'INVALID_BODY', queuePosition: 0, queueDepth: 0 }))(res);
   }
   log.event('body_parse.ok', req, { bodyType: bt, parseMethod: req._bodyParseMethod || 'unknown' });
@@ -148,6 +150,7 @@ module.exports = async (req, res) => {
     log.event('honeypot.triggered', req, { field: hp.field });
     log.addTrace(req, 'validation', 'blocked');
     log.structured(req, { stage: 'validation', status: 'blocked', reason: 'honeypot', field: hp.field });
+    registry.registerLifecycle(log.requestId(req), { status: 'rejected', reason: 'validation', receivedAt: req._lifecycle.startTime });
     return json(200, { 'Content-Type': 'application/json', ...deployHeaders(req), ...reqHeaders(req), ...debugHeaders({ allowed: false }, RATE_LIMIT_REASON.BOT) }, resPayload(req, { success: true, status: 'processed', queuePosition: 0, queueDepth: 0 }))(res);
   }
 
@@ -157,6 +160,7 @@ module.exports = async (req, res) => {
     log.event('timing_check.blocked', req, { reason: tc.reason });
     log.addTrace(req, 'validation', 'blocked');
     log.structured(req, { stage: 'validation', status: 'blocked', reason: 'timing', detail: tc.reason });
+    registry.registerLifecycle(log.requestId(req), { status: 'rejected', reason: 'validation', receivedAt: req._lifecycle.startTime });
     return json(400, { 'Content-Type': 'application/json', ...deployHeaders(req), ...reqHeaders(req) }, resPayload(req, { success: false, status: 'rejected', error: 'INVALID_REQUEST', queuePosition: 0, queueDepth: 0 }))(res);
   }
   log.event('timing_check.ok', req, { elapsedMs: tc.elapsedMs });
@@ -169,6 +173,7 @@ module.exports = async (req, res) => {
     log.event('validation.fail', req, { field: 'name', reason: nameCheck.reason });
     log.addTrace(req, 'validation', 'fail');
     log.structured(req, { stage: 'validation', status: 'fail', field: 'name', reason: nameCheck.reason });
+    registry.registerLifecycle(log.requestId(req), { status: 'rejected', reason: 'validation', receivedAt: req._lifecycle.startTime });
     return json(400, { 'Content-Type': 'application/json', ...deployHeaders(req), ...reqHeaders(req) }, resPayload(req, { success: false, status: 'rejected', error: 'INVALID_REQUEST', queuePosition: 0, queueDepth: 0 }))(res);
   }
   const safeName = nameCheck.value;
@@ -178,6 +183,7 @@ module.exports = async (req, res) => {
     log.event('validation.fail', req, { field: 'email' });
     log.addTrace(req, 'validation', 'fail');
     log.structured(req, { stage: 'validation', status: 'fail', field: 'email' });
+    registry.registerLifecycle(log.requestId(req), { status: 'rejected', reason: 'validation', receivedAt: req._lifecycle.startTime });
     return json(400, { 'Content-Type': 'application/json', ...deployHeaders(req), ...reqHeaders(req) }, resPayload(req, { success: false, status: 'rejected', error: 'INVALID_REQUEST', queuePosition: 0, queueDepth: 0 }))(res);
   }
 
@@ -186,6 +192,7 @@ module.exports = async (req, res) => {
     log.event('validation.fail', req, { field: 'message', reason: 'empty' });
     log.addTrace(req, 'validation', 'fail');
     log.structured(req, { stage: 'validation', status: 'fail', field: 'message', reason: 'empty' });
+    registry.registerLifecycle(log.requestId(req), { status: 'rejected', reason: 'validation', receivedAt: req._lifecycle.startTime });
     return json(400, { 'Content-Type': 'application/json', ...deployHeaders(req), ...reqHeaders(req) }, resPayload(req, { success: false, status: 'rejected', error: 'INVALID_REQUEST', queuePosition: 0, queueDepth: 0 }))(res);
   }
   if (message.length > 100000) {
@@ -193,6 +200,7 @@ module.exports = async (req, res) => {
     log.event('validation.fail', req, { field: 'message', reason: 'too_long', length: message.length });
     log.addTrace(req, 'validation', 'fail');
     log.structured(req, { stage: 'validation', status: 'fail', field: 'message', reason: 'too_long', length: message.length });
+    registry.registerLifecycle(log.requestId(req), { status: 'rejected', reason: 'validation', receivedAt: req._lifecycle.startTime });
     return json(400, { 'Content-Type': 'application/json', ...deployHeaders(req), ...reqHeaders(req) }, resPayload(req, { success: false, status: 'rejected', error: 'INVALID_REQUEST', queuePosition: 0, queueDepth: 0 }))(res);
   }
   log.addTrace(req, 'validation', 'ok');
@@ -206,6 +214,7 @@ module.exports = async (req, res) => {
     log.event('rate_limit.blocked', req, { layer: 'edge', reason: RATE_LIMIT_REASON.IP_BURST, retryAfter: edge.retryAfter, remaining: edge.remaining });
     log.addTrace(req, 'rateLimit', 'blocked');
     log.structured(req, { stage: 'rateLimit', status: 'blocked', layer: 'edge', retryAfter: edge.retryAfter, limit: edge.limit });
+    registry.registerLifecycle(log.requestId(req), { status: 'rejected', reason: 'rate_limit', receivedAt: req._lifecycle.startTime });
     const nowMs = Date.now();
     return json(429, { ...deployHeaders(req), ...reqHeaders(req), ...rateLimitHeaders(edge), ...debugHeaders(edge, RATE_LIMIT_REASON.IP_BURST) }, resPayload(req, { success: false, status: 'rate_limited', error: 'RATE_LIMITED', retryAfterMs: Math.max(1, edge.retryAfter) * 1000, retryAfterSeconds: Math.max(1, edge.retryAfter), resetTime: new Date(nowMs + Math.max(1, edge.retryAfter) * 1000).toISOString(), limitType: 'ip', currentUsage: edge.currentUsage, limitThreshold: edge.limit, queuePosition: 0, queueDepth: 0 }))(res);
   }
@@ -216,6 +225,7 @@ module.exports = async (req, res) => {
     log.event('rate_limit.blocked', req, { layer: 'dedup', reason: RATE_LIMIT_REASON.EMAIL_DUP, retryAfter: dedupCheck.retryAfter, email: maskEmail(email) });
     log.addTrace(req, 'rateLimit', 'blocked');
     log.structured(req, { stage: 'rateLimit', status: 'blocked', layer: 'dedup', retryAfter: dedupCheck.retryAfter, limit: dedupCheck.limit });
+    registry.registerLifecycle(log.requestId(req), { status: 'rejected', reason: 'rate_limit', receivedAt: req._lifecycle.startTime });
     const nowMs = Date.now();
     return json(429, { ...deployHeaders(req), ...reqHeaders(req), ...rateLimitHeaders(dedupCheck), ...debugHeaders(dedupCheck, RATE_LIMIT_REASON.EMAIL_DUP) }, resPayload(req, { success: false, status: 'rate_limited', error: 'RATE_LIMITED', retryAfterMs: Math.max(1, dedupCheck.retryAfter) * 1000, retryAfterSeconds: Math.max(1, dedupCheck.retryAfter), resetTime: new Date(nowMs + Math.max(1, dedupCheck.retryAfter) * 1000).toISOString(), limitType: 'email', currentUsage: dedupCheck.currentUsage, limitThreshold: dedupCheck.limit, queuePosition: 0, queueDepth: 0 }))(res);
   }
@@ -233,6 +243,7 @@ module.exports = async (req, res) => {
     log.event('smtp.misconfigured', req, { ip });
     log.addTrace(req, 'smtp', 'fail');
     log.structured(req, { stage: 'smtp', status: 'fail', reason: 'missing_credentials' });
+    registry.registerLifecycle(log.requestId(req), { status: 'rejected', reason: 'bad_request', receivedAt: req._lifecycle.startTime });
     return json(500, { 'Content-Type': 'application/json', ...deployHeaders(req), ...reqHeaders(req) }, resPayload(req, { success: false, status: 'rejected', error: 'Email service misconfigured', queuePosition: 0, queueDepth: 0 }))(res);
   }
 
@@ -255,9 +266,7 @@ module.exports = async (req, res) => {
       log.addTrace(req, 'queue.waitEnd', 'ok');
       log.structured(req, { stage: 'queue.waitEnd', status: 'ok', queueDepthAtStart: depth });
 
-      const executionStartedAt = Date.now();
       const rid = log.requestId(req);
-      registry.registerLifecycle(rid, { status: 'processing', executionStartedAt });
 
       log.addTrace(req, 'email.admin.start', 'ok');
       log.structured(req, { stage: 'email.admin.start', status: 'ok' });
@@ -295,19 +304,6 @@ module.exports = async (req, res) => {
 
       log.addTrace(req, 'email.sendEnd', sendStatus);
       log.structured(req, { stage: 'email.sendEnd', status: sendStatus });
-      log.structured(req, {
-        stage: 'lifecycle.complete',
-        status: finalLifecycleStatus,
-        receivedAt: req._lifecycle.startTime,
-        queuedAt: req._lifecycle.queuedAt,
-        executionStartedAt,
-        executionFinishedAt,
-        queuePosition: position,
-        queueDepth: depth,
-        queueWaitTimeMs: Math.round(executionStartedAt - req._lifecycle.queuedAt),
-        executionDurationMs: Math.round(executionFinishedAt - executionStartedAt),
-        totalLifecycleTimeMs: Math.round(executionFinishedAt - req._lifecycle.startTime),
-      });
       log.info(req, 'Contact emails sent', { name: safeName, email: maskEmail(email), adminOk, clientOk });
     },
     req,
@@ -319,12 +315,15 @@ module.exports = async (req, res) => {
     log.event('queue.overflow', req, { ip, endpoint: 'sendContact' });
     log.addTrace(req, 'queue.assign', 'overflow');
     log.structured(req, { stage: 'queue.assign', status: 'overflow' });
+    registry.registerLifecycle(log.requestId(req), { status: 'rejected', reason: 'bad_request', receivedAt: req._lifecycle.startTime });
     return json(503, { 'Content-Type': 'application/json', ...deployHeaders(req), ...reqHeaders(req) }, resPayload(req, { success: false, status: 'rejected', error: 'QUEUE_OVERFLOW', queuePosition: 0, queueDepth: 0 }))(res);
   }
 
   const { queueId, position, depth } = queueResult;
   const queuedAt = Date.now();
   req._lifecycle.queuedAt = queuedAt;
+  req._lifecycle.queuePosition = position;
+  req._lifecycle.queueDepth = depth;
   registry.registerLifecycle(log.requestId(req), {
     status: 'queued',
     receivedAt: req._lifecycle.startTime,

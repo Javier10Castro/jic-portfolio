@@ -68,7 +68,7 @@ Debug mode (?debug=true):
 
 ### Execution Lifecycle (requestId-based)
 
-Each requestId traces through 4 explicit states:
+Each requestId traces through 5 explicit states:
 
 | State | Meaning | Transition |
 |---|---|---|
@@ -76,12 +76,13 @@ Each requestId traces through 4 explicit states:
 | `processing` | Worker actively executing email delivery | At queue.waitEnd, execution started |
 | `completed` | Both emails sent successfully | After email.sendEnd (adminOk && clientOk) |
 | `failed` | One or both emails failed after retries | After email.sendEnd (partial) or queue retry exhaustion |
+| `rejected` | Pre-queue failure (validation/rate-limit/bad-request) | Terminal — never reaches queue |
 
 ### Timestamps tracked per requestId
 
 - `receivedAt` — when HTTP request arrived (`req._lifecycle.startTime`)
 - `queuedAt` — when request entered the queue
-- `executionStartedAt` — when worker started processing
+- `executionStartedAt` — when worker started processing (single source: `queue.js:52`)
 - `executionFinishedAt` — when processing ended (success or failure)
 
 Derived metrics:
@@ -91,7 +92,7 @@ Derived metrics:
 
 ### Structured lifecycle log
 
-On every request completion, a `lifecycle.complete` structured log is emitted:
+On every request completion, a `lifecycle.complete` structured log is emitted from `queue.js:_process()` (single source, covers retry exhaustion):
 
 ```json
 {
@@ -248,15 +249,16 @@ In-memory registry that stores full lifecycle data per requestId.
 | Property | Value |
 |---|---|
 | Max entries | 1,000 |
-| Entry TTL | 5 minutes |
-| Cleanup interval | 1 minute |
+| Entry TTL | 5 minutes (enforced regardless of size) |
+| Cleanup interval | 60s (via `setInterval`) |
+| Lookup expiry | TTL checked on every `lookupRequest()` call |
 | Persistence | None (in-memory only) |
 
 ### Diagnostic Endpoint
 
 `GET /api/sendContact?id=<requestId>`
 
-Returns the full lifecycle record for a requestId if it's still in the registry:
+Returns the full lifecycle record for a requestId if it's still in the registry (TTL-checked on lookup):
 
 ```json
 {
@@ -280,7 +282,7 @@ If not found: `404 { error: "NOT_FOUND" }`.
 
 - **In-memory only** — all data is lost if the Vercel instance terminates. Acceptable for debugging recent requests within the same cold start.
 - **Per-instance** — multiple Vercel instances have independent registries. A request processed by instance A cannot be looked up via instance B.
-- **TTL-bound** — entries older than 5 minutes are evicted.
+- **TTL-bound** — entries older than 5 minutes are evicted (enforced regardless of registry size).
 - **No history** — the registry does not persist across cold starts. For persistent audit trails, a database-backed store would be required.
 
 ### Queue Health Metrics

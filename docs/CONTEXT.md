@@ -106,7 +106,7 @@ Stage 2 — Execution Layer (Internal Queue Scheduler)
 
 ## Request Lifecycle Observability
 
-Every requestId now traces through 4 explicit lifecycle states with 4 timestamps and 3 derived metrics.
+Every requestId traces through 5 explicit lifecycle states with 4 timestamps and 3 derived metrics. The registry (`lib/request-registry.js`) enforces a 5-minute TTL via periodic cleanup (60s interval), on-lookup expiry, and on-aggregate expiry. Derived metrics (`executionDurationMs`, `queueWaitTimeMs`, `totalLifecycleTimeMs`) are persisted in the registry Map alongside raw timestamps, enabling accurate aggregate computations.
 
 ### States
 
@@ -116,12 +116,13 @@ Every requestId now traces through 4 explicit lifecycle states with 4 timestamps
 | `processing` | Worker dequeues and starts | → completed or failed |
 | `completed` | Both emails sent successfully | Terminal |
 | `failed` | Email failure after retries | Terminal |
+| `rejected` | Pre-queue failure (validation/rate-limit/bad-request) | Terminal |
 
 ### Timestamps
 
 - `receivedAt` — HTTP request arrival
 - `queuedAt` — queue entry
-- `executionStartedAt` — worker starts
+- `executionStartedAt` — worker starts (single source: `queue.js:52`)
 - `executionFinishedAt` — processing ends
 
 ### Derived Metrics
@@ -130,11 +131,13 @@ Every requestId now traces through 4 explicit lifecycle states with 4 timestamps
 
 ### Diagnostic Endpoint
 
-`GET /api/sendContact?id=<requestId>` — returns full lifecycle record for recent requests (in-memory, 1,000 entries, 5min TTL).
+`GET /api/sendContact?id=<requestId>` — returns full lifecycle record for recent requests (in-memory, 1,000 entries, 5min TTL enforced). Expired entries return 404.
 
-### Queue Health Metrics
+### Aggregate Metrics (per-instance)
 
-`/api/health?section=queue` exposes `lifecycle` block with aggregate stats. `/api/health` (default summary) also includes `lifecycle`.
+`/api/health?section=queue` exposes a `lifecycle` block with aggregate stats. `/api/health` (default summary) also includes `lifecycle`.
+
+**Note**: These metrics are per-instance only — Vercel isolates `api/health.js` and `api/sendContact.js` into separate serverless functions without shared memory. The health endpoint always shows 0 lifecycle entries for a different function instance. Within the same instance (`GET /api/sendContact?id=X`), derived metrics and aggregates are now accurate, with `averageExecutionTimeMs` and `averageQueueWaitTimeMs` reflecting real averages instead of always 0.
 
 ---
 
@@ -165,6 +168,33 @@ The contact form (`index.html`) implements automatic retry with exponential back
 - Fully compatible with the Ingestion Boundary Principle — the client retry operates on the HTTP response, not on the internal pipeline.
 - No changes to backend, rate limiting, or queue logic.
 - Retries are transparent to the server (each is a fresh HTTP request that must pass the rate limit gate).
+
+---
+
+## Serverless Memory Isolation (Critical)
+
+This project runs on **Vercel Serverless Functions**. Each file inside `/api` is deployed as an independent function:
+
+- `api/sendContact.js`
+- `api/health.js`
+- `api/sendBrief.js`
+
+These functions **DO NOT** share:
+
+- memory
+- singleton instances
+- module state
+- in-memory Maps
+- queue instances
+
+**Therefore:**
+
+- `request-registry` data is only valid inside the function instance that created it
+- health endpoints cannot aggregate `request-registry` data across functions
+- in-memory metrics are per-instance only
+- cross-instance observability requires shared storage (Redis, PostgreSQL, etc.)
+
+This is a **platform constraint**, not an implementation bug. Code that assumes shared `require()` state between API routes will not work in production.
 
 ---
 
