@@ -15,7 +15,7 @@ function json(status, headers, payload) {
 }
 
 function debugHeaders(rlCheck, reason) {
-  if (process.env.DEBUG_RATE_LIMIT !== 'true') return {};
+  if (process.env.DEBUG_RATE_LIMIT !== 'true' && process.env.DEBUG_API !== 'true') return {};
   return {
     'X-Debug-RateLimit': `${rlCheck.allowed ? 'ALLOW' : 'BLOCK'}`,
     'X-Debug-Reason': reason,
@@ -42,6 +42,15 @@ function deployHeaders(req) {
   };
 }
 
+function reqHeaders(req) {
+  const rid = log.requestId(req);
+  return { 'X-Request-Id': rid };
+}
+
+function resPayload(req, extra) {
+  return { requestId: log.requestId(req), ...extra };
+}
+
 async function sendWithTimeout(transporter, mailOptions, timeoutMs, req, label) {
   const sendStart = Date.now();
   try {
@@ -66,87 +75,94 @@ module.exports = async (req, res) => {
   const start = Date.now();
   const ip = clientIp(req);
   req._debugEndpoint = 'sendContact';
+  log.requestId(req);
+  log.event('request.start', req, { ip, method: req.method, endpoint: 'sendContact' });
   stage(req, 'start');
   const di = deployInfo();
   log.info(req, 'deploy_context', { sha: di.sha, env: di.env, region: di.region });
 
   if (req.method !== 'POST') {
     log.warn(req, 'Method not allowed', { ip, method: req.method, reason: RATE_LIMIT_REASON.VALIDATION });
-    return json(405, { 'Content-Type': 'application/json' }, { success: false, error: 'Method Not Allowed' })(res);
+    return json(405, { 'Content-Type': 'application/json', ...deployHeaders(req), ...reqHeaders(req) }, resPayload(req, { success: false, error: 'Method Not Allowed' }))(res);
   }
 
-  // ── 1. Body parsing (safe, handles Vercel pre-parsed + stream) ─
+  const bt = log.bodyType(req);
+
   const parsed = await parseBody(req);
   if (!parsed) {
-    return json(400, { 'Content-Type': 'application/json', ...deployHeaders(req) }, { success: false, error: 'INVALID_BODY' })(res);
+    log.event('body_parse.fail', req, { bodyType: bt, parseMethod: req._bodyParseMethod || 'unknown' });
+    return json(400, { 'Content-Type': 'application/json', ...deployHeaders(req), ...reqHeaders(req) }, resPayload(req, { success: false, error: 'INVALID_BODY' }))(res);
   }
+  log.event('body_parse.ok', req, { bodyType: bt, parseMethod: req._bodyParseMethod || 'unknown' });
 
-  // ── 2. Anti-spam: honeypot (silent 200) ───────────────────────
   const hp = honeypotCheck(parsed);
   if (hp.triggered) {
     log.warn(req, 'Honeypot triggered', { ip, field: hp.field, reason: RATE_LIMIT_REASON.BOT });
-    return json(200, { 'Content-Type': 'application/json', ...debugHeaders({ allowed: false }, RATE_LIMIT_REASON.BOT) }, { success: true })(res);
+    log.event('honeypot.triggered', req, { field: hp.field });
+    return json(200, { 'Content-Type': 'application/json', ...deployHeaders(req), ...reqHeaders(req), ...debugHeaders({ allowed: false }, RATE_LIMIT_REASON.BOT) }, resPayload(req, { success: true }))(res);
   }
 
-  // ── 3. Anti-spam: timing check (submittedAt REQUIRED) �────────
   const tc = timingCheck(parsed);
-  if (tc.tooFast) {
-    const reason = tc.reason === 'missing_timestamp' ? RATE_LIMIT_REASON.BOT : RATE_LIMIT_REASON.TIMING;
-    log.warn(req, 'Timing check failed', { ip, elapsedMs: tc.elapsedMs, reason });
-    return json(400, { 'Content-Type': 'application/json', ...debugHeaders({ allowed: false }, reason) }, { success: false, error: 'Invalid request' })(res);
+  if (tc.blocked) {
+    log.warn(req, 'Timing check failed', { ip, reason: tc.reason });
+    log.event('timing_check.blocked', req, { reason: tc.reason });
+    return json(400, { 'Content-Type': 'application/json', ...deployHeaders(req), ...reqHeaders(req) }, resPayload(req, { success: false, error: 'INVALID_REQUEST' }))(res);
   }
+  log.event('timing_check.ok', req, { elapsedMs: tc.elapsedMs });
 
-  // ── 4. Validate payload ───────────────────────────────────────
   const { name: rawName, email, company, project, message, lang } = parsed;
 
   const nameCheck = sanitizeAndValidateName(rawName);
   if (!nameCheck.valid) {
     log.debugLog(req, 'Name validation failed', { ip, reason: nameCheck.reason });
-    return json(400, { 'Content-Type': 'application/json' }, { success: false, error: nameCheck.reason })(res);
+    log.event('validation.fail', req, { field: 'name', reason: nameCheck.reason });
+    return json(400, { 'Content-Type': 'application/json', ...deployHeaders(req), ...reqHeaders(req) }, resPayload(req, { success: false, error: 'INVALID_REQUEST' }))(res);
   }
   const safeName = nameCheck.value;
 
   if (!validateEmail(email)) {
     log.warn(req, 'Invalid email', { ip, email: maskEmail(email), reason: RATE_LIMIT_REASON.VALIDATION });
-    return json(400, { 'Content-Type': 'application/json' }, { success: false, error: 'A valid email address is required' })(res);
+    log.event('validation.fail', req, { field: 'email' });
+    return json(400, { 'Content-Type': 'application/json', ...deployHeaders(req), ...reqHeaders(req) }, resPayload(req, { success: false, error: 'INVALID_REQUEST' }))(res);
   }
 
   if (!message || typeof message !== 'string' || message.trim().length === 0) {
     log.debugLog(req, 'Message missing', { ip });
-    return json(400, { 'Content-Type': 'application/json' }, { success: false, error: 'Message is required' })(res);
+    log.event('validation.fail', req, { field: 'message', reason: 'empty' });
+    return json(400, { 'Content-Type': 'application/json', ...deployHeaders(req), ...reqHeaders(req) }, resPayload(req, { success: false, error: 'INVALID_REQUEST' }))(res);
   }
   if (message.length > 100000) {
     log.debugLog(req, 'Message too long', { ip, length: message.length });
-    return json(400, { 'Content-Type': 'application/json' }, { success: false, error: 'Message exceeds 100,000 characters' })(res);
+    log.event('validation.fail', req, { field: 'message', reason: 'too_long', length: message.length });
+    return json(400, { 'Content-Type': 'application/json', ...deployHeaders(req), ...reqHeaders(req) }, resPayload(req, { success: false, error: 'INVALID_REQUEST' }))(res);
   }
 
-  // ── 5. LAYER 1: Edge protection (IP burst) ────────────────────
-  // Soft limit (>20 req/60s): still allow through but set throttling headers.
-  // Hard limit (>40 req/60s): blocks aggressive bots only.
   const rlKey = rateLimitKey('contact', req);
   const edge = edgeCheck(rlKey);
   if (edge.soft) req._edgeSoft = edge;
   if (!edge.allowed) {
     log.warn(req, 'Edge blocked', { ip, retryAfter: edge.retryAfter, reason: RATE_LIMIT_REASON.IP_BURST });
-    return json(429, { ...rateLimitHeaders(edge), ...debugHeaders(edge, RATE_LIMIT_REASON.IP_BURST) }, { success: false, error: 'Too many requests. Please wait before submitting again.' })(res);
+    log.event('rate_limit.blocked', req, { layer: 'edge', reason: RATE_LIMIT_REASON.IP_BURST, retryAfter: edge.retryAfter, remaining: edge.remaining });
+    return json(429, { ...deployHeaders(req), ...reqHeaders(req), ...rateLimitHeaders(edge), ...debugHeaders(edge, RATE_LIMIT_REASON.IP_BURST) }, resPayload(req, { success: false, error: 'RATE_LIMITED' }))(res);
   }
 
-  // ── 6. LAYER 2: Abuse protection — email dedup (5 min) ────────
   const dedupCheck = emailDedup(email);
   if (!dedupCheck.allowed) {
     log.warn(req, 'Email dedup blocked', { email: maskEmail(email), retryAfter: dedupCheck.retryAfter, reason: RATE_LIMIT_REASON.EMAIL_DUP });
-    return json(429, { ...rateLimitHeaders(dedupCheck), ...debugHeaders(dedupCheck, RATE_LIMIT_REASON.EMAIL_DUP) }, { success: false, error: 'A message was already sent with this email. Please wait before sending again.' })(res);
+    log.event('rate_limit.blocked', req, { layer: 'dedup', reason: RATE_LIMIT_REASON.EMAIL_DUP, retryAfter: dedupCheck.retryAfter, email: maskEmail(email) });
+    return json(429, { ...deployHeaders(req), ...reqHeaders(req), ...rateLimitHeaders(dedupCheck), ...debugHeaders(dedupCheck, RATE_LIMIT_REASON.EMAIL_DUP) }, resPayload(req, { success: false, error: 'RATE_LIMITED' }))(res);
   }
 
+  log.event('rate_limit.ok', req, { edgeRemaining: edge.remaining });
   stage(req, 'after_validation');
 
-  // ── 7. LAYER 3: Resource protection (SMTP concurrency) ────────
   const GMAIL_USER = process.env.GMAIL_USER;
   const GMAIL_APP_PASSWORD = process.env.GMAIL_APP_PASSWORD;
 
   if (!GMAIL_USER || !GMAIL_APP_PASSWORD) {
     log.error(req, 'Missing GMAIL_USER or GMAIL_APP_PASSWORD', null, { ip });
-    return json(500, { 'Content-Type': 'application/json' }, { success: false, error: 'Email service misconfigured' })(res);
+    log.event('smtp.misconfigured', req, { ip });
+    return json(500, { 'Content-Type': 'application/json', ...deployHeaders(req), ...reqHeaders(req) }, resPayload(req, { success: false, error: 'Email service misconfigured' }))(res);
   }
 
   const transporter = nodemailer.createTransport({
@@ -162,9 +178,8 @@ module.exports = async (req, res) => {
 
   const templateData = { name: safeName, email, company, project, message, dateStr, lang: isES ? 'es' : 'en' };
 
-  // ── 8. Queue email sending (non-blocking, returns 202) ─────────
   stage(req, 'before_email_send');
-  const { queueId, position, depth } = emailQueue.enqueue({
+  const queueResult = emailQueue.enqueue({
     handler: async () => {
       await sendWithTimeout(transporter, {
         from: `"Javier Ibrahim — Portfolio" <${GMAIL_USER}>`,
@@ -192,15 +207,24 @@ module.exports = async (req, res) => {
     label: 'sendContact',
   });
 
+  if (!queueResult) {
+    log.warn(req, 'Queue overflow', { ip });
+    log.event('queue.overflow', req, { ip, endpoint: 'sendContact' });
+    return json(503, { 'Content-Type': 'application/json', ...deployHeaders(req), ...reqHeaders(req) }, resPayload(req, { success: false, error: 'QUEUE_OVERFLOW' }))(res);
+  }
+
+  const { queueId, position, depth } = queueResult;
+  log.event('queue.queued', req, { queueId, position, depth, endpoint: 'sendContact' });
   log.debugLog(req, 'Emails queued', { queueId, position, depth });
   return json(202, withSoftHeaders(req, {
     'Content-Type': 'application/json',
     ...deployHeaders(req),
+    ...reqHeaders(req),
     'X-Queue-Id': String(queueId),
     'X-Queue-Depth': String(depth),
     'X-Queue-Position': String(position),
     'X-Processing-Mode': depth > 0 ? 'queued' : 'immediate',
-  }), { success: true, queued: true, position, depth })(res);
+  }), resPayload(req, { success: true, queued: true, position, depth }))(res);
 };
 
 function buildContactHTML({ name, email, company, project, message, dateStr, lang }, type) {
