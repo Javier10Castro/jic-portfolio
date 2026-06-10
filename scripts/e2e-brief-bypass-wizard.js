@@ -1,82 +1,89 @@
 // =============================================================================
-// E2E Brief Maestro — Bypass del Wizard v1
+// E2E Brief Maestro - Bypass del Wizard v1
 //
-// Modo 1: submitContact() direct (usa la función interna real, necesita DOM)
+// Modo 1: submitContact() direct (usa la funcion interna real, necesita DOM)
 // Modo 2: fetch directo a /api/sendBrief (no necesita DOM, puro bypass)
 // =============================================================================
 // Pega todo el script en DevTools console de brief-maestro.html
+// =============================================================================
+// NOTA: Este archivo usa solo ASCII. NO contiene emojis, box-drawing ni
+// caracteres Unicode fuera del rango basico. Esto garantiza que copiar y
+// pegar desde cualquier terminal funcione sin corruption de encoding.
 // =============================================================================
 
 (function() {
   'use strict';
 
-  const LOG_PFX = '[E2E-Brief]';
-  const log = (msg, data) => console.log(`${LOG_PFX} ${msg}`, data !== undefined ? data : '');
-  const sleep = ms => new Promise(r => setTimeout(r, ms));
+  var LOG_PFX = '[E2E-Brief]';
+  var log = function(msg, data) {
+    console.log(LOG_PFX + ' ' + msg, data !== undefined ? data : '');
+  };
+  var sleep = function(ms) { return new Promise(function(r) { setTimeout(r, ms); }); };
 
-  // ── Test Data ──────────────────────────────────────────────────────────────
-  const TEST_DATA = {
-    biz_name: 'Salmos Café',
-    biz_tagline: 'Experiencias memorables alrededor de una taza de café',
-    biz_history: 'Salmos Café nació hace cuatro años durante un campamento de líderes juveniles. Lo que comenzó como una pasión por el café y el deseo de servir a Dios se transformó en un proyecto dedicado a crear experiencias memorables para las personas a través de una barra de café profesional para eventos.',
-    biz_mision: 'Llevar lo mejor del café y crear experiencias excepcionales que conecten a las personas a través del servicio, la hospitalidad y la excelencia.',
-    biz_vision: 'Convertirnos en una de las empresas de café para eventos más reconocidas de Baja California.',
-    biz_valores: ['Excelencia', 'Servicio', 'Integridad', 'Hospitalidad', 'Calidad', 'Pasión'],
-    biz_diferenciadores: 'Atención personalizada, imagen elegante, inspiración cristiana, café de alta calidad, experiencia memorable.',
+  // -- Test Data -------------------------------------------------------------
+  // Los acentos espanoles se mantienen porque son datos que el backend espera.
+  var TEST_DATA = {
+    biz_name: 'Salmos Cafe',
+    biz_tagline: 'Experiencias memorables alrededor de una taza de cafe',
+    biz_history: 'Salmos Cafe nacio hace cuatro anos durante un campamento de lideres juveniles. Lo que comenzo como una pasion por el cafe y el deseo de servir a Dios se transformo en un proyecto dedicado a crear experiencias memorables para las personas a traves de una barra de cafe profesional para eventos.',
+    biz_mision: 'Llevar lo mejor del cafe y crear experiencias excepcionales que conecten a las personas a traves del servicio, la hospitalidad y la excelencia.',
+    biz_vision: 'Convertirnos en una de las empresas de cafe para eventos mas reconocidas de Baja California.',
+    biz_valores: ['Excelencia', 'Servicio', 'Integridad', 'Hospitalidad', 'Calidad', 'Pasion'],
+    biz_diferenciadores: 'Atencion personalizada, imagen elegante, inspiracion cristiana, cafe de alta calidad, experiencia memorable.',
     biz_personalidad: ['Profesional y seria', 'Cercana y amigable', 'Minimalista y elegante'],
-    biz_contacto: 'Teléfono y WhatsApp: 663 150 8119 | Correo: salmoscafe497@gmail.com',
+    biz_contacto: 'Telefono y WhatsApp: 663 150 8119 | Correo: salmoscafe497@gmail.com',
     biz_redes: 'Instagram: @salmos_cafe | Facebook: SalmosCafe',
     obj_principal: 'Generar leads calificados',
-    obj_secundarios: ['Posicionamiento SEO', 'Construcción de comunidad', 'Educación del mercado'],
-    obj_kpis: 'Solicitudes de cotización, mensajes por WhatsApp, formularios enviados, llamadas recibidas.',
+    obj_secundarios: ['Posicionamiento SEO', 'Construccion de comunidad', 'Educacion del mercado'],
+    obj_kpis: 'Solicitudes de cotizacion, mensajes por WhatsApp, formularios enviados, llamadas recibidas.',
     obj_conversion: 'Llenar formulario de contacto',
-    obj_plazo: '3\u20136 meses',
+    obj_plazo: '3-6 meses',
     comp_sitio: '',
     comp_problemas: ['No tengo sitio web actualmente'],
     comp_directos: 'Civet Cafe, Bendito Cafe, Electric Coffee Roasters, Das Cortez',
-    comp_aspiracionales: 'Marcas premium de café y experiencias para eventos.',
+    comp_aspiracionales: 'Marcas premium de cafe y experiencias para eventos.',
     comp_oportunidades: 'Diferenciarse mediante experiencia personalizada, elegante y enfocada en eventos.',
-    pub_ideal: 'Parejas próximas a casarse, organizadores de eventos, iglesias, empresas.',
+    pub_ideal: 'Parejas proximas a casarse, organizadores de eventos, iglesias, empresas.',
     pub_problemas: 'Necesitan un servicio profesional que agregue valor a sus eventos.',
-    pub_motivaciones: 'Crear una experiencia memorable, elevar la percepción del evento.',
+    pub_motivaciones: 'Crear una experiencia memorable, elevar la percepcion del evento.',
     pub_objeciones: 'Precio, disponibilidad, calidad del producto, capacidad para eventos grandes.',
     pub_decision: 'Investiga y compara varias opciones',
-    pub_canales: ['Instagram', 'Facebook', 'Referidos/boca en boca', 'Google búsqueda orgánica'],
-    brand_logo: 'Sí, tengo logotipo definido',
+    pub_canales: ['Instagram', 'Facebook', 'Referidos/boca en boca', 'Google busqueda organica'],
+    brand_logo: 'Si, tengo logotipo definido',
     brand_tipografia: 'Moderna, limpia, sans-serif profesional como Inter o Poppins.',
-    brand_estilo: ['Minimalista y limpio', 'Moderno y tecnológico', 'Cálido y humano'],
-    brand_emociones: ['Confianza y seguridad', 'Calidad y excelencia', 'Cercanía y calidez', 'Profesionalismo y seriedad'],
+    brand_estilo: ['Minimalista y limpio', 'Moderno y tecnologico', 'Calido y humano'],
+    brand_emociones: ['Confianza y seguridad', 'Calidad y excelencia', 'Cercania y calidez', 'Profesionalismo y seriedad'],
     brand_prohibido: '',
     brand_nivel: 4,
     branding_colors: { primary: '#529FB3', secondary: '#0B0F19', accent: '#00D4FF', palette: ['#0B0F19', '#529FB3', '#00D4FF', '#FFFFFF'] },
     brand_colores: 'Primary: #529FB3 | Secondary: #0B0F19 | Accent: #00D4FF | Palette: #0B0F19, #529FB3, #00D4FF, #FFFFFF',
-    arq_paginas: ['Portada/Inicio', 'Quiénes somos', 'Servicios (general)', 'Portafolio/Casos de éxito', 'Testimonios', 'Contacto'],
+    arq_paginas: ['Portada/Inicio', 'Quienes somos', 'Servicios (general)', 'Portafolio/Casos de exito', 'Testimonios', 'Contacto'],
     arq_extras: '',
-    arq_prioridad: 'Inicio, Servicios, Galería',
-    arq_flujo: 'Inicio \u2192 Servicios \u2192 Galer\u00eda \u2192 Contacto',
+    arq_prioridad: 'Inicio, Servicios, Galeria',
+    arq_flujo: 'Inicio -> Servicios -> Galeria -> Contacto',
     cont_textos: 'Solo ideas y notas',
-    cont_fotos: 'Algunas fotos básicas',
+    cont_fotos: 'Algunas fotos basicas',
     cont_videos: 'No tengo pero estoy dispuesto a producir',
     cont_recursos: '',
-    serv_lista: 'Barra móvil de café para eventos, coffee break, bebidas calientes y frías.',
-    serv_estrella: 'Barra de café para eventos',
-    serv_beneficios: 'Experiencia premium, servicio personalizado, excelente presentación.',
-    serv_proceso: '1. Cotización 2. Definición 3. Confirmación 4. Menú 5. Montaje 6. Operación',
+    serv_lista: 'Barra movil de cafe para eventos, coffee break, bebidas calientes y frias.',
+    serv_estrella: 'Barra de cafe para eventos',
+    serv_beneficios: 'Experiencia premium, servicio personalizado, excelente presentacion.',
+    serv_proceso: '1. Cotizacion 2. Definicion 3. Confirmacion 4. Menu 5. Montaje 6. Operacion',
     serv_precio: 'Precios a consultar',
-    social_testimonios: 'Clientes destacan la calidad del café y la atención del equipo.',
-    social_numeros: 'Más de 50 eventos realizados. De 20 a más de 1000 personas.',
+    social_testimonios: 'Clientes destacan la calidad del cafe y la atencion del equipo.',
+    social_numeros: 'Mas de 50 eventos realizados. De 20 a mas de 1000 personas.',
     social_clientes: '',
     social_cert: '',
-    social_casos: 'Historias pero sin métricas',
-    func_basicas: ['Formulario de contacto', 'WhatsApp flotante', 'Galería de imágenes'],
+    social_casos: 'Historias pero sin metricas',
+    func_basicas: ['Formulario de contacto', 'WhatsApp flotante', 'Galeria de imagenes'],
     func_avanzadas: ['Sistema de reservas/citas'],
     func_herramientas: '',
     func_cms: 'Yo mismo / equipo interno',
-    seo_keywords: ['barra de café para eventos', 'coffee bar para bodas', 'coffee catering tijuana', 'barra móvil de café'],
+    seo_keywords: ['barra de cafe para eventos', 'coffee bar para bodas', 'coffee catering tijuana', 'barra movil de cafe'],
     seo_geo: ['Tijuana', 'Rosarito', 'Tecate', 'Ensenada', 'Baja California'],
     seo_competencia: '',
-    seo_blog: 'Me gustaría empezar',
-    ref_favoritos: 'Marcas premium de café minimalistas y elegantes con fotografías inmersivas.',
+    seo_blog: 'Me gustaria empezar',
+    ref_favoritos: 'Marcas premium de cafe minimalistas y elegantes con fotografias inmersivas.',
     ref_odio: '',
     ref_marcas: 'Apple',
     ref_palabras: 'Elegante, Premium, Memorables',
@@ -85,15 +92,15 @@
     conv_lead: '',
     conv_urgencia: '',
     conv_seguimiento: 'Contactar al prospecto por WhatsApp o llamada en 24 hrs.',
-    ai_persona: 'Un anfitrión elegante, atento y genuino que hace sentir especial a cada invitado.',
+    ai_persona: 'Un anfitrion elegante, atento y genuino que hace sentir especial a cada invitado.',
     ai_5seg: 'Profesionalismo, confianza y una experiencia premium.',
-    ai_diferencia: 'No solo servimos café; creamos experiencias memorables que elevan cualquier evento.',
+    ai_diferencia: 'No solo servimos cafe; creamos experiencias memorables que elevan cualquier evento.',
     ai_prohibido: '',
-    ai_metafora: 'Como el aroma de un buen café que transforma un momento ordinario en una experiencia inolvidable.',
+    ai_metafora: 'Como el aroma de un buen cafe que transforma un momento ordinario en una experiencia inolvidable.',
     ai_extra: ''
   };
 
-  // ── Modo 1: vía submitContact() interna ────────────────────────────────────
+  // -- Modo 1: via submitContact() interna ----------------------------------
   // Requiere que los elementos del DOM existan (inp-name, inp-email, etc.)
   async function runViaSubmitContact(contactInfo) {
     log('=== Modo 1: submitContact() interno ===');
@@ -102,11 +109,11 @@
     Object.assign(formData, JSON.parse(JSON.stringify(TEST_DATA)));
     if (typeof save === 'function') save();
     log('formData loaded with test data');
-    log('  fields:', Object.keys(formData).length);
+    log('  fields:' + Object.keys(formData).length);
 
-    // 2. Asegurar que contact-page esté visible (para que los inputs sean accesibles)
-    const app = document.getElementById('app');
-    const contactPage = document.getElementById('contact-page');
+    // 2. Asegurar que contact-page este visible (para que los inputs sean accesibles)
+    var app = document.getElementById('app');
+    var contactPage = document.getElementById('contact-page');
     if (app) app.classList.remove('active');
     if (contactPage) contactPage.classList.add('active');
 
@@ -116,45 +123,45 @@
     document.getElementById('inp-company').value = contactInfo.company || '';
     document.getElementById('inp-phone').value = contactInfo.phone || '';
 
-    log('Contact fields set:', contactInfo);
+    log('Contact fields set: name=' + contactInfo.name + ' email=' + contactInfo.email);
 
     // 4. Interceptar fetch para capturar response
-    const origFetch = window.fetch;
-    window.fetch = async function(...args) {
-      log('📤 Request sent');
-      log('  url:', args[0]);
-      log('  method:', args[1]?.method || 'GET');
-      log('  payload:', JSON.parse(args[1]?.body || '{}'));
+    var origFetch = window.fetch;
+    window.fetch = async function() {
+      var args = arguments;
+      log('[SEND] Request sent');
+      log('  url: ' + args[0]);
+      log('  method: ' + (args[1] && args[1].method ? args[1].method : 'GET'));
 
-      const response = await origFetch(...args);
-      const clone = response.clone();
-      let body = null;
-      try { body = await clone.json(); } catch(e) { body = { raw: await clone.text() }; }
+      var response = await origFetch.apply(window, args);
+      var clone = response.clone();
+      var body = null;
+      try { body = await clone.json(); } catch(e) { try { body = { raw: await clone.text() }; } catch(e2) { body = { raw: 'unreadable' }; } }
 
-      log('📥 Response received');
-      log('  status:', response.status);
-      log('  ok:', response.ok);
-      if (body.requestId) log('  requestId:', body.requestId);
-      if (body.queuePosition !== undefined) log('  queuePosition:', body.queuePosition);
-      if (body.queueDepth !== undefined) log('  queueDepth:', body.queueDepth);
-      if (body.status) log('  status field:', body.status);
-      log('  full body:', body);
+      log('[RECV] Response received');
+      log('  status: ' + response.status);
+      log('  ok: ' + response.ok);
+      if (body && body.requestId) log('  requestId: ' + body.requestId);
+      if (body && body.queuePosition !== undefined) log('  queuePosition: ' + body.queuePosition);
+      if (body && body.queueDepth !== undefined) log('  queueDepth: ' + body.queueDepth);
+      if (body && body.status) log('  status field: ' + body.status);
+      log('  full body: ' + JSON.stringify(body));
 
       window.fetch = origFetch;
       return response;
     };
 
-    // 5. Ejecutar submitContact() — la función interna real
+    // 5. Ejecutar submitContact() - la funcion interna real
     log('Calling submitContact()...');
     if (typeof submitContact === 'function') {
       submitContact();
-      log('✅ submitContact() executed');
+      log('[OK] submitContact() executed');
     } else {
-      log('❌ submitContact() not found in global scope');
+      log('[ERR] submitContact() not found in global scope');
     }
   }
 
-  // ── Modo 2: fetch directo a /api/sendBrief ─────────────────────────────────
+  // -- Modo 2: fetch directo a /api/sendBrief ---------------------------------
   // No necesita DOM. Construye el payload exacto que espera el backend.
   async function runDirectAPI(contactInfo) {
     log('=== Modo 2: fetch directo a /api/sendBrief ===');
@@ -163,18 +170,18 @@
     Object.assign(formData, JSON.parse(JSON.stringify(TEST_DATA)));
     if (typeof save === 'function') save();
 
-    // 2. Generar el prompt maestro usando la función interna
-    let prompt = '';
+    // 2. Generar el prompt maestro usando la funcion interna
+    var prompt = '';
     if (typeof generatePrompt === 'function') {
       prompt = generatePrompt();
       log('Prompt generated (' + prompt.length + ' chars)');
     } else {
-      prompt = '# PROMPT MAESTRO — GENERACIÓN DE SITIO WEB PROFESIONAL\nGenerado por E2E test';
-      log('⚠ generatePrompt() not found, using fallback prompt');
+      prompt = '# PROMPT MAESTRO - GENERACION DE SITIO WEB PROFESIONAL\nGenerado por E2E test';
+      log('[WARN] generatePrompt() not found, using fallback prompt');
     }
 
     // 3. Construir payload exacto
-    const payload = {
+    var payload = {
       name: contactInfo.name,
       email: contactInfo.email,
       company: contactInfo.company || '',
@@ -186,66 +193,66 @@
 
     log('Payload built');
     log('  endpoint: /api/sendBrief');
-    log('  name:', payload.name);
-    log('  email:', payload.email);
-    log('  lang:', payload.lang);
-    log('  prompt length:', payload.prompt.length);
-    log('  formData keys:', Object.keys(payload.formData).length);
+    log('  name: ' + payload.name);
+    log('  email: ' + payload.email);
+    log('  lang: ' + payload.lang);
+    log('  prompt length: ' + payload.prompt.length);
+    log('  formData keys: ' + Object.keys(payload.formData).length);
 
     // 4. Enviar
-    log('📤 Sending request...');
-    const startTime = Date.now();
+    log('[SEND] Sending request...');
+    var startTime = Date.now();
 
     try {
-      const response = await fetch('/api/sendBrief', {
+      var response = await fetch('/api/sendBrief', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       });
 
-      const elapsed = Date.now() - startTime;
-      let body = null;
-      try { body = await response.clone().json(); } catch(e) { body = { raw: await response.clone().text() }; }
+      var elapsed = Date.now() - startTime;
+      var body = null;
+      try { body = await response.clone().json(); } catch(e) { try { body = { raw: await response.clone().text() }; } catch(e2) { body = { raw: 'unreadable' }; } }
 
-      log('📥 Response received (' + elapsed + 'ms)');
-      log('  status:', response.status);
-      log('  ok:', response.ok);
-      if (body.requestId) log('  requestId:', body.requestId);
-      if (body.queuePosition !== undefined) log('  queuePosition:', body.queuePosition);
-      if (body.queueDepth !== undefined) log('  queueDepth:', body.queueDepth);
-      if (body.status) log('  status field:', body.status);
-      log('  full body:', body);
+      log('[RECV] Response received (' + elapsed + 'ms)');
+      log('  status: ' + response.status);
+      log('  ok: ' + response.ok);
+      if (body && body.requestId) log('  requestId: ' + body.requestId);
+      if (body && body.queuePosition !== undefined) log('  queuePosition: ' + body.queuePosition);
+      if (body && body.queueDepth !== undefined) log('  queueDepth: ' + body.queueDepth);
+      if (body && body.status) log('  status field: ' + body.status);
+      log('  full body: ' + JSON.stringify(body));
 
-      if (body.requestId) {
-        log('🔍 To inspect lifecycle: GET /api/sendBrief?id=' + body.requestId);
+      if (body && body.requestId) {
+        log('[INFO] To inspect lifecycle: GET /api/sendBrief?id=' + body.requestId);
       }
 
-      return { response, body, elapsed };
+      return { response: response, body: body, elapsed: elapsed };
     } catch (err) {
-      log('❌ Network error:', err.message);
+      log('[ERR] Network error: ' + err.message);
       throw err;
     }
   }
 
-  // ── Entry Point ────────────────────────────────────────────────────────────
+  // -- Entry Point -----------------------------------------------------------
   window.runBriefE2E = async function(mode, contactInfo) {
     mode = mode || 1;
     contactInfo = contactInfo || {
       name: 'Javier Ibrahim',
       email: 'contacto@ejemplo.com',
-      company: 'Salmos Café',
+      company: 'Salmos Cafe',
       phone: '+52 663 150 8119'
     };
 
-    log('═══════════════════════════════════════════');
-    log('E2E Brief Maestro — Bypass del Wizard');
+    log('========================================');
+    log('E2E Brief Maestro - Bypass del Wizard');
     log('Mode: ' + mode + ' (1=submitContact, 2=direct API)');
     log('Contact: ' + contactInfo.name + ' <' + contactInfo.email + '>');
-    log('═══════════════════════════════════════════');
+    log('========================================');
 
     // Verificar que estamos en brief-maestro.html
     if (typeof formData === 'undefined') {
-      log('❌ formData global not found. Are you on brief-maestro.html?');
+      log('[ERR] formData global not found. Are you on brief-maestro.html?');
       return;
     }
 
@@ -253,25 +260,25 @@
       if (mode === 1) {
         await runViaSubmitContact(contactInfo);
       } else {
-        const result = await runDirectAPI(contactInfo);
-        log('✅ Direct API call complete');
+        var result = await runDirectAPI(contactInfo);
+        log('[OK] Direct API call complete');
         return result;
       }
     } catch (err) {
-      log('❌ E2E test failed:', err.message);
+      log('[ERR] E2E test failed: ' + err.message);
       console.error(err);
     }
   };
 
-  log('═══════════════════════════════════════════');
+  log('========================================');
   log('E2E Brief Maestro script loaded');
   log('');
   log('Usage:');
-  log('  runBriefE2E(1)        → Mode 1: submitContact() interno (usa DOM)');
-  log('  runBriefE2E(2)        → Mode 2: fetch directo a /api/sendBrief');
-  log('  runBriefE2E(1, { name, email, company?, phone? }) → custom contact');
+  log('  runBriefE2E(1)        -> Mode 1: submitContact() interno (usa DOM)');
+  log('  runBriefE2E(2)        -> Mode 2: fetch directo a /api/sendBrief');
+  log('  runBriefE2E(1, { name, email, company?, phone? }) -> custom contact');
   log('');
   log('Ejemplo: runBriefE2E(2)');
-  log('═══════════════════════════════════════════');
+  log('========================================');
 
 })();

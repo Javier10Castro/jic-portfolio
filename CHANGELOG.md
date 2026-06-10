@@ -28,6 +28,16 @@
     - No manual wizard navigation required
   - Reason: enable rapid testing of /api/sendBrief without clicking through 14 sections
 
+### Fixed
+- [2026-06-10] - E2E script encoding corruption
+  - Original file had 742 non-ASCII chars (emoji, box-drawing, Spanish accents)
+  - Caused silent IIFE failure when copy-pasted via terminals with encoding issues
+  - Rewrote as pure ASCII: replaced emoji with [OK]/[ERR]/[WARN]/[SEND]/[RECV]/[INFO],
+    box-drawing with regular ASCII chars, kept Spanish data via unaccented equivalents
+  - Verified: `node --check` passes, `window.runBriefE2E` exports correctly,
+    file is pure ASCII (0 non-ASCII printable chars), 285 lines, proper `})();` closure
+  - Files: `scripts/e2e-brief-bypass-wizard.js`
+
 ## [v1.2.0] - 2026-06-10
 
 ### Fixed
