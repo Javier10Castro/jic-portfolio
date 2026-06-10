@@ -1,5 +1,12 @@
 # Changelog
 
+## [v1.0.11] - 2026-06-10
+
+### Observability Clarification Patch
+- Clarified queue vs execution behavior in Vercel runtime
+- Documented rate limit activation timing relative to queue admission
+- Improved CLI testing reproducibility notes
+
 ## [v1.0.10] - 2026-06-10
 - Fixed CLI testing inconsistencies under PowerShell
 - Improved queue stability under burst traffic

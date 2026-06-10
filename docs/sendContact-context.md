@@ -70,7 +70,7 @@ Debug mode (?debug=true):
 
 ## 4. Queue System
 
-FIFO async queue system:
+Real FIFO queue system (single-instance in-memory, Vercel runtime):
 
 Fields:
 - queuePosition
@@ -81,10 +81,11 @@ Fields:
 - processingTimeMs
 
 Behavior:
-- FIFO scheduling
-- active depth tracking
-- controlled backlog under load
+- real FIFO scheduling (in-memory queue, per Vercel instance)
+- active depth tracking (queue depth reported at response time)
+- controlled backlog under load (queue backlog grows linearly, no request loss)
 - exposed via /api/health?section=queue
+- queue admission occurs before rate limit expiration check — a queued request already passed rate limiting at enqueue time
 
 ---
 
@@ -161,3 +162,7 @@ Impact: confirms edgeSoftLimit enforcement working correctly
 [2026-06-10T15:55:00Z] - Identified Git path mismatch in documentation update workflow
 Reason: incorrect assumption of docs/ path structure
 Impact: improved clarity in repo structure handling
+
+[2026-06-10T16:00:00Z] - Observed system operates in queued execution model under burst traffic
+Reason: validate production behavior with PowerShell burst sequence
+Impact: confirmed queue depth grows linearly under sustained load without message loss or order violation
