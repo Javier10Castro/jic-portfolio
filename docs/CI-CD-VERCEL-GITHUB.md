@@ -5,7 +5,14 @@
 GitHub Repo:  Javier10Castro/jic-portfolio
 Vercel Team:  javier-ibrahim-s-projects
 Vercel Project: web-portfolio
-Current State: Git integration NOT connected
+Current State: Git integration CONNECTED (since 2026-06-10)
+Integration Type: GitHub App
+Production Branch: main
+Auto-deploy: ENABLED
+Preview Deployments: ENABLED
+Repo ID: 1263203153
+Git Credential ID: cred_7beb34f358c57626b729f99be5703565c6c2fd01
+Link created: 2026-06-10T22:10:59.569Z
 ```
 
 ---

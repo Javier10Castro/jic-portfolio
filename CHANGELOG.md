@@ -43,6 +43,24 @@
   - Verified: `GET /scripts/e2e-brief-bypass-wizard.js` returns HTTP 200 (via `vercel curl`)
   - Files: `public/scripts/e2e-brief-bypass-wizard.js` (new)
   - Reason: Vercel only serves static assets from root and `public/` directory
+- [2026-06-10] - Git integration NOT connected — CI/CD missing
+  - Vercel project had no Git provider linked; all deploys manual via `vercel --prod`
+  - `vercel git connect` failed because Vercel GitHub App was not installed on `Javier10Castro` account
+  - Root cause: Vercel GitHub App authorization was missing from GitHub account
+  - Fix: Installed Vercel GitHub App on `Javier10Castro` account, granting access to `jic-portfolio`
+  - After install: `vercel git connect` succeeded with `"already connected"`
+  - Integration confirmed via Vercel API: `link.type=github`, `link.productionBranch=main`
+  - Auto-deploy verified: `git push origin main` → deployment auto-triggered (commit `4369dc5` → deploy `oivpci6kp`)
+  - Files: `docs/CI-CD-VERCEL-GITHUB.md` (updated)
+
+### Changed
+- [2026-06-10] - Deployment strategy updated from manual-only to CI/CD
+  - Before: All deploys via `vercel --prod` only
+  - After: `git push origin main` auto-deploys to production
+  - Production URL preserved: `https://web-portfolio-kappa-wheat.vercel.app`
+  - Existing deployments preserved (20+ history)
+  - No business logic, API behavior, or runtime modified
+  - `vercel --prod` still works as fallback deploy method
 
 ### Added
 - [2026-06-10] - Production deployment documentation suite
