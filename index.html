@@ -294,6 +294,7 @@ input::placeholder,textarea::placeholder{color:rgba(176,183,195,0.5)}
 textarea{min-height:120px}
 .form-submit{width:100%;margin-top:0.5rem}
 .form-note{font-size:0.78rem;color:var(--muted);text-align:center;margin-top:1rem;line-height:1.5}
+.retry-status{font-size:0.85rem;color:var(--accent);text-align:center;margin-top:0.75rem;line-height:1.5;font-weight:500}
 
 /* FOOTER */
 footer{background:var(--bg);border-top:1px solid var(--border);padding:3rem;display:flex;align-items:center;justify-content:space-between;position:relative;z-index:1}
@@ -1257,6 +1258,7 @@ footer{background:var(--bg);border-top:1px solid var(--border);padding:3rem;disp
           data-es="Generalmente respondo en 24 horas.">
           I typically respond within 24 hours.
         </p>
+        <p id="retry-status" class="retry-status" style="display:none"></p>
       </form>
 
     </div>
@@ -1520,11 +1522,12 @@ function cardMouse(e,card){
 //     });
 // }
 
-function handleSubmit(e) {
+async function handleSubmit(e) {
   e.preventDefault();
 
   const form = document.querySelector(".contact-form");
   const btn = form.querySelector(".form-submit");
+  const retryEl = document.getElementById("retry-status");
 
   const payload = {
     name: form.querySelector('[name="name"]').value,
@@ -1547,27 +1550,57 @@ function handleSubmit(e) {
   btn.innerHTML = lang === 'es' ? "Enviando..." : "Sending...";
   btn.disabled = true;
 
-  fetch('/api/sendContact', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload)
-  })
-    .then(res => {
-      if (!res.ok) throw new Error('HTTP ' + res.status);
-      return res.json();
-    })
-    .then(() => {
-      btn.innerHTML = lang === 'es' ? "✅ Enviado!" : "✅ Sent!";
-      form.reset();
-      setTimeout(() => {
-        btn.innerHTML = lang === 'es' ? "Enviar Mensaje" : "Send Message";
-        btn.disabled = false;
-      }, 3000);
-    })
-    .catch(() => {
+  const MAX_RETRIES = 4;
+  const BACKOFF = [0, 1000, 2000, 4000];
+
+  for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+    let res;
+    try {
+      res = await fetch('/api/sendContact', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+    } catch (err) {
+      retryEl.style.display = 'none';
       btn.innerHTML = "Error ❌";
       btn.disabled = false;
-    });
+      console.log('[retry] network error — no retry');
+      return;
+    }
+
+    if (res.status === 429 && attempt < MAX_RETRIES) {
+      const body = await res.json().catch(() => ({}));
+      const delay = BACKOFF[attempt];
+      const requestId = body.requestId || res.headers.get('X-Request-Id') || 'unknown';
+
+      console.log('[retry]', JSON.stringify({ requestId, retryAttempt: attempt, retryDelayMs: delay }));
+
+      retryEl.style.display = '';
+      retryEl.textContent = lang === 'es'
+        ? `Reintentando envío... (Intento ${attempt + 1} de ${MAX_RETRIES})`
+        : `Retrying... (Attempt ${attempt + 1} of ${MAX_RETRIES})`;
+
+      await new Promise(r => setTimeout(r, delay));
+      continue;
+    }
+
+    if (!res.ok) {
+      retryEl.style.display = 'none';
+      btn.innerHTML = "Error ❌";
+      btn.disabled = false;
+      return;
+    }
+
+    retryEl.style.display = 'none';
+    btn.innerHTML = lang === 'es' ? "✅ Enviado!" : "✅ Sent!";
+    form.reset();
+    setTimeout(() => {
+      btn.innerHTML = lang === 'es' ? "Enviar Mensaje" : "Send Message";
+      btn.disabled = false;
+    }, 3000);
+    return;
+  }
 }
 
 // COUNTER ANIMATION

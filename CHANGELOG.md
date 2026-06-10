@@ -1,5 +1,15 @@
 # Changelog
 
+## [v1.0.15] - 2026-06-10
+
+### Added
+- [2026-06-10] - Client-side retry with exponential backoff for 429 responses in contact form
+  - Retry strategy: attempt 1 immediate, 2 (1s), 3 (2s), 4 (4s) — max 4 total
+  - UI status: "Reintentando envío... (Intento X de 4)" / "Retrying... (Attempt X of 4)"
+  - Console logging: `requestId`, `retryAttempt`, `retryDelayMs` per retry
+  - Zero backend changes — only frontend `index.html` modified
+  - Reason: transparent 429 recovery without user-facing errors
+
 ## [v1.0.11] - 2026-06-10
 
 ### Observability Clarification Patch

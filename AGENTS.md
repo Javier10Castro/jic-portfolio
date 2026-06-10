@@ -355,7 +355,8 @@ vercel --prod
 
 Before deployment, verify:
 
-- [ ] Contact form submits successfully
+- [ ] Contact form submits successfully (including retry on 429)
+- [ ] Retry UI shows correct language text and attempt counter
 - [ ] Brief submission sends successfully
 - [ ] PDF attachment generated and attached to admin email
 - [ ] Admin email delivered to `GMAIL_USER`
@@ -950,6 +951,23 @@ INCOMING REQUEST
 | Queue metrics are filtered | Queue depth reflects only admitted traffic, not total ingress |
 | Spikes are handled by the gate | The queue does NOT absorb traffic spikes — rate limiting does |
 | Test the correct layer | Controlled throughput tests queue behavior; burst tests only test gate limits |
+
+### Client Retry & Backoff Strategy
+
+The contact form (`index.html`) implements client-side retry on 429 responses:
+
+| Attempt | Delay | Cumulative |
+|---|---|---|
+| 1 | 0ms | 0ms |
+| 2 | 1,000ms | 1,000ms |
+| 3 | 2,000ms | 3,000ms |
+| 4 | 4,000ms | 7,000ms |
+
+- Only HTTP 429 triggers retries. Other errors surface immediately.
+- Each retry is a fresh HTTP request — the server rate limit gate processes each independently.
+- Console logs `requestId`, `retryAttempt`, `retryDelayMs` per retry.
+- UI shows localized retry status (`"Reintentando envío... (Intento X de 4)"` / `"Retrying... (Attempt X of 4)"`).
+- Zero backend changes — this is purely a frontend UX improvement.
 
 ### Known Issues
 

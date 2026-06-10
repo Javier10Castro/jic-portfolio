@@ -380,6 +380,25 @@ Supported error codes:
 
 ---
 
+## Client Retry & Backoff Strategy
+
+The contact form (`index.html`) retries automatically on 429 responses with exponential backoff.
+
+| Attempt | Delay | Cumulative |
+|---|---|---|
+| 1 | 0ms | 0ms |
+| 2 | 1,000ms | 1,000ms |
+| 3 | 2,000ms | 3,000ms |
+| 4 | 4,000ms | 7,000ms |
+
+- Each retry is a fresh HTTP request — the server sees no difference from a manual retry.
+- Non-429 errors surface immediately (no retry).
+- UI shows retry progress per language.
+- Console logs `requestId`, `retryAttempt`, `retryDelayMs` on each retry.
+- Backend is unchanged: rate limit gate processes each retry independently.
+
+---
+
 ## Dependencies
 
 | Package | Version | Used for |

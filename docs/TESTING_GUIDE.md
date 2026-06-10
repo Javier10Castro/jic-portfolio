@@ -515,6 +515,23 @@ while (-not $found) {
 | Does NOT test queue performance | Queue only sees requests that pass rate limiting. A burst loop that triggers 429 tells you nothing about queue throughput |
 | Misleading failure rate | A test reporting 80% failure rate due to rate limiting is not a system failure — it is expected gateway behavior |
 
+## Client Retry & Backoff Strategy
+
+The contact form retries 429 responses automatically with exponential backoff (0s, 1s, 2s, 4s, max 4 total).
+
+### Testing Client Retry
+
+1. Trigger a 429 by hitting the rate limit (saturate IP window with rapid requests).
+2. Observe the browser console logs: each retry emits `{ requestId, retryAttempt, retryDelayMs }`.
+3. The UI should show `"Retrying... (Attempt 2 of 4)"` while retries are in flight.
+4. After all 4 retries fail (or a retry succeeds), the UI resolves to success or error.
+
+### Important
+
+- Client retry is a **UX feature**, not a reliability mechanism — each retry must independently pass the server's rate limit gate.
+- The 7s worst-case window means a sustained 429 condition will exhaust all 4 retries and surface an error.
+- Network errors (no connection, DNS failure, timeout) do not trigger retry — only HTTP 429 does.
+
 ### Summary
 
 | Test Type | Delay | Goal | Expected Result |

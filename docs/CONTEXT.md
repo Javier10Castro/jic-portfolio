@@ -104,6 +104,36 @@ Stage 2 — Execution Layer (Internal Queue Scheduler)
 
 ---
 
+## Client Retry & Backoff Strategy
+
+The contact form (`index.html`) implements automatic retry with exponential backoff when the API responds with 429 (Rate Limited).
+
+### Retry Parameters
+
+| Parameter | Value |
+|---|---|
+| Max retries | 4 total (1 initial + 3 retries) |
+| Backoff sequence | 0ms, 1,000ms, 2,000ms, 4,000ms |
+| Trigger | HTTP 429 only — other errors surface immediately |
+| Timeout | 7s total worst-case (0+1+2+4) |
+
+### Behavior
+
+1. **Attempt 1** fires immediately. If 429, schedules retry with 1s delay.
+2. **Attempts 2–4** increase delay exponentially (1s → 2s → 4s).
+3. Each retry logs `requestId`, `retryAttempt`, `retryDelayMs` to console.
+4. UI shows `"Reintentando envío... (Intento 2 de 4)"` or `"Retrying... (Attempt 2 of 4)"`.
+5. If all 4 attempts return 429, shows error state.
+6. Non-429 errors (4xx/5xx) surface immediately without retries.
+
+### Compatibility
+
+- Fully compatible with the Ingestion Boundary Principle — the client retry operates on the HTTP response, not on the internal pipeline.
+- No changes to backend, rate limiting, or queue logic.
+- Retries are transparent to the server (each is a fresh HTTP request that must pass the rate limit gate).
+
+---
+
 ### 2. Body Parsing Layer
 
 All requests go through:
