@@ -1,5 +1,11 @@
 # Changelog
 
+## [v1.0.10] - 2026-06-10
+- Fixed CLI testing inconsistencies under PowerShell
+- Improved queue stability under burst traffic
+- Confirmed rate-limit enforcement behavior
+- Fixed documentation path confusion in repo structure
+
 ## [v1.9.0] - 2026-06-10
 
 ### Added
