@@ -653,6 +653,53 @@ curl "https://web-portfolio-kappa-wheat.vercel.app/api/logs?id=<requestId>"
 
 Returns full lifecycle record from Neon (survives cold starts).
 
+### Validation Failure Persistence
+
+Since migration `007_add_validation_columns.sql`, validation diagnostic fields are persisted to Neon and survive across Vercel function instances:
+
+```
+sendBrief rejects request
+  → registry.registerLifecycle({ status:'rejected', validationStage, validationField, validationReason })
+  → in-memory Map + Neon request_logs (async, fire-and-forget)
+    → api/logs reads from Neon (separate instance) → returns validation fields
+      → dashboard-logs.html renders validation detail card on status === 'rejected'
+```
+
+**Test persistence**:
+
+```powershell
+# 1. Submit invalid request (missing prompt)
+$body = @{
+  name = "Test"; email = "t@t.com"
+  submittedAt = [DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds()
+} | ConvertTo-Json
+
+$response = Invoke-WebRequest -Uri "https://web-portfolio-kappa-wheat.vercel.app/api/sendBrief" `
+  -Method POST -ContentType "application/json" -Body $body
+
+$requestId = ($response.Content | ConvertFrom-Json).requestId
+
+# 2. Query logs endpoint (may be different Vercel instance)
+$status = Invoke-RestMethod -Uri "https://web-portfolio-kappa-wheat.vercel.app/api/logs?id=$requestId"
+$status | ConvertTo-Json -Depth 10
+```
+
+**Expected response**:
+
+```json
+{
+  "requestId": "uuid",
+  "status": "rejected",
+  "reason": "validation",
+  "validationStage": "validatePrompt",
+  "validationField": "prompt",
+  "validationReason": "Prompt cannot be empty",
+  "receivedAt": 1718000000000
+}
+```
+
+**Backward compatibility**: Old rows return `null` for all 3 validation fields. The dashboard only renders the validation detail block when at least one field is present.
+
 ---
 
 ## E2E Browser Console Testing

@@ -336,12 +336,17 @@ CREATE TABLE request_logs (
   total_lifecycle_ms INT,
   payload_sanitized TEXT,
   error_reason TEXT,
+  validation_stage TEXT,
+  validation_field TEXT,
+  validation_reason TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 ```
 
 **Upsert**: `ON CONFLICT (request_id) DO UPDATE SET status = EXCLUDED.status, ...`
+
+**Validation fields** (added via migration `007_add_validation_columns.sql`): `validation_stage`, `validation_field`, `validation_reason`. Populated by `sendBrief.js` when a request is rejected with `status: 'rejected'`. Exposed via `_rowToApi()` and rendered in `dashboard-logs.html` when `status === 'rejected'`. Backward compatible — old rows have `NULL`.
 
 ### 10b. `form_responses` (Neon PostgreSQL) — Brief form data
 
@@ -390,6 +395,24 @@ CREATE TABLE form_responses (
 **Read flow**: read(requestId) → memory (fast) → Neon (source of truth) → Redis (fallback)
 
 **Cleanup**: Memory eviction every 60s, on lookup expiry, on aggregate computation.
+
+### Validation Failure Persistence
+
+Validation failures (`status: 'rejected'`) carry 3 diagnostic fields that must survive across Vercel function instances:
+
+**Flow**: `sendBrief` → `request-registry.registerLifecycle()` → in-memory Map → `_neonSave(storeEntry)` → `request_logs` table (columns `validation_stage`, `validation_field`, `validation_reason`) → `api/logs` (reads from Neon) → `dashboard-logs.html` (`renderRegistryEntry()`)
+
+**New columns**:
+
+| Column | maps from `entry.*` | Example |
+|---|---|---|
+| `validation_stage` | `validationStage` | `validateEmail` |
+| `validation_field` | `validationField` | `email` |
+| `validation_reason` | `validationReason` | `invalid_format` |
+
+**Why cross-instance persistence matters**: `sendBrief.js` and `logs.js` are separate Vercel function instances. The in-memory registry Map is per-instance. Without Neon persistence, a request to `logs.js` (different instance) cannot see validation details written by `sendBrief.js`. Neon bridges this gap as the shared source of truth.
+
+**Backward compatibility**: Old `request_logs` rows have `NULL` for all 3 validation columns. The dashboard renderer checks for their presence before displaying.
 
 ---
 

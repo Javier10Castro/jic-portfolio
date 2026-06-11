@@ -370,10 +370,20 @@ Response:
 | `validateEmail` | `email` | Invalid email format |
 | `validatePrompt` | `prompt` | Empty, too short, or too long |
 
-### PowerShell equivalent
+### Persistence across Vercel instances
 
-```powershell
-$response = Invoke-WebRequest -Uri "https://web-portfolio-kappa-wheat.vercel.app/api/sendBrief" `
+Validation diagnostics (`validationStage`, `validationField`, `validationReason`) are persisted to Neon's `request_logs` table. This is necessary because `sendBrief.js` and `logs.js` run as separate Vercel function instances — they do not share the in-memory registry. The flow:
+
+```
+sendBrief (registerLifecycle with validation fields)
+  → memory Map (per-instance, 5min TTL)
+  → Neon request_logs (async, fire-and-forget)
+    → api/logs reads from Neon → returns full entry including validation fields
+```
+
+If the Neon write completes before the logs query, the validation details survive the cold start gap. If not, the registry falls back to Redis (if configured) or returns only the in-memory entry (same-instance).
+
+### PowerShell equivalent
   -Method POST -ContentType "application/json" `
   -Body (@{ name="Test"; email="t@t.com" } | ConvertTo-Json)
 

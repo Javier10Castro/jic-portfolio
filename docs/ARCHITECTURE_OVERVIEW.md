@@ -174,6 +174,24 @@ See `lib/request-registry.js` and `lib/db/requestLogs.js`.
 - Fires async `_neonSave()` — never awaited (fire-and-forget)
 - UPSERT on conflict (`request_id`) — incremental state updates work correctly
 
+#### Validation Failure Persistence
+
+Validation failures (rejected requests) carry diagnostic fields that must survive across Vercel function instances:
+
+**Flow**: `sendBrief` → `request-registry` (memory Map) → `_neonSave()` (async) → `request_logs` table → `api/logs` → `dashboard-logs.html`
+
+**New columns** (migration `007_add_validation_columns.sql`):
+
+| Column | maps from entry | Example |
+|---|---|---|
+| `validation_stage` | `entry.validationStage` | `validateEmail` |
+| `validation_field` | `entry.validationField` | `email` |
+| `validation_reason` | `entry.validationReason` | `invalid_format` |
+
+**Why needed**: `sendBrief` and `logs` are separate Vercel function instances. The in-memory registry Map is per-instance. Without Neon persistence, validation details from `sendBrief` are invisible to `logs`.
+
+**Backward compatibility**: Old rows have `NULL` for the 3 columns. The dashboard renders validation details only when `status === 'rejected'` and at least one validation field is non-null.
+
 #### Key Constants
 
 | Setting | Value |

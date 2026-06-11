@@ -191,11 +191,18 @@ function renderRegistryEntry(e){
   const queueWait = e.queueWaitTimeMs != null ? Math.round(e.queueWaitTimeMs/1000) + 's' : '—';
   const execDur = e.executionDurationMs != null ? Math.round(e.executionDurationMs/1000) + 's' : '—';
   const totalLife = e.totalLifecycleTimeMs != null ? Math.round(e.totalLifecycleTimeMs/1000) + 's' : '—';
+  const valHtml = (st === 'rejected' && (e.validationStage || e.validationField || e.validationReason))
+    ? `<div class="validation-detail" style="margin-top:6px;padding:6px 8px;background:rgba(255,200,0,0.08);border-radius:4px;font-size:11px;color:var(--yellow)">
+        ${e.validationStage ? `<span style="font-weight:600">Stage:</span> ${escapeHTML(e.validationStage)}<br>` : ''}
+        ${e.validationField ? `<span style="font-weight:600">Field:</span> ${escapeHTML(e.validationField)}<br>` : ''}
+        ${e.validationReason ? `<span style="font-weight:600">Reason:</span> ${escapeHTML(e.validationReason)}` : ''}
+      </div>` : '';
   return `<div class="step-card">
     <div class="head">
       <div class="name"><span class="dot ${st === 'completed' ? 'done' : st === 'failed' ? 'fail' : st === 'rejected' ? 'fail' : 'running'}"></span>${escapeHTML(e.requestId ? e.requestId.substring(0, 8) + '...' : '—')} ${statusBadge(st)}</div>
     </div>
     ${e.reason ? `<div class="summary" style="color:var(--yellow)">⚠ ${escapeHTML(e.reason)}</div>` : ''}
+    ${valHtml}
     <div class="meta" style="display:flex;gap:12px;margin-top:4px;flex-wrap:wrap;font-size:11px;color:var(--muted)">
       <span>Queue: ${queueWait}</span>
       <span>Exec: ${execDur}</span>
