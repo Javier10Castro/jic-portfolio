@@ -374,7 +374,8 @@ Before deployment, verify:
 - [ ] Retry UI shows correct language text and attempt counter
 - [ ] Validation diagnostics persist through Neon on INVALID_REQUEST (400):
   - [ ] POST /api/sendBrief with invalid email returns 400 with requestId
-  - [ ] GET /api/logs?id=<requestId> returns 200 with validationStage, validationField, validationReason
+  - [ ] POST /api/sendContact with invalid email returns 400 with requestId
+  - [ ] GET /api/logs?id=<requestId> returns 200 with validationStage, validationField, validationReason (both endpoints)
   - [ ] Neon request_logs row contains all 3 validation columns
 - [ ] Lifecycle observability: `GET /api/sendContact?id=<requestId>` returns `completed` status with all timestamps
 - [ ] Queue health: `/api/health?section=queue` includes `lifecycle` block with aggregate metrics
@@ -980,9 +981,11 @@ Validation failures are persisted before HTTP 400 responses are returned.
 
 Reference:
 `docs/VALIDATION_PERSISTENCE_VERIFICATION.md`
+`docs/SENDCONTACT_PERSISTENCE_VERIFICATION.md`
 
 Implemented in:
-42efb28
+- `42efb28` (sendBrief — initial fix)
+- `THIS_COMMIT` (sendContact — same pattern applied)
 
 ### Validation Diagnostics Persistence
 
@@ -994,11 +997,30 @@ Validation failures (`400 INVALID_REQUEST`) persist 3 diagnostic fields through 
 | `validationField` | `validation_field` | `email` |
 | `validationReason` | `validation_reason` | `invalid_format` |
 
-**Flow**: `sendBrief.js` → `registry.registerLifecycle()` → in-memory Map → `registry.persistImmediate()` → `_neon.saveLog()` → `request_logs` table.
+**Flow**: `sendBrief.js` / `sendContact.js` → `registry.registerLifecycle()` → in-memory Map → `registry.persistImmediate()` → `_neon.saveLog()` → `request_logs` table.
 
 **Retrieval**: `GET /api/logs?id=<requestId>` reads from Neon (cross-instance source of truth). Entries with `status: "rejected"` include all 3 validation fields.
 
-**Critical implementation detail**: The `persistImmediate()` function (added in commit `42efb28`) `await`s the Neon INSERT before returning the 400 response. This is necessary because Vercel may freeze the serverless function immediately after the response is sent — a fire-and-forget Promise may never complete. See `lib/request-registry.js:132-139`.
+**Critical implementation detail**: The `persistImmediate()` function (added in commit `42efb28`, extended to sendContact in `THIS_COMMIT`) `await`s the Neon INSERT before returning the response. This is necessary because Vercel may freeze the serverless function immediately after the response is sent — a fire-and-forget Promise may never complete. See `lib/request-registry.js:132-139`.
+
+### sendContact Reject Paths (12 paths, all fixed)
+
+All 12 early-return paths in `api/sendContact.js` now call `await registry.persistImmediate(log.requestId(req))` before returning:
+
+| # | Line | Trigger | Status | `validationStage` | `validationField` | `validationReason` |
+|---|---|---|---|---|---|---|
+| 1 | 129-131 | Method not POST | 405 | `methodCheck` | `method` | `not_allowed` |
+| 2 | 141-143 | Body parse fail | 400 | `parseBody` | `body` | `parse_failed` |
+| 3 | 155-157 | Honeypot triggered | 200 | `honeypotCheck` | `hp.field` | `bot_detected` |
+| 4 | 166-168 | Timing check fail | 400 | `timingCheck` | `submittedAt` | `tc.reason` |
+| 5 | 180-182 | Name validation fail | 400 | `sanitizeAndValidateName` | `name` | `nameCheck.reason` |
+| 6 | 191-193 | Email validation fail | 400 | `validateEmail` | `email` | `invalid_format` |
+| 7 | 201-203 | Message empty | 400 | `validateMessage` | `message` | `empty` |
+| 8 | 210-212 | Message too long | 400 | `validateMessage` | `message` | `too_long` |
+| 9 | 225-228 | Edge rate limit | 429 | `rateLimit` | `ip` | `burst` |
+| 10 | 237-240 | Email dedup | 429 | `rateLimit` | `email` | `duplicate` |
+| 11 | 256-258 | Missing SMTP creds | 500 | `configCheck` | `smtp` | `missing_credentials` |
+| 12 | 329-331 | Queue overflow | 503 | `queueCheck` | `queue` | `overflow` |
 
 ### Client Retry & Backoff Strategy
 

@@ -1,5 +1,16 @@
 # Changelog
 
+## [v1.4.2] - 2026-06-11
+
+### Fixed
+- [2026-06-11] - sendContact validation persistence (same root cause as sendBrief fix 42efb28)
+  - All 12 early-return paths in `api/sendContact.js` now call `await registry.persistImmediate(log.requestId(req))` before returning
+  - Added `validationStage`, `validationField`, `validationReason` diagnostics to all `registerLifecycle()` calls on reject paths
+  - Production verification confirmed: `POST /api/sendContact` validation rejects now persist to Neon `request_logs` predictably
+  - Docs: `docs/SENDCONTACT_PERSISTENCE_VERIFICATION.md` (verification procedure + production results)
+  - Docs: `AGENTS.md` — added sendContact Reject Paths table (12 paths with validationStage/validationField/validationReason)
+  - Docs: `CHANGELOG.md` — this entry
+
 ## [v1.4.1] - 2026-06-11
 
 ### Added

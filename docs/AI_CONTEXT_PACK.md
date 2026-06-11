@@ -402,7 +402,7 @@ CREATE TABLE form_responses (
 
 Validation failures (`status: 'rejected'`) carry 3 diagnostic fields that must survive across Vercel function instances:
 
-**Flow**: `sendBrief` → `request-registry.registerLifecycle()` → in-memory Map → `_neonSave(storeEntry)` → `request_logs` table (columns `validation_stage`, `validation_field`, `validation_reason`) → `api/logs` (reads from Neon) → `dashboard-logs.html` (`renderRegistryEntry()`)
+**Flow**: `sendBrief.js` / `sendContact.js` → `request-registry.registerLifecycle()` → in-memory Map → `persistImmediate()` (awaited) → `request_logs` table (columns `validation_stage`, `validation_field`, `validation_reason`) → `api/logs` (reads from Neon) → `dashboard-logs.html` (`renderRegistryEntry()`)
 
 **New columns**:
 
