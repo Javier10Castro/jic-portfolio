@@ -102,11 +102,12 @@
 
   // -- Modo 1: via submitContact() interna ----------------------------------
   // Requiere que los elementos del DOM existan (inp-name, inp-email, etc.)
-  async function runViaSubmitContact(contactInfo) {
+  async function runViaSubmitContact(contactInfo, dataOverride) {
     log('=== Modo 1: submitContact() interno ===');
 
     // 1. Poblar formData global
-    Object.assign(formData, JSON.parse(JSON.stringify(TEST_DATA)));
+    var data = dataOverride || TEST_DATA;
+    Object.assign(formData, JSON.parse(JSON.stringify(data)));
     if (typeof save === 'function') save();
     log('formData loaded with test data');
     log('  fields:' + Object.keys(formData).length);
@@ -163,11 +164,12 @@
 
   // -- Modo 2: fetch directo a /api/sendBrief ---------------------------------
   // No necesita DOM. Construye el payload exacto que espera el backend.
-  async function runDirectAPI(contactInfo) {
+  async function runDirectAPI(contactInfo, dataOverride) {
     log('=== Modo 2: fetch directo a /api/sendBrief ===');
 
     // 1. Poblar formData (necesario para generatePrompt)
-    Object.assign(formData, JSON.parse(JSON.stringify(TEST_DATA)));
+    var data = dataOverride || TEST_DATA;
+    Object.assign(formData, JSON.parse(JSON.stringify(data)));
     if (typeof save === 'function') save();
 
     // 2. Generar el prompt maestro usando la funcion interna
@@ -188,7 +190,7 @@
       phone: contactInfo.phone || '',
       prompt: prompt,
       lang: typeof currentLang !== 'undefined' ? currentLang : 'es',
-      formData: JSON.parse(JSON.stringify(formData || TEST_DATA))
+      formData: JSON.parse(JSON.stringify(formData || data))
     };
 
     log('Payload built');
@@ -235,7 +237,7 @@
   }
 
   // -- Entry Point -----------------------------------------------------------
-  window.runBriefE2E = async function(mode, contactInfo) {
+  window.runBriefE2E = async function(mode, contactInfo, dataOverride) {
     mode = mode || 1;
     contactInfo = contactInfo || {
       name: 'Javier Ibrahim',
@@ -258,9 +260,9 @@
 
     try {
       if (mode === 1) {
-        await runViaSubmitContact(contactInfo);
+        await runViaSubmitContact(contactInfo, dataOverride);
       } else {
-        var result = await runDirectAPI(contactInfo);
+        var result = await runDirectAPI(contactInfo, dataOverride);
         log('[OK] Direct API call complete');
         return result;
       }
@@ -274,8 +276,9 @@
   log('E2E Brief Maestro script loaded');
   log('');
   log('Usage:');
-  log('  runBriefE2E(1)        -> Mode 1: submitContact() interno (usa DOM)');
-  log('  runBriefE2E(2)        -> Mode 2: fetch directo a /api/sendBrief');
+  log('  runBriefE2E(1)             -> Mode 1: submitContact() interno (usa DOM)');
+  log('  runBriefE2E(2)             -> Mode 2: fetch directo a /api/sendBrief');
+  log('  runBriefE2E(m, c, data)    -> Modo m, contacto c, formData data');
   log('  runBriefE2E(1, { name, email, company?, phone? }) -> custom contact');
   log('');
   log('Ejemplo: runBriefE2E(2)');

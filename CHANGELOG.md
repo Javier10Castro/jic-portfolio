@@ -1,5 +1,32 @@
 # Changelog
 
+## [v1.2.2] - 2026-06-10
+
+### Added
+- [2026-06-10] - E2E helper loader system for Brief Maestro testing
+  - `public/scripts/load-e2e.js` — loader que expone helpers globales:
+    - `e2eSalmos()` — envia brief completo con datos de Salmos Cafe
+    - `e2eInkognita()` — envia brief con datos de Inkognita Agency (nuevo dataset)
+    - `e2eCustom({ name, email, company?, phone?, formData? })` — brief personalizado
+    - `showCurrentFormData()` — inspecciona formData actual via console.table
+    - `clearFormData()` — resetea formData a valores vacios
+  - Carga dinamicamente `e2e-brief-bypass-wizard.js` via `<script>` tag
+  - Solo se activa manualmente desde consola — no referenciado desde ningun HTML
+  - Sin riesgo en produccion (cero auto-ejecucion)
+  - Visual `[E2E]` logging en consola con pasos: Loading → Generating → Sending → Completed
+  - Files: `public/scripts/load-e2e.js` (new), `public/scripts/e2e-brief-bypass-wizard.js` (modified)
+  - Inkognita Agency data: 85+ fields, industria branding digital (B2B, nacional, servicio)
+  - `runBriefE2E(mode, contactInfo?, dataOverride?)` — nuevo 3er parametro opcional para inyectar formData externo
+  - Backward compatible: llamadas existentes sin 3er parametro funcionan identico
+
+### Docs
+- [2026-06-10] - E2E testing guide: `docs/E2E-TESTING.md`
+  - Como cargar el script desde consola
+  - Como ejecutar pruebas (e2eSalmos, e2eInkognita, e2eCustom)
+  - Como inspeccionar requestId y lifecycle
+  - Como ver formData actual y resetearlo
+  - Seguridad: solo ejecucion manual, cero auto-carga
+
 ## [v1.2.1] - 2026-06-10
 
 ### Fixed
