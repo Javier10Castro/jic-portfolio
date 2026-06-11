@@ -550,7 +550,75 @@ DEPLOYMENT (lib/deployment/) — Git init, commit, GitHub repo, push (optional)
 
 ---
 
-## 18. Historical Decisions (Why Things Are This Way)
+## 18. Database Migration Strategy
+
+### Location
+
+All migrations live in `data/migrations/` as sequential SQL files prefixed with a 3-digit number. Each file is additive — no destructive operations.
+
+```
+data/migrations/
+├── 001_create_form_responses.sql
+├── 002_create_projects_executions.sql
+├── 003_saas_schema.sql
+├── 004_normalize_execution_status.sql
+├── 005_narrow_project_status_check.sql
+├── 006_request_logs.sql
+├── 007_add_validation_columns.sql
+└── migration-005-report.md
+```
+
+### How to execute
+
+```bash
+# Apply a single migration
+psql $DATABASE_URL -f data/migrations/006_request_logs.sql
+
+# Apply all pending migrations (in order)
+for f in data/migrations/[0-9][0-9][0-9]_*.sql; do
+  echo "Applying $f..."
+  psql $DATABASE_URL -f "$f"
+done
+```
+
+`$DATABASE_URL` must be the Neon PostgreSQL connection string.
+
+### How to validate
+
+```sql
+-- Check migration was applied
+SELECT column_name, data_type
+FROM information_schema.columns
+WHERE table_name = 'request_logs'
+ORDER BY ordinal_position;
+```
+
+New columns (`validation_stage`, `validation_field`, `validation_reason`) should appear in the result.
+
+### Naming conventions
+
+| Rule | Example |
+|---|---|
+| Prefix with 3-digit sequence | `007_add_validation_columns.sql` |
+| Use snake_case for the description | `add_validation_columns` |
+| Use `IF NOT EXISTS` / `IF EXISTS` for idempotency | `ADD COLUMN IF NOT EXISTS …` |
+| One concern per file | Never bundle unrelated schema changes |
+
+### .gitignore rule
+
+Migrations are tracked by negation — runtime data is ignored, scripts are not:
+
+```gitignore
+data/*
+!data/migrations/
+!data/migrations/*
+```
+
+New migration files placed in `data/migrations/` are automatically picked up by git.
+
+---
+
+## 19. Historical Decisions (Why Things Are This Way)
 
 | Date | Decision | Rationale |
 |---|---|---|
@@ -564,7 +632,7 @@ DEPLOYMENT (lib/deployment/) — Git init, commit, GitHub repo, push (optional)
 
 ---
 
-## 19. COPY THIS TO ANOTHER AI — Quick Start
+## 20. COPY THIS TO ANOTHER AI — Quick Start
 
 If you need to give this context to another AI agent, copy sections 1–7 and 10 above. The minimal set is:
 

@@ -1,0 +1,8 @@
+-- =============================================================
+-- DEPRECATED: Schema moved to 003_saas_schema.sql
+-- =============================================================
+-- This migration previously defined projects and executions tables.
+-- All schema creation has moved to 003_saas_schema.sql (UUID-based,
+-- full SaaS columns, foreign keys, constraints).
+-- This file is preserved as a placeholder for migration ordering
+-- and backward compatibility. It creates no schema objects.

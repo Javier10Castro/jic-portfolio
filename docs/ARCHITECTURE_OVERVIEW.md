@@ -267,10 +267,84 @@ public/
 │   ├── e2e-brief-bypass-wizard.js  Testing layer — E2E tooling, uses payload builder
 │   └── load-e2e.js                 Legacy dynamic loader (load-e2e)
 data/
-└── migrations/
-    └── 006_request_logs.sql  Table schema
+└── migrations/              SQL migration scripts (versioned)
+    ├── 001_create_form_responses.sql
+    ├── 002_create_projects_executions.sql
+    ├── 003_saas_schema.sql
+    ├── 004_normalize_execution_status.sql
+    ├── 005_narrow_project_status_check.sql
+    ├── 006_request_logs.sql
+    └── 007_add_validation_columns.sql
 docs/
 ├── ARCHITECTURE_OVERVIEW.md  This file
 ├── E2E_SYSTEM.md             E2E module documentation
 └── TESTING_GUIDE.md          Usage examples and commands
 ```
+
+---
+
+## Database Migration Strategy
+
+### Location
+
+All migrations live in `data/migrations/` as sequential SQL files prefixed with a 3-digit number (`001_`, `002_`, …). Each file is additive — no destructive operations (`DROP`, `DELETE`).
+
+```tree
+data/migrations/
+├── 001_create_form_responses.sql
+├── 002_create_projects_executions.sql
+├── 003_saas_schema.sql
+├── 004_normalize_execution_status.sql
+├── 005_narrow_project_status_check.sql
+├── 006_request_logs.sql
+├── 007_add_validation_columns.sql
+└── migration-005-report.md
+```
+
+### How to execute
+
+```bash
+# Apply a single migration
+psql $DATABASE_URL -f data/migrations/006_request_logs.sql
+
+# Apply all pending migrations (in order)
+for f in data/migrations/[0-9][0-9][0-9]_*.sql; do
+  echo "Applying $f..."
+  psql $DATABASE_URL -f "$f"
+done
+```
+
+The `$DATABASE_URL` environment variable must point to the Neon PostgreSQL connection string.
+
+### How to validate
+
+```sql
+-- Check migration was applied by inspecting the schema
+SELECT column_name, data_type
+FROM information_schema.columns
+WHERE table_name = 'request_logs'
+ORDER BY ordinal_position;
+```
+
+The new columns (`validation_stage`, `validation_field`, `validation_reason`) should appear in the result. Each migration should document which query validates its changes.
+
+### Naming conventions
+
+| Rule | Example |
+|---|---|
+| Prefix with 3-digit sequence | `007_add_validation_columns.sql` |
+| Use snake_case for the description | `add_validation_columns`, not `AddValidationColumns` |
+| Use `IF NOT EXISTS` / `IF EXISTS` for idempotency | `ADD COLUMN IF NOT EXISTS …` |
+| One concern per file | Never bundle unrelated schema changes |
+
+### .gitignore rule
+
+Migrations are tracked by a negation rule:
+
+```gitignore
+data/*
+!data/migrations/
+!data/migrations/*
+```
+
+This ignores runtime data (`data/decisions.json`, `data/deployments.json`) while keeping all migration scripts versioned. New migration files must be placed in `data/migrations/` and will be automatically picked up by git. New runtime data files in `data/` remain ignored.```
