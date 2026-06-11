@@ -323,6 +323,69 @@ The builder normalizes fields, deep-copies formData, and always injects `submitt
 See `docs/TESTING_GUIDE.md` for runnable examples covering all testing scenarios:
 console commands, API tests, lifecycle debugging, and failure mode diagnosis.
 
+---
+
+## Diagnosing INVALID_REQUEST
+
+When `runBriefE2EConsole()` or `runBriefE2E(2)` returns `HTTP 400 { error: 'INVALID_REQUEST' }`, use the request registry to identify which validation failed.
+
+### Step 1 — Capture the requestId
+
+`_sendPayload()` logs the `requestId` on every response:
+
+```
+[PASS] requestId: 550e8400-e29b-41d4-a716-446655440000
+```
+
+or from the `X-Request-Id` response header.
+
+### Step 2 — Query the registry
+
+```js
+// In browser console (after receiving 400):
+var id = '550e8400-e29b-41d4-a716-446655440000'; // replace with actual id
+fetch('/api/logs?id=' + id).then(r => r.json()).then(console.log)
+```
+
+Response:
+
+```json
+{
+  "requestId": "550e8400-...",
+  "status": "rejected",
+  "reason": "validation",
+  "validationStage": "validatePrompt",
+  "validationField": "prompt",
+  "validationReason": "Prompt cannot be empty",
+  "receivedAt": 1718000000000
+}
+```
+
+### Validation stages
+
+| `validationStage` | `validationField` | Triggered when |
+|---|---|---|
+| `timingCheck` | `submittedAt` | Missing, future, or stale timestamp |
+| `sanitizeAndValidateName` | `name` | Empty, non-string, or XSS |
+| `validateEmail` | `email` | Invalid email format |
+| `validatePrompt` | `prompt` | Empty, too short, or too long |
+
+### PowerShell equivalent
+
+```powershell
+$response = Invoke-WebRequest -Uri "https://web-portfolio-kappa-wheat.vercel.app/api/sendBrief" `
+  -Method POST -ContentType "application/json" `
+  -Body (@{ name="Test"; email="t@t.com" } | ConvertTo-Json)
+
+$requestId = ($response.Content | ConvertFrom-Json).requestId
+Write-Host "requestId: $requestId"
+
+$status = Invoke-RestMethod -Uri "https://web-portfolio-kappa-wheat.vercel.app/api/logs?id=$requestId"
+$status | ConvertTo-Json -Depth 10
+```
+
+---
+
 ## Limitations
 
 | Limitation | Detail | Impact |

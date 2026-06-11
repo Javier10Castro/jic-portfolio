@@ -772,7 +772,47 @@ Las validaciones se ejecutan en este orden estricto:
 
 ### Cómo identificar el stage exacto
 
-**Opción 1 — Revisar logs de Vercel (recomendado):**
+**Opción 1 — Consultar el diagnostic endpoint (recomendado):**
+
+Cada request `INVALID_REQUEST` ahora queda registrada en el request registry con el stage exacto. Usa el `requestId` de la respuesta 400 para consultar:
+
+```powershell
+$response = Invoke-WebRequest -Uri "https://web-portfolio-kappa-wheat.vercel.app/api/sendBrief" `
+  -Method POST -ContentType "application/json" `
+  -Body (@{ name="Test"; email="t@t.com" } | ConvertTo-Json)
+
+$requestId = ($response.Content | ConvertFrom-Json).requestId
+Write-Host "requestId: $requestId"
+
+# Consultar el registry:
+$status = Invoke-RestMethod -Uri "https://web-portfolio-kappa-wheat.vercel.app/api/logs?id=$requestId"
+$status | ConvertTo-Json -Depth 10
+```
+
+Respuesta esperada:
+
+```json
+{
+  "requestId": "uuid",
+  "status": "rejected",
+  "reason": "validation",
+  "validationStage": "validatePrompt",
+  "validationField": "prompt",
+  "validationReason": "Prompt cannot be empty",
+  "receivedAt": 1718000000000
+}
+```
+
+Los campos relevantes:
+
+| Campo | Descripción |
+|---|---|
+| `validationStage` | `timingCheck`, `sanitizeAndValidateName`, `validateEmail`, o `validatePrompt` |
+| `validationField` | `submittedAt`, `name`, `email`, o `prompt` |
+| `validationReason` | Texto descriptivo del error: `Missing submittedAt`, `Prompt cannot be empty`, etc. |
+| `receivedAt` | Timestamp Unix ms de cuando se recibió el request |
+
+**Opción 2 — Revisar logs de Vercel:**
 
 ```powershell
 vercel logs --follow | Select-String -Pattern "validation.failed"
@@ -790,7 +830,7 @@ Cada evento incluye:
 - **validateEmail**: `emailType`, `emailLength`, `emailPreview` (masked)
 - **validatePrompt**: `promptType`, `promptLength`, `promptPreview`
 
-**Opción 2 — Reconstrucción manual (sin logs):**
+**Opción 3 — Reconstrucción manual (sin logs):**
 
 Examina el payload enviado:
 

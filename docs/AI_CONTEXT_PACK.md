@@ -440,6 +440,32 @@ Single source of truth for all `/api/sendBrief` payloads. Called by wizard, dire
 
 ---
 
+### Diagnosing INVALID_REQUEST
+
+Every `/api/sendBrief` validation failure registers in the request registry with the exact stage. Query via `GET /api/logs?id=<requestId>`:
+
+```json
+{
+  "requestId": "uuid",
+  "status": "rejected",
+  "reason": "validation",
+  "validationStage": "validatePrompt",
+  "validationField": "prompt",
+  "validationReason": "Prompt cannot be empty",
+  "receivedAt": 1718000000000
+}
+```
+
+| Field | Possible values |
+|---|---|
+| `validationStage` | `timingCheck`, `sanitizeAndValidateName`, `validateEmail`, `validatePrompt` |
+| `validationField` | `submittedAt`, `name`, `email`, `prompt` |
+| `validationReason` | Human-readable failure description |
+
+The same data is also logged to Vercel stdout as `{ "type": "observability", "event": "validation.failed", "stage": "...", ... }` for real-time tailing via `vercel logs --follow`.
+
+---
+
 ## 14. Environment Variables
 
 | Variable | Required | Purpose |
