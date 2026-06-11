@@ -398,6 +398,7 @@ footer{
 .btn-submit .spinner{display:none;width:18px;height:18px;border:2px solid rgba(11,15,25,0.2);border-top-color:#0B0F19;border-radius:50%;animation:spin 0.7s linear infinite}
 .btn-submit.loading .spinner{display:inline-block}
 .btn-submit.loading .btn-text{opacity:0.7}
+.retry-status{font-size:0.85rem;color:var(--accent);text-align:center;margin-top:0.75rem;line-height:1.5;font-weight:500}
 
 /* SUCCESS OVERLAY */
 .success-overlay{display:none;position:fixed;inset:0;z-index:9999;background:rgba(11,15,25,0.97);backdrop-filter:blur(24px);align-items:center;justify-content:center;flex-direction:column;padding:2rem}
@@ -573,6 +574,7 @@ footer{
         <span class="spinner"></span>
         <span class="btn-text" id="btn-submit-text">Enviar información</span>
       </button>
+      <p class="retry-status" id="retry-status" style="display:none"></p>
     </div>
   </div>
 </div>
@@ -1661,12 +1663,13 @@ Nivel de sofisticación: ${p('brand_nivel')}/5
 Palabras guía del diseño: ${p('ref_palabras')}`;
 }
 
-function submitContact(){
+async function submitContact(){
   const name=document.getElementById('inp-name').value.trim();
   const email=document.getElementById('inp-email').value.trim();
   const company=document.getElementById('inp-company').value.trim();
   const phone=document.getElementById('inp-phone').value.trim();
   const btn=document.getElementById('btn-submit');
+  const retryEl=document.getElementById('retry-status');
   let valid=true;
   ['field-name','field-email'].forEach(id=>document.getElementById(id).classList.remove('error'));
   document.getElementById('err-name').classList.remove('show');
@@ -1676,11 +1679,28 @@ function submitContact(){
   if(!valid)return;
   btn.classList.add('loading');btn.disabled=true;
   const prompt=generatePrompt();
-  const payload={name,email,company,phone,prompt,lang:currentLang,formData:JSON.parse(JSON.stringify(formData))};
-  fetch('/api/sendBrief',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)})
-    .then(r=>{if(!r.ok)throw new Error(r.status);return r.json()})
-    .then(()=>{btn.classList.remove('loading');btn.disabled=false;document.getElementById('success-overlay').classList.add('active')})
-    .catch(()=>{btn.classList.remove('loading');btn.disabled=false;showToast(t('toast_send_error'),'error')});
+  const payload={name,email,company,phone,prompt,lang:currentLang,formData:JSON.parse(JSON.stringify(formData)),submittedAt:Date.now()};
+  const MAX_RETRIES=4;
+  const BACKOFF=[0,1000,2000,4000];
+  for(let attempt=1;attempt<=MAX_RETRIES;attempt++){
+    let res;
+    try{res=await fetch('/api/sendBrief',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)})}
+    catch(err){retryEl.style.display='none';btn.classList.remove('loading');btn.disabled=false;showToast(t('toast_send_error'),'error');return}
+    if(res.status===429&&attempt<MAX_RETRIES){
+      const body=await res.json().catch(()=>({}));
+      const delay=BACKOFF[attempt];
+      const requestId=body.requestId||res.headers.get('X-Request-Id')||'unknown';
+      retryEl.style.display='';
+      retryEl.textContent=currentLang==='es'?'Reintentando envío... (Intento '+(attempt+1)+' de '+MAX_RETRIES+')':'Retrying... (Attempt '+(attempt+1)+' of '+MAX_RETRIES+')';
+      await new Promise(r=>setTimeout(r,delay));
+      continue;
+    }
+    if(!res.ok){retryEl.style.display='none';btn.classList.remove('loading');btn.disabled=false;showToast(t('toast_send_error'),'error');return}
+    retryEl.style.display='none';
+    btn.classList.remove('loading');btn.disabled=false;
+    document.getElementById('success-overlay').classList.add('active');
+    return;
+  }
 }
 
 

@@ -219,17 +219,52 @@
       log('[RECV] Response received (' + elapsed + 'ms)');
       log('  status: ' + response.status);
       log('  ok: ' + response.ok);
-      if (body && body.requestId) log('  requestId: ' + body.requestId);
+
+      // --- Response Validation ---
+      var validation = { statusOk: false, hasRequestId: false, hasSuccess: false, errors: [] };
+
+      if (response.status === 200) {
+        validation.statusOk = true;
+        log('[PASS] HTTP 200 OK');
+      } else if (response.status === 429) {
+        validation.errors.push('RATE_LIMITED');
+        log('[WARN] HTTP 429 — Rate limited (expected under load)');
+      } else {
+        validation.errors.push('HTTP_' + response.status);
+        log('[FAIL] HTTP ' + response.status + ' — unexpected status');
+      }
+
+      if (body && body.requestId) {
+        validation.hasRequestId = true;
+        log('[PASS] requestId: ' + body.requestId);
+      } else {
+        validation.errors.push('MISSING_REQUEST_ID');
+        log('[FAIL] No requestId in response');
+      }
+
+      if (body && body.success === true) {
+        validation.hasSuccess = true;
+        log('[PASS] success: true');
+      }
+
+      validation.passed = validation.statusOk && validation.hasRequestId;
+
+      if (validation.passed) {
+        log('[RESULT] ✅ VALIDATION PASSED');
+      } else {
+        log('[RESULT] ❌ VALIDATION FAILED — ' + validation.errors.join(', '));
+      }
+
       if (body && body.queuePosition !== undefined) log('  queuePosition: ' + body.queuePosition);
       if (body && body.queueDepth !== undefined) log('  queueDepth: ' + body.queueDepth);
       if (body && body.status) log('  status field: ' + body.status);
       log('  full body: ' + JSON.stringify(body));
 
-      if (body && body.requestId) {
+      if (validation.passed) {
         log('[INFO] To inspect lifecycle: GET /api/sendBrief?id=' + body.requestId);
       }
 
-      return { response: response, body: body, elapsed: elapsed };
+      return { response: response, body: body, elapsed: elapsed, validation: validation };
     } catch (err) {
       log('[ERR] Network error: ' + err.message);
       throw err;

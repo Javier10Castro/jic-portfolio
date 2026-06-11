@@ -182,6 +182,27 @@ function renderExecution(exec, decisions){
   `;
 }
 
+function renderRegistryEntry(e){
+  const st = e.status || 'unknown';
+  const dt = e.receivedAt || e.updatedAt;
+  const queueWait = e.queueWaitTimeMs != null ? Math.round(e.queueWaitTimeMs/1000) + 's' : '—';
+  const execDur = e.executionDurationMs != null ? Math.round(e.executionDurationMs/1000) + 's' : '—';
+  const totalLife = e.totalLifecycleTimeMs != null ? Math.round(e.totalLifecycleTimeMs/1000) + 's' : '—';
+  return `<div class="step-card">
+    <div class="head">
+      <div class="name"><span class="dot ${st === 'completed' ? 'done' : st === 'failed' ? 'fail' : st === 'rejected' ? 'fail' : 'running'}"></span>${escapeHTML(e.requestId ? e.requestId.substring(0, 8) + '...' : '—')} ${statusBadge(st)}</div>
+    </div>
+    ${e.reason ? `<div class="summary" style="color:var(--yellow)">⚠ ${escapeHTML(e.reason)}</div>` : ''}
+    <div class="meta" style="display:flex;gap:12px;margin-top:4px;flex-wrap:wrap;font-size:11px;color:var(--muted)">
+      <span>Queue: ${queueWait}</span>
+      <span>Exec: ${execDur}</span>
+      <span>Total: ${totalLife}</span>
+      <span>${dt ? ago(dt) : ''}</span>
+      <span>Event: ${escapeHTML(e.event || 'brief')}</span>
+    </div>
+  </div>`;
+}
+
 let pollStopExec = null;
 let eventSubLogId = null;
 
@@ -220,19 +241,54 @@ function startLogEvents(execId){
   });
 }
 
+async function loadDemoLogs(){
+  const content = document.getElementById('content');
+  const loading = document.getElementById('loading');
+  const sub = document.getElementById('sub');
+  loading.style.display = 'block';
+  loading.textContent = 'Loading recent requests...';
+  try {
+    const data = await api.getRecentLogs(30);
+    const entries = data.entries || [];
+    const metrics = data.metrics || {};
+    loading.style.display = 'none';
+    sub.innerHTML = 'Recent Brief Submissions <span style="font-size:11px;color:var(--muted);margin-left:8px">⚡ Demo Mode — <a href="/dashboard.html" style="color:var(--accent)">Connect a workspace</a> for full execution logs</span>';
+    let html = '';
+    if (metrics.totalRequests > 0) {
+      html += `<div class="exec-header"><div class="row"><div style="font-size:13px;color:var(--text-strong)">Aggregate Metrics</div></div><div class="meta">Total: ${metrics.totalRequests} · Completed: ${metrics.completedRequests} · Failed: ${metrics.failedRequests} · Avg Exec: ${metrics.averageExecutionTimeMs}ms · Avg Wait: ${metrics.averageQueueWaitTimeMs}ms</div></div>`;
+    }
+    if (entries.length) {
+      html += entries.map(renderRegistryEntry).join('');
+    } else {
+      html = '<div class="empty">No recent requests. Submit a brief from the <a href="/brief-maestro.html" style="color:var(--accent)">Maestro tool</a> to see data here.</div>';
+    }
+    content.innerHTML = html;
+    if (entries.some(e => e.status === 'processing' || e.status === 'queued')) {
+      if (!pollStopExec) pollStopExec = api.poll(5000, loadDemoLogs);
+    }
+  } catch(e) {
+    loading.style.display = 'none';
+    content.innerHTML = '<div class="error-banner">Failed: ' + escapeHTML(e.message) + '</div>';
+  }
+}
+
 async function loadExec(){
   const content = document.getElementById('content');
   const loading = document.getElementById('loading');
   const sub = document.getElementById('sub');
+
+  if (!execId && !projectId) {
+    if (api.isReady()) {
+      loading.style.display = 'none';
+      content.innerHTML = '<div class="empty">Pass ?id=PROJECT_ID or ?exec=EXECUTION_ID to view logs</div>';
+      return;
+    }
+    return loadDemoLogs();
+  }
+
   if (!api.isReady()) {
     loading.style.display = 'none';
     content.innerHTML = '<div class="error-banner">Connect to a workspace in the dashboard first</div>';
-    return;
-  }
-
-  if (!execId && !projectId) {
-    loading.style.display = 'none';
-    content.innerHTML = '<div class="empty">Pass ?id=PROJECT_ID or ?exec=EXECUTION_ID to view logs</div>';
     return;
   }
 

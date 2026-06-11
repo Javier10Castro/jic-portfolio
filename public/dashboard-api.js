@@ -219,6 +219,18 @@ window.DASHBOARD_API = (() => {
       loop();
       return stop;
     },
+
+    async getHealth(section) {
+      const r = await fetch(`/api/health${section ? '?section=' + encodeURIComponent(section) : ''}`);
+      if (!r.ok) throw new Error('Health check failed: ' + r.status);
+      return r.json();
+    },
+
+    async getRecentLogs(limit) {
+      const r = await fetch('/api/logs?limit=' + (limit || 20));
+      if (!r.ok) throw new Error('Logs fetch failed: ' + r.status);
+      return r.json();
+    },
   };
 
   return api;
