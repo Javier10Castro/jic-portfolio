@@ -205,6 +205,11 @@ Lead generation and client onboarding through contact forms, AI-powered brief co
   1. Admin notification to `GMAIL_USER`
   2. Client confirmation to `[email, GMAIL_USER]`
 
+### `GET /api/logs`
+- **`?id=<requestId>`**: Returns single lifecycle entry (200) or 404. Entries with `status: "rejected"` include `validationStage`, `validationField`, `validationReason`.
+- **`?limit=N`**: Returns recent entries + aggregate metrics. Default 20, max 200.
+- **Source of truth**: Neon `request_logs` table — survives Vercel cold starts across all function instances.
+
 ---
 
 ## Environment Variables
@@ -367,6 +372,10 @@ Before deployment, verify:
 
 - [ ] Contact form submits successfully (including retry on 429)
 - [ ] Retry UI shows correct language text and attempt counter
+- [ ] Validation diagnostics persist through Neon on INVALID_REQUEST (400):
+  - [ ] POST /api/sendBrief with invalid email returns 400 with requestId
+  - [ ] GET /api/logs?id=<requestId> returns 200 with validationStage, validationField, validationReason
+  - [ ] Neon request_logs row contains all 3 validation columns
 - [ ] Lifecycle observability: `GET /api/sendContact?id=<requestId>` returns `completed` status with all timestamps
 - [ ] Queue health: `/api/health?section=queue` includes `lifecycle` block with aggregate metrics
 - [ ] Structured log: `lifecycle.complete` stage emitted on every request completion
@@ -964,6 +973,22 @@ Diagnostic endpoint: `GET /api/sendContact?id=<requestId>` returns `{ requestId,
 `/api/health?section=queue` includes `lifecycle` aggregate metrics. Default `/api/health` also includes `lifecycle`.
 
 Limitations: in-memory only, per-instance, 1,000 entries, 5min TTL.
+
+### Validation Diagnostics Persistence
+
+Validation failures (`400 INVALID_REQUEST`) persist 3 diagnostic fields through Neon `request_logs`:
+
+| Field | SQL column | Example |
+|---|---|---|
+| `validationStage` | `validation_stage` | `validateEmail` |
+| `validationField` | `validation_field` | `email` |
+| `validationReason` | `validation_reason` | `invalid_format` |
+
+**Flow**: `sendBrief.js` → `registry.registerLifecycle()` → in-memory Map → `registry.persistImmediate()` → `_neon.saveLog()` → `request_logs` table.
+
+**Retrieval**: `GET /api/logs?id=<requestId>` reads from Neon (cross-instance source of truth). Entries with `status: "rejected"` include all 3 validation fields.
+
+**Critical implementation detail**: The `persistImmediate()` function (added in commit `42efb28`) `await`s the Neon INSERT before returning the 400 response. This is necessary because Vercel may freeze the serverless function immediately after the response is sent — a fire-and-forget Promise may never complete. See `lib/request-registry.js:132-139`.
 
 ### Client Retry & Backoff Strategy
 
