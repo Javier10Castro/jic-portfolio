@@ -442,19 +442,15 @@ This is a design-phase release (v1.6.0). No engines were modified — the existi
 
 ## [v1.5.0] - 2026-06-08
 
-### Added
-- Project Loader Engine v1 (lib/loader/index.js) — read-only project reconstruction from PostgreSQL
-- loadProject() — full project data with section-grouped form responses
-- rebuildPromptMaestro() — reconstructs Prompt Maestro string from stored data
-- getProjectState() — complete pipeline state combining DB + filesystem sources
-- listProjects() — enumerates all projects in the database
+### Added (Design)
+- Project Loader Engine v1 (lib/loader/) — design for read-only project reconstruction from PostgreSQL
+- loadProject(), rebuildPromptMaestro(), getProjectState(), listProjects() — API design
 - SQL migration (data/migrations/002_create_projects_executions.sql) — optional
-- Multi-source data reconstruction: form_responses + decisions.json + optional tables
-- Spanish/English bilingual Prompt Maestro reconstruction
-- 65+ field labels for human-readable key mapping
+- Multi-source data reconstruction spec: form_responses + decisions.json + optional tables
+- Spanish/English bilingual Prompt Maestro reconstruction design
 
 ### Notes
-This version adds the final read layer, completing the full CRUD cycle: Compiler → Plan → Scaffold → Persist → Load.
+This version adds the design for the read layer, completing the full design CRUD cycle: Compiler (design) → Plan → Scaffold → Persist → Load (design).
 
 ---
 
@@ -481,16 +477,15 @@ This version adds the persistence layer before the Orchestrator pipeline, ensuri
 ### Added
 - Decision Layer v1 (lib/decision/index.js) — architectural decision recording system
 - Deployment Engine v1 (lib/deployment/index.js) — automated Git/GitHub pipeline
-- Orchestrator Engine v1 (lib/orchestrator/index.js) — central controller for all modules
+- Orchestrator Engine v1 (lib/orchestrator/) — design for central controller (not implemented)
 - Persistent storage via data/deployments.json (auto-creating)
 - initRepository(), commitProject(), createGitHubRepo(), pushToRemote() API
 - deployFullPipeline() for end-to-end deployment orchestration
 - Graceful degradation when Git or GitHub CLI is unavailable
 - Deployment status tracking (deployed/failed/pending)
-- Dynamic input type detection (raw_email, structured_prompt, json_brief, existing_project)
-- Dynamic pipeline building based on input type
-- Session-based state management with step-by-step results
-- Automatic Decision Layer logging on module failure
+- Dynamic input type detection (design for raw_email, structured_prompt, json_brief, existing_project)
+- Session-based state management with step-by-step results (design)
+- Automatic Decision Layer logging on module failure (design)
 
 ### Notes
 This version adds the complete deployment pipeline and central orchestrator, finalizing the Project Factory system.

@@ -68,25 +68,27 @@ Layer 2 — Execution Layer (Internal Queue Scheduler)
 
 ```
 /
-├── index.html                 # Portfolio landing page
-├── brief-maestro.html         # 14-section strategic questionnaire
-├── dashboard.html             # Project list (status badges, create, auto-refresh)
-├── dashboard-project.html     # Project control center (pipeline tracker, scoring)
-├── dashboard-logs.html        # Execution logs + AI decision viewer
-├── dashboard-preview.html     # Preview renderer (iframe, approval)
-├── dashboard-api.js           # Shared API v1 integration layer
-├── test-data.json             # Test fixture (Salmos Café)
-├── public/scripts/
-│   ├── sendBrief-payload.js        Shared utility — production-grade payload builder (zero E2E dep)
-│   ├── e2e-brief-bypass-wizard.js  Testing layer — E2E tooling, uses payload builder
-│   └── load-e2e.js                 Legacy dynamic loader
+├── public/
+│   ├── index.html                 # Portfolio landing page
+│   ├── brief-maestro.html         # 14-section strategic questionnaire
+│   ├── dashboard.html             # Project list (status badges, create, auto-refresh)
+│   ├── dashboard-project.html     # Project control center (pipeline tracker, scoring)
+│   ├── dashboard-logs.html        # Execution logs + AI decision viewer
+│   ├── dashboard-preview.html     # Preview renderer (iframe, approval)
+│   ├── dashboard-api.js           # Shared API v1 integration layer
+│   ├── test-data.json             # Test fixture (Salmos Café)
+│   ├── icon.ico                   # Favicon
+│   ├── scripts/
+│   │   ├── sendBrief-payload.js        Shared utility — production-grade payload builder
+│   │   ├── e2e-brief-bypass-wizard.js  Testing layer — E2E tooling, uses payload builder
+│   │   └── load-e2e.js                 Legacy dynamic loader
+│   ├── icon.ico                   # Favicon
 │
 ├── api/
 │   ├── sendContact.js         # Contact form (2 emails, queue-based)
 │   ├── sendBrief.js           # Brief submission (2 emails + PDF, queue-based)
 │   ├── health.js              # Health + aggregate metrics endpoint
 │   ├── logs.js                # Request registry listing
-│   ├── projects/              # Dashboard API (legacy)
 │   └── v1/                    # SaaS API v1 (tenant-safe)
 │
 ├── lib/
@@ -95,19 +97,19 @@ Layer 2 — Execution Layer (Internal Queue Scheduler)
 │   ├── request-registry.js    # Lifecycle registry (memory → Neon → Redis, 3-tier)
 │   ├── logger.js              # Structured JSON logging, lifecycle tracing
 │   ├── safeBodyParser.js      # Body parser (req.body object/string → stream fallback)
-│   ├── compiler/              # Unified Brief Compiler v1
 │   ├── plan/                  # Plan Engine v1 (semantic compiler)
 │   ├── scaffold/              # Scaffold Engine v1 (filesystem generator)
 │   ├── decision/              # Decision Layer v1 (architectural log)
-│   ├── orchestrator/          # Orchestrator Engine v1 (central controller)
 │   ├── runtime/               # SaaS Runtime Layer v1 (pipeline orchestrator)
 │   ├── db/
 │   │   ├── index.js           # Pool + query + connection management (Neon PG)
 │   │   ├── formResponses.js   # Form Persistence Layer (save brief form data to PG)
 │   │   └── requestLogs.js     # Request lifecycle persistence (save/read lifecycle to PG)
-│   ├── loader/                # Project Loader Engine v1 (read-only)
+│   ├── compiler/              # (planned) Unified Brief Compiler v1
+│   ├── orchestrator/          # (planned) Orchestrator Engine v1 (central controller)
+│   ├── loader/                # (planned) Project Loader Engine v1 (read-only)
 │   ├── design-system/         # Design System Engine v1
-│   └── preview/               # Visual Preview Engine v1
+│   ├── preview/               # Visual Preview Engine v1
 │
 ├── data/
 │   ├── decisions.json         # Architectural decision records
@@ -524,7 +526,7 @@ The same data is also logged to Vercel stdout as `{ "type": "observability", "ev
 ```
 INPUT (raw_email / structured_prompt / json_brief)
     ↓
-COMPILER (lib/compiler/) — Unified Brief Compiler
+COMPILER (lib/compiler/) — (planned) Unified Brief Compiler
     ↓
 PLAN (lib/plan/) — Semantic IR (JSON blueprint)
     ↓
@@ -532,7 +534,7 @@ SCAFFOLD (lib/scaffold/) — Filesystem generator (index.html, assets/, README, 
     ↓
 FORM SAVER (lib/db/formResponses.js) — Persists to Neon (non-blocking, pre-orchestrator)
     ↓
-ORCHESTRATOR (lib/orchestrator/) — Central controller, coordinates all engines
+ORCHESTRATOR (lib/orchestrator/) — (planned) Central controller, coordinates all engines
     ↓
 DEPLOYMENT (lib/deployment/) — Git init, commit, GitHub repo, push (optional)
 ```

@@ -150,8 +150,9 @@ USER (Browser)
    │        ├── 4a. SAVE FORM → lib/db/formResponses.js
    │        │       → Persists all inputs to form_responses
    │        │
-   │        ├── 4b. ORCHESTRATOR → lib/orchestrator/index.js
-   │        │       → detectType(input) → buildPipeline(type)
+    │        ├── 4b. RUNTIME → lib/runtime/index.js
+    │        │       → plan → scaffold → deploy (actual implementation)
+    │        │       (lib/orchestrator/ remains planned for future unification)
    │        │
    │        ├── 4c. PLAN ENGINE → lib/plan/index.js
    │        │       → Semantic IR JSON

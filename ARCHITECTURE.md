@@ -481,20 +481,19 @@ Project path on disk (from Scaffold Engine)
 
 ---
 
-## Orchestrator Engine
+## Orchestrator Engine (Design)
 
-The `lib/orchestrator/` module is the **central controller** of the Agent Pack v1 system.
+The `lib/orchestrator/` module is designed as the **central controller** of the Agent Pack v1 system, but has not been implemented. Current orchestration is handled by `lib/runtime/index.js`.
 
-It dynamically coordinates all modules (Compiler, Plan, Scaffold, Decision Layer, Deployment) based on the detected input type.
+It would dynamically coordinate all modules (Compiler, Plan, Scaffold, Decision Layer, Deployment) based on the detected input type.
 
 ### Module structure
 
 ```
-/lib/orchestrator/
-  index.js            → entry point (input analyzer + pipeline builder + executor)
+/lib/orchestrator/          (planned)
 ```
 
-### Input type detection
+### Input type detection (design)
 
 | Type | Detection | Pipeline |
 |---|---|---|
@@ -503,57 +502,30 @@ It dynamically coordinates all modules (Compiler, Plan, Scaffold, Decision Layer
 | `json_brief` | Input is an object or string starting with `{`/`[` | `scaffold` |
 | `existing_project` | No build pipeline | deployment (if requested) |
 
-### API
-
-| Method | Signature | Returns | Description |
-|---|---|---|---|
-| `process` | `({ input, type?, deploy?, projectName?, projectType? })` | `{ session_id, status, steps, output }` | Full pipeline execution |
-| `detectType` | `(input)` | `'raw_email' \| 'structured_prompt' \| 'json_brief' \| 'existing_project'` | Classify input |
-| `buildPipeline` | `(inputType)` | `string[]` | Return step list per type |
-
-### Session output
-
-```json
-{
-  "session_id": "a1b2c3d4",
-  "input_type": "structured_prompt",
-  "status": "completed",
-  "pipeline": ["plan", "scaffold"],
-  "steps": [
-    { "name": "plan", "status": "completed", "result": {...} },
-    { "name": "scaffold", "status": "completed", "result": {...} }
-  ],
-  "errors": [],
-  "output": { "project_path": "salmos-cafe", "ir": {...}, "compiled": null }
-}
-```
-
-### Fallback intelligence
+### Fallback intelligence (design)
 
 - On module failure: auto-register in **Decision Layer** with error details
 - Pipeline continues with remaining steps (non-blocking)
 - Final status reflects overall result: `completed` / `partial` / `failed`
 - Deployment is controlled by the `deploy` option (default: true)
 
-### Constraints
+### Constraints (design)
 
 - Zero external dependencies
-- No existing module modification
 - Deterministic: same input + same options = same output
-- No data invention — orchestrates existing modules only
 
 ---
 
 ## Form Persistence Layer
 
-The `lib/db/formResponses.js` module persists all Brief Maestro form responses to PostgreSQL **before** the Orchestrator pipeline executes.
+The `lib/db/formResponses.js` module persists all Brief Maestro form responses to PostgreSQL **before** the pipeline executes.
 
 ```
 INPUT (Brief Maestro)
     ↓
-FORM SAVER (saves sections → form_responses table)
+FORM SAVER (guarda secciones → form_responses)
     ↓
-ORCHESTRATOR (compiler → plan → scaffold → deploy)
+RUNTIME (lib/runtime/index.js) (plan → scaffold → deploy)
 ```
 
 ### Module structure
@@ -628,17 +600,16 @@ In `api/sendBrief.js`, form persistence runs after validation but before any pip
 
 ---
 
-## Project Loader Engine
+## Project Loader Engine (Design)
 
-The `lib/loader/` module reconstructs projects from PostgreSQL and local filesystem data.
+The `lib/loader/` module is designed to reconstruct projects from PostgreSQL and local filesystem data, but has not been implemented.
 
-It is a **read-only** module — it queries and reconstructs without modifying any data.
+It would be a **read-only** module — it queries and reconstructs without modifying any data.
 
 ### Module structure
 
 ```
-/lib/loader/
-  index.js            → entry point (queries + data reconstruction)
+/lib/loader/          (planned)
 ```
 
 ### API

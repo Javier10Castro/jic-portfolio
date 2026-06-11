@@ -47,16 +47,16 @@ Lead generation and client onboarding through contact forms, AI-powered brief co
 ├── .vercel/                   # Vercel cache (auto-generated, ignore)
 ├── node_modules/              # Dependencies (npm install)
 ├── lib/                       # Internal system modules
-│   ├── compiler/              # Unified Brief Compiler v1
 │   ├── plan/                  # Plan Engine v1 (semantic compiler)
 │   ├── scaffold/              # Scaffold Engine v1 (filesystem generator)
 │   ├── decision/              # Decision Layer v1 (architectural log)
-│   ├── orchestrator/          # Orchestrator Engine v1 (central controller)
 │   ├── db/                    # Database modules (Neon PostgreSQL)
-│   ├── loader/                # Project Loader Engine v1 (read-only)
 │   ├── design-system/         # Design System Engine v1 (CSS vars + tokens)
 │   ├── preview/               # Visual Preview Engine v1 (simulation)
-│   └── runtime/               # SaaS Runtime Layer v1 (pipeline orchestrator)
+│   ├── runtime/               # SaaS Runtime Layer v1 (pipeline orchestrator)
+│   ├── compiler/              # (planned) Unified Brief Compiler v1
+│   ├── orchestrator/          # (planned) Orchestrator Engine v1 (central controller)
+│   └── loader/                # (planned) Project Loader Engine v1 (read-only)
 ├── data/                      # Runtime storage (not committed)
 │   ├── decisions.json         # Architectural decision records
 │   ├── deployments.json       # Deployment records
@@ -64,17 +64,17 @@ Lead generation and client onboarding through contact forms, AI-powered brief co
 ├── api/                       # Vercel Serverless Functions
 │   ├── sendBrief.js           # Brief submission (2 emails + PDF)
 │   ├── sendContact.js         # Contact form (2 emails)
-│   ├── projects/              # Dashboard API (legacy)
 │   └── v1/                    # SaaS API v1 (tenant-safe)
-├── dashboard-api.js           # Shared API v1 integration layer (workspace auth, polling)
-├── dashboard.html             # Project list with status badges, create form, auto-refresh
-├── dashboard-project.html     # Project control center (pipeline tracker, scoring, controls)
-├── dashboard-logs.html        # Live execution logs + AI decision viewer
-├── dashboard-preview.html     # Preview renderer (iframe, version selector, approval)
-├── index.html                 # Portfolio landing page
-├── brief-maestro.html         # Brief Maestro tool (14 sections)
+├── public/                    # Static assets served by Vercel
+│   ├── dashboard-api.js       # Shared API v1 integration layer (workspace auth, polling)
+│   ├── dashboard.html         # Project list with status badges, create form, auto-refresh
+│   ├── dashboard-project.html # Project control center (pipeline tracker, scoring, controls)
+│   ├── dashboard-logs.html    # Live execution logs + AI decision viewer
+│   ├── dashboard-preview.html # Preview renderer (iframe, version selector, approval)
+│   ├── index.html             # Portfolio landing page
+│   ├── brief-maestro.html     # Brief Maestro tool (14 sections)
+│   ├── icon.ico               # Favicon
 ├── test-data.json             # Test fixture (Salmos Café)
-├── icon.ico                   # Favicon
 ├── package.json               # Project metadata + dependencies
 ├── package-lock.json          # npm lockfile
 ├── AGENTS.md                  # This file
@@ -87,22 +87,30 @@ Lead generation and client onboarding through contact forms, AI-powered brief co
 /
 ├── api/
 │   ├── sendBrief.js          # Vercel Function: brief submission (2 emails + PDF)
-│   └── sendContact.js        # Vercel Function: contact form (2 emails)
-├── .vercel/                   # Vercel cache (auto-generated, ignore)
-├── node_modules/              # Dependencies (npm install)
+│   ├── sendContact.js        # Vercel Function: contact form (2 emails)
+│   ├── health.js             # Health endpoint
+│   ├── logs.js               # Registry reader
+│   └── v1/                   # SaaS API v1 (tenant-safe)
 ├── lib/                       # Internal system modules
-│   ├── compiler/              # Unified Brief Compiler v1
+│   ├── queue.js               # Background FIFO queue
+│   ├── rate-limit.js          # Edge gate (IP, timing, dedup, honeypot)
+│   ├── request-registry.js    # Lifecycle tracking (Neon + memory)
+│   ├── logger.js              # Structured logger
+│   ├── safeBodyParser.js      # Payload parsing
 │   ├── plan/                  # Plan Engine v1 (semantic compiler)
 │   ├── scaffold/              # Scaffold Engine v1 (filesystem generator)
 │   ├── decision/              # Decision Layer v1 (architectural log)
-│   ├── orchestrator/          # Orchestrator Engine v1 (central controller)
-│   ├── db/                    # Database modules (Neon PostgreSQL)
-│   │   ├── index.js           # Pool + query + connection management
-│   │   └── formResponses.js   # Form Persistence Layer v1
-│   ├── loader/                # Project Loader Engine v1 (read-only)
+│   ├── deployment/            # Deployment Engine v1 (Git/GitHub)
 │   ├── design-system/         # Design System Engine v1 (CSS vars + tokens)
 │   ├── preview/               # Visual Preview Engine v1 (simulation)
 │   ├── runtime/               # SaaS Runtime Layer v1 (pipeline orchestrator)
+│   ├── db/
+│   │   ├── index.js           # Pool manager
+│   │   ├── requestLogs.js     # Neon CRUD for lifecycle
+│   │   └── formResponses.js   # Form response persistence
+│   ├── compiler/              # (planned) Unified Brief Compiler v1
+│   ├── orchestrator/          # (planned) Orchestrator Engine v1 (central controller)
+│   ├── loader/                # (planned) Project Loader Engine v1 (read-only)
 │   ├── scoring/               # (planned) Decision Scoring Engine v2
 │   ├── queue/                 # (planned) Bull/Redis job queue adapter
 │   ├── storage/               # (planned) Blob storage adapter
@@ -111,16 +119,18 @@ Lead generation and client onboarding through contact forms, AI-powered brief co
 ├── data/                      # Runtime storage (not committed)
 │   ├── decisions.json         # Architectural decision records
 │   ├── deployments.json       # Deployment records
-│   └── migrations/            # SQL migration scripts
-├── index.html                 # Portfolio landing page
-├── brief-maestro.html         # Brief Maestro tool (14 sections)
-├── test-data.json             # Test fixture (Salmos Café)
-├── dashboard-api.js           # Shared API v1 integration layer (workspace auth, polling)
-├── dashboard.html             # Project list with status badges, create form, auto-refresh
-├── dashboard-project.html     # Project control center (pipeline tracker, scoring, controls)
-├── dashboard-logs.html        # Live execution logs + AI decision viewer
-├── dashboard-preview.html     # Preview renderer (iframe, version selector, approval)
-├── icon.ico                   # Favicon
+│   └── migrations/            # SQL migration scripts (versioned)
+├── public/                    # Static assets served by Vercel
+│   ├── index.html             # Portfolio landing page
+│   ├── brief-maestro.html     # Brief Maestro tool (14 sections)
+│   ├── dashboard.html         # Project list
+│   ├── dashboard-project.html # Project control center
+│   ├── dashboard-logs.html    # Execution logs
+│   ├── dashboard-preview.html # Preview renderer
+│   ├── dashboard-api.js       # Shared API v1 integration
+│   ├── icon.ico               # Favicon
+│   ├── scripts/               # JS modules
+│   └── test-data.json         # Test fixture (Salmos Café)
 ├── package.json               # Project metadata + dependencies
 ├── package-lock.json          # npm lockfile
 ├── AGENTS.md                  # This file
@@ -698,18 +708,17 @@ Reglas:
 
 ---
 
-## Orchestrator Engine (v1)
+## Orchestrator Engine (v1 — Design)
 
-El módulo `lib/orchestrator/` es el **controlador central** del sistema Agent Pack v1.
+El módulo `lib/orchestrator/` está diseñado como el **controlador central** del sistema Agent Pack v1, pero aún no ha sido implementado. Actualmente la orquestación la maneja `lib/runtime/index.js`.
 
-Coordina dinámicamente todos los módulos (Compiler, Plan, Scaffold, Decision Layer, Deployment) según el tipo de input detectado.
+Coordinaria dinámicamente todos los módulos (Compiler, Plan, Scaffold, Decision Layer, Deployment) según el tipo de input detectado.
 
 ```
-/lib/orchestrator/
-  index.js            → entry point (input analyzer + pipeline builder + executor)
+/lib/orchestrator/          (planned)
 ```
 
-### Input types
+### Input types (design)
 
 | Tipo | Detección | Pipeline |
 |---|---|---|
@@ -718,32 +727,7 @@ Coordina dinámicamente todos los módulos (Compiler, Plan, Scaffold, Decision L
 | `json_brief` | Input es objeto JSON o string que empieza con `{`/`[` | `scaffold` |
 | `existing_project` | No tiene pipeline de build | `deployment` (si se solicita) |
 
-**API** pública:
-
-| Función | Input | Output | Descripción |
-|---|---|---|---|
-| `process(opts)` | `{ input, type?, deploy?, projectName?, projectType? }` | `{ session_id, status, steps, output }` | Ejecuta pipeline completo según tipo de input |
-| `detectType(input)` | string/object | `'raw_email' \| 'structured_prompt' \| 'json_brief' \| 'existing_project'` | Analiza y clasifica el input |
-| `buildPipeline(inputType)` | string | `string[]` | Devuelve lista de pasos para el tipo |
-
-### Session output
-
-```json
-{
-  "session_id": "a1b2c3d4",
-  "input_type": "structured_prompt",
-  "status": "completed",
-  "pipeline": ["plan", "scaffold"],
-  "steps": [
-    { "name": "plan", "status": "completed", "result": { "project": {...} } },
-    { "name": "scaffold", "status": "completed", "result": { "path": "...", "files": [...] } }
-  ],
-  "errors": [],
-  "output": { "project_path": "...", "ir": {...}, "compiled": {...} }
-}
-```
-
-### Fallback intelligence
+### Fallback intelligence (design)
 
 - Si un paso falla, se registra automáticamente en **Decision Layer**
 - El pipeline continúa con los pasos restantes
@@ -768,7 +752,7 @@ INPUT (Brief Maestro)
     ↓
 FORM SAVER (guarda secciones → form_responses)
     ↓
-ORCHESTRATOR (compiler → plan → scaffold → deploy)
+RUNTIME (lib/runtime/index.js) (plan → scaffold → deploy)
 ```
 
 ### Schema PostgreSQL
@@ -825,18 +809,17 @@ Cada campo del formulario se asigna automáticamente a una sección según su pr
 
 ---
 
-## Project Loader Engine (v1)
+## Project Loader Engine (v1 — Design)
 
-El módulo `lib/loader/` reconstruye proyectos desde PostgreSQL y archivos del sistema.
+El módulo `lib/loader/` está diseñado para reconstruir proyectos desde PostgreSQL y archivos del sistema, pero aún no ha sido implementado.
 
 Es un módulo **read-only** — no modifica datos, solo los consulta y reconstruye.
 
 ```
-/lib/loader/
-  index.js            → entry point (queries + data reconstruction)
+/lib/loader/          (planned)
 ```
 
-**API**:
+### API (design)
 
 | Función | Input | Output | Descripción |
 |---|---|---|---|
@@ -845,7 +828,7 @@ Es un módulo **read-only** — no modifica datos, solo los consulta y reconstru
 | `getProjectState(project_id)` | string | `{ project, form_responses, execution_history, decisions }` | Estado completo del proyecto |
 | `listProjects()` | — | Array | Lista todos los proyectos con metadata |
 
-### Fuentes de datos
+### Fuentes de datos (design)
 
 | Fuente | Tipo | Propósito |
 |---|---|---|
@@ -854,7 +837,7 @@ Es un módulo **read-only** — no modifica datos, solo los consulta y reconstru
 | `executions` (PostgreSQL) | Tabla opcional | Historial de ejecuciones del pipeline |
 | `data/decisions.json` | Archivo local | Decisiones arquitectónicas del sistema |
 
-### Reglas
+### Reglas (design)
 
 - Solo lectura de datos, nunca escribe
 - Tablas opcionales (`projects`, `executions`) no bloquean si no existen
@@ -884,8 +867,7 @@ The system has been extended with a full multi-tenant SaaS architecture design. 
 - Existing `api/` endpoints remain functional — new SaaS endpoints are additive
 - Legacy `form_responses` table preserved — `project_inputs` is the new standard
 - Existing `data/decisions.json` remains for architectural decisions; `decisions` table is for AI governance
-- Dashboard API routes (`/api/projects/*`) remain for backward compat — new SaaS API at `/api/v1/*`
-- `lib/runtime/index.js` is a new module that orchestrates all engines — it does not replace `lib/orchestrator/`
+- `lib/runtime/index.js` is a new module that orchestrates all engines — it does not require `lib/orchestrator/` (planned for future use)
 
 ### SaaS Architecture Reference
 

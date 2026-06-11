@@ -69,14 +69,14 @@ In-memory pub/sub + optional PostgreSQL persistence for real-time dashboard upda
 ### Engine Modules (`lib/*/`)
 
 | Module | Purpose | API |
-|---|---|---|
-| `lib/compiler/` | Unified Brief Compiler v1 — bridges raw email/notes → structured brief | `compile(input)` → structured object |
+|---|---|---|---|
+| `lib/compiler/` | (planned) Unified Brief Compiler v1 — bridges raw email/notes → structured brief | `compile(input)` → structured object |
 | `lib/plan/` | Plan Engine v1 — converts Prompt Maestro → Semantic Intermediate Representation (JSON) | `compile(prompt)` → `{ project: { identity, structure, ui, content, seo, conversion, assets, rules } }` |
 | `lib/scaffold/` | Scaffold Engine v1 — generates filesystem project from IR | `generate(projectDef)` → `{ path, files[] }` |
 | `lib/decision/` | Decision Layer v1 — architectural decision records (system-level, not user-level) | `registerDecision({ id, title, reason, impact, modules_affected, version })`, `listDecisions()`, `getDecision(id)`. Persists to `data/decisions.json` |
 | `lib/deployment/` | Deployment Engine v1 — Git/GitHub/Vercel automation | `initRepository(path)`, `commitProject(path)`, `createGitHubRepo(name, path)`, `pushToRemote(path)`, `deployFullPipeline(path, opts)`. Persists to `data/deployments.json` |
-| `lib/orchestrator/` | Orchestrator Engine v1 — single-project pipeline builder | `process({ input, type, deploy? })`, `detectType(input)`, `buildPipeline(inputType)` |
-| `lib/loader/` | Project Loader Engine v1 — read-only project reconstruction from DB | `loadProject(projectId)`, `rebuildPromptMaestro(projectId, lang?)`, `getProjectState(projectId)`, `listProjects()` |
+| `lib/orchestrator/` | (planned) Orchestrator Engine v1 — single-project pipeline builder | `process({ input, type, deploy? })`, `detectType(input)`, `buildPipeline(inputType)` |
+| `lib/loader/` | (planned) Project Loader Engine v1 — read-only project reconstruction from DB | `loadProject(projectId)`, `rebuildPromptMaestro(projectId, lang?)`, `getProjectState(projectId)`, `listProjects()` |
 | `lib/design-system/` | Design System Engine v1 — CSS variables + tokens from brand input | `generateTokens(brandData)` → `{ css, variables, typography, spacing }` |
 | `lib/preview/` | Visual Preview Engine v1 — HTML/CSS simulation | `renderPreview(projectDef)` → `{ html, css }` |
 | `lib/db/` | Database layer (PostgreSQL) | `index.js` — pool + query connection management. `formResponses.js` — Form Persistence Layer: `saveFormResponse`, `saveBulkFormResponses`, `getProjectFormResponses`, `getResponsesGrouped`, `generateProjectId` |
