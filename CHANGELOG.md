@@ -1,5 +1,19 @@
 # Changelog
 
+## [v1.3.0] - 2026-06-11
+
+### Added
+- [2026-06-11] - Neon PostgreSQL persistent request lifecycle registry (replaces in-memory-only)
+  - `data/migrations/006_request_logs.sql` — new `request_logs` table with 17 columns + indexes
+  - `lib/db/requestLogs.js` — CRUD + aggregate query functions (saveLog, getLog, listLogs, getAggregateMetrics)
+  - `lib/request-registry.js` — rewritten: Neon as source of truth, in-memory Map as cache layer, Redis as inactive fallback
+  - `api/sendBrief.js` — missing lifecycle registration added (queued, completed stages)
+  - Persistence model: fire-and-forget Neon writes (never block API), memory-first reads with Neon fallback
+  - Dashboards: removed "Demo Mode" — always show real data from Neon-backed `/api/logs`
+  - Files: `lib/db/requestLogs.js` (new), `data/migrations/006_request_logs.sql` (new), `lib/request-registry.js` (rewritten), `api/sendBrief.js` (modified), `public/dashboard.html` (modified), `public/dashboard-logs.html` (modified)
+  - Reason: Vercel cold starts lose all in-memory state after ~30-60s idle; Neon provides cross-instance persistence
+  - Impact: `/api/logs` and `/api/health` lifecycle metrics survive cold starts across all Vercel instances
+
 ## [v1.2.2] - 2026-06-10
 
 ### Added
