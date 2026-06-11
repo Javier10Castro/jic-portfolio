@@ -217,7 +217,11 @@ lib/
 public/
 ├── index.html          Portfolio
 ├── brief-maestro.html  Brief wizard
+├── dashboard.html      SaaS project list
+├── dashboard-project.html  Project control center
 ├── dashboard-logs.html Execution logs dashboard
+├── dashboard-preview.html  Visual preview renderer
+├── icon.ico            Site favicon
 ├── scripts/
 │   ├── e2e-brief-bypass-wizard.js  Global E2E testing module
 │   └── load-e2e.js     Legacy dynamic loader (load-e2e)

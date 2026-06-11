@@ -1,5 +1,14 @@
 # Changelog
 
+## [v1.3.2] - 2026-06-11
+
+### Added
+- [2026-06-11] - Consistent favicon across all HTML views
+  - Added `<link rel="icon" href="icon.ico" type="image/x-icon">` to `<head>` of all 4 dashboard files:
+    `dashboard.html`, `dashboard-logs.html`, `dashboard-project.html`, `dashboard-preview.html`
+  - `index.html` and `brief-maestro.html` already had it
+  - All 6 HTML views now share the same JIC favicon
+
 ## [v1.3.1] - 2026-06-11
 
 ### Changed
