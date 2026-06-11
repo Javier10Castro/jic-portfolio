@@ -105,7 +105,7 @@ POST /api/sendBrief
 - **Portfolio** (`index.html`): Landing page, contact form, services, projects
 - **Brief Maestro** (`brief-maestro.html`): 14-section wizard, generates prompt, submits to `/api/sendBrief`
 - **Dashboards**: Project management, execution logs, preview, pipeline control
-- **E2E Testing** (`e2e-brief-bypass-wizard.js`): Global script loaded on all pages, exposes `runBriefE2E`, `runBriefE2EConsole`, `ensureE2E`
+- **E2E Testing** (`e2e-brief-bypass-wizard.js`): Global script loaded on all pages, exposes `buildSendBriefPayload`, `runBriefE2E`, `runBriefE2EConsole`, `ensureE2E`
 
 No frameworks, no build step, no TypeScript.
 
@@ -174,6 +174,7 @@ See `docs/E2E_SYSTEM.md` for full documentation.
 | `runBriefE2E(2)` | brief-maestro.html (wizard) | Yes (formData, generatePrompt) |
 | `runBriefE2E(2)` | Any page (standalone) | No |
 | `runBriefE2EConsole()` | Any page | No |
+| `buildSendBriefPayload()` | Any page | No — pure function |
 
 ## Key Differences: Production vs Testing
 

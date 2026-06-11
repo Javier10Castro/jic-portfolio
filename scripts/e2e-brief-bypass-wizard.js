@@ -20,6 +20,28 @@
   };
   var sleep = function(ms) { return new Promise(function(r) { setTimeout(r, ms); }); };
 
+  // -- Unified Payload Builder ------------------------------------------------
+  function buildSendBriefPayload(opts) {
+    var name = opts.name || '';
+    var email = opts.email || '';
+    var company = opts.company || '';
+    var phone = opts.phone || '';
+    var prompt = opts.prompt || opts.message || '';
+    var rawFormData = opts.formData || {};
+    var source = opts.source || 'unknown';
+    var lang = opts.lang;
+    if (!lang && typeof currentLang !== 'undefined') lang = currentLang;
+    if (!lang) lang = 'es';
+    var payload = {
+      name: name, email: email, company: company, phone: phone,
+      prompt: prompt, lang: lang,
+      formData: JSON.parse(JSON.stringify(rawFormData)),
+      submittedAt: Date.now()
+    };
+    console.log('[PAYLOAD:' + source.toUpperCase() + ']', JSON.parse(JSON.stringify(payload)));
+    return payload;
+  }
+
   // -- Test Data -------------------------------------------------------------
   // Los acentos espanoles se mantienen porque son datos que el backend espera.
   var TEST_DATA = {
@@ -181,15 +203,15 @@
     }
 
     // 3. Construir payload exacto
-    var payload = {
+    var payload = buildSendBriefPayload({
       name: contactInfo.name,
       email: contactInfo.email,
       company: contactInfo.company || '',
       phone: contactInfo.phone || '',
       prompt: prompt,
-      lang: typeof currentLang !== 'undefined' ? currentLang : 'es',
-      formData: JSON.parse(JSON.stringify(formData || TEST_DATA))
-    };
+      formData: formData || TEST_DATA,
+      source: 'v1-direct-api'
+    });
 
     log('Payload built');
     log('  endpoint: /api/sendBrief');

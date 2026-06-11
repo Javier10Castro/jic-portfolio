@@ -1680,7 +1680,7 @@ async function submitContact(){
   if(!valid)return;
   btn.classList.add('loading');btn.disabled=true;
   const prompt=generatePrompt();
-  const payload={name,email,company,phone,prompt,lang:currentLang,formData:JSON.parse(JSON.stringify(formData)),submittedAt:Date.now()};
+  const payload=window.buildSendBriefPayload({name,email,company,phone,prompt,lang:currentLang,formData,source:'wizard'});
   const MAX_RETRIES=4;
   const BACKOFF=[0,1000,2000,4000];
   for(let attempt=1;attempt<=MAX_RETRIES;attempt++){

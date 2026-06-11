@@ -24,6 +24,40 @@
   };
   var sleep = function(ms) { return new Promise(function(r) { setTimeout(r, ms); }); };
 
+  // -- Unified Payload Builder ------------------------------------------------
+  // Single source of truth for all /api/sendBrief payloads across all flows.
+  // Guarantees identical shape: submittedAt, normalized optionals, no mutation.
+  function buildSendBriefPayload(opts) {
+    var name = opts.name || '';
+    var email = opts.email || '';
+    var company = opts.company || '';
+    var phone = opts.phone || '';
+    var prompt = opts.prompt || opts.message || '';
+    var rawFormData = opts.formData || {};
+    var source = opts.source || 'unknown';
+    var lang = opts.lang;
+
+    if (!lang && typeof currentLang !== 'undefined') lang = currentLang;
+    if (!lang) lang = 'es';
+
+    var payload = {
+      name: name,
+      email: email,
+      company: company,
+      phone: phone,
+      prompt: prompt,
+      lang: lang,
+      formData: JSON.parse(JSON.stringify(rawFormData)),
+      submittedAt: Date.now()
+    };
+
+    // TODO: remove debug logs after validation
+    console.log('[PAYLOAD:' + source.toUpperCase() + ']', JSON.parse(JSON.stringify(payload)));
+
+    return payload;
+  }
+  window.buildSendBriefPayload = buildSendBriefPayload;
+
   // -- Test Data -------------------------------------------------------------
   var TEST_DATA = {
     biz_name: 'Salmos Cafe',
@@ -176,15 +210,15 @@
       log('[WARN] generatePrompt() not found, using fallback prompt');
     }
 
-    var payload = {
+    var payload = buildSendBriefPayload({
       name: contactInfo.name,
       email: contactInfo.email,
       company: contactInfo.company || '',
       phone: contactInfo.phone || '',
       prompt: prompt,
-      lang: typeof currentLang !== 'undefined' ? currentLang : 'es',
-      formData: JSON.parse(JSON.stringify(formData || data))
-    };
+      formData: formData || data,
+      source: 'direct-api'
+    });
 
     return _sendPayload(payload);
   }
@@ -213,15 +247,15 @@
       promptText = '# PROMPT MAESTRO - GENERACION DE SITIO WEB PROFESIONAL\nGenerado por E2E Console test';
     }
 
-    var payload = {
+    var payload = buildSendBriefPayload({
       name: contactInfo.name,
       email: contactInfo.email,
       company: contactInfo.company || '',
       phone: contactInfo.phone || '',
       prompt: promptText,
-      lang: 'es',
-      formData: formDataPayload
-    };
+      formData: formDataPayload,
+      source: 'standalone'
+    });
 
     log('Payload built (standalone, no DOM)');
     log('  name: ' + payload.name);
@@ -355,17 +389,23 @@
   };
 
   // -- Console-safe API ------------------------------------------------------
+  // Self-contained: builds payload directly, no routing through runBriefE2E(2).
   window.runBriefE2EConsole = async function(data) {
     await window.ensureE2E();
-    return window.runBriefE2E(2, {
+    log('=== runBriefE2EConsole (standalone) ===');
+
+    var payload = buildSendBriefPayload({
       name: data.name || 'Test User',
       email: data.email || 'test@demo.com',
       company: data.company || 'Test Co',
-      phone: data.phone || ''
-    }, {
-      prompt: data.message || 'E2E test submission via console',
-      formData: data.formData || {}
+      phone: data.phone || '',
+      message: data.message || '',
+      prompt: data.prompt || null,
+      formData: data.formData || {},
+      source: 'console'
     });
+
+    return await _sendPayload(payload);
   };
 
   log('========================================');

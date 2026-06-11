@@ -1,5 +1,25 @@
 # Changelog
 
+## [v1.3.1] - 2026-06-11
+
+### Changed
+- [2026-06-11] - Unified `/api/sendBrief` payload builder across all E2E flows
+  - `public/scripts/e2e-brief-bypass-wizard.js` — new `buildSendBriefPayload()` as single source of truth
+  - `public/brief-maestro.html:1683` — `submitContact()` now delegates to `buildSendBriefPayload()`
+  - `public/scripts/e2e-brief-bypass-wizard.js` — `runDirectAPI()` and `runDirectAPIStandalone()` use builder
+  - `public/scripts/e2e-brief-bypass-wizard.js` — `runBriefE2EConsole()` now self-contained (no routing through Mode 2)
+  - `scripts/e2e-brief-bypass-wizard.js` — v1 legacy copy updated with same builder
+  - Builder guarantees: `submittedAt: Date.now()` always present, deep copy of formData (no mutation), identical shape across all 4 flows
+  - Debug logs: `[PAYLOAD:WIZARD]`, `[PAYLOAD:DIRECT-API]`, `[PAYLOAD:STANDALONE]`, `[PAYLOAD:CONSOLE]` for cross-flow comparison (TODOs for removal)
+  - Fixes HTTP 400 `INVALID_REQUEST` on `runBriefE2EConsole()` (was missing `submittedAt`)
+  - Backward compatible: `runBriefE2E(1)` and `runBriefE2E(2)` unchanged
+  - Reason: eliminate payload inconsistencies between wizard, direct API, and console flows
+
+### Docs
+- [2026-06-11] - Updated `docs/E2E_SYSTEM.md` with `buildSendBriefPayload` contract, flow descriptions, and removed fixed limitation
+- [2026-06-11] - Updated `docs/ARCHITECTURE_OVERVIEW.md` with builder in global functions list
+- [2026-06-11] - Updated `docs/AI_CONTEXT_PACK.md` with builder in E2E testing section
+
 ## [v1.3.0] - 2026-06-11
 
 ### Added

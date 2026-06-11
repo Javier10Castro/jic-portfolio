@@ -8,13 +8,51 @@ It is loaded automatically via `<script defer>` on all three public pages: `inde
 
 ## Global Functions
 
-All three functions are exposed on `window`:
+All functions are exposed on `window`:
 
 ```js
+buildSendBriefPayload(opts)       // Unified payload builder (single source of truth)
 runBriefE2E(mode, contactInfo, dataOverride)
 runBriefE2EConsole(data)
 ensureE2E()
 ```
+
+---
+
+## buildSendBriefPayload(opts) — Unified Payload Builder
+
+Single source of truth for all `/api/sendBrief` payloads. Used by `submitContact()` (wizard), `runBriefE2E(2)`, and `runBriefE2EConsole()`.
+
+```js
+var payload = buildSendBriefPayload({
+  name, email, company, phone,
+  message,        // Used as prompt if prompt is not provided
+  prompt,         // Master prompt string (takes precedence over message)
+  formData,       // 14-section form data object
+  lang,           // 'es' | 'en' (auto-detects currentLang global)
+  source          // Label for debug logs: 'wizard', 'direct-api', 'standalone', 'console'
+});
+```
+
+### Contract
+
+| Field | Behaviour |
+|---|---|
+| `name` | Normalized to string, defaults to `''` |
+| `email` | Normalized to string, defaults to `''` |
+| `company` | Normalized to string, defaults to `''` |
+| `phone` | Normalized to string, defaults to `''` |
+| `prompt` | Used if provided; falls back to `message` |
+| `formData` | Deep-copied (no mutation of source), defaults to `{}` |
+| `lang` | Falls back to `window.currentLang`, then to `'es'` |
+| `submittedAt` | **Always** set to `Date.now()` — never missing |
+
+### Guarantees
+
+- **Always** includes `submittedAt: Date.now()` (passes timing check)
+- **Never** mutates the original `formData` object (deep copy)
+- **Always** produces identical shape regardless of calling flow
+- Emits `[PAYLOAD:SOURCE]` debug log to console for cross-flow comparison
 
 ---
 
@@ -51,7 +89,7 @@ If `formData` exists globally:
 
 1. Merges `dataOverride` into global `formData`
 2. Calls `generatePrompt()` to build the master prompt
-3. Constructs full API payload (`name`, `email`, `prompt`, `formData`, `lang`)
+3. Calls `buildSendBriefPayload()` to construct the unified payload
 4. Sends `POST /api/sendBrief`
 
 #### Path B: Standalone context (any page)
@@ -61,7 +99,8 @@ If `formData` does NOT exist globally:
 1. Uses `dataOverride` fields directly — no global variables needed
 2. Extracts `dataOverride.prompt` as prompt string (or uses default)
 3. Extracts `dataOverride.formData` as the form data object (or empty `{}`)
-4. Sends `POST /api/sendBrief`
+4. Calls `buildSendBriefPayload()` to construct the unified payload
+5. Sends `POST /api/sendBrief`
 
 ### Parameters
 
@@ -137,14 +176,16 @@ runBriefE2EConsole({
 | `email` | No | `'test@demo.com'` | `contactInfo.email` |
 | `company` | No | `'Test Co'` | `contactInfo.company` |
 | `phone` | No | `''` | `contactInfo.phone` |
-| `message` | No | `'E2E test submission via console'` | `dataOverride.prompt` |
-| `formData` | No | `{}` | `dataOverride.formData` |
+| `message` | No | `'E2E test submission via console'` | Becomes `prompt` (via builder fallback) |
+| `prompt` | No | `null` | Takes precedence over `message` |
+| `formData` | No | `{}` | Deep-copied into payload |
 
 ### Internal Flow
 
 1. Calls `ensureE2E()` to guarantee the script is loaded
-2. Calls `runBriefE2E(2, contactInfo, { prompt, formData })`
-3. Execution follows **Mode 2 Path B** (standalone, no DOM needed)
+2. Calls `buildSendBriefPayload()` directly with all parameters
+3. Calls `_sendPayload()` directly — no routing through `runBriefE2E(2)`
+4. Fully self-contained: zero dependency on DOM or global `formData`
 
 ---
 
@@ -241,20 +282,22 @@ var hasFormData = (typeof formData !== 'undefined');
 
 The standalone path reads zero global variables and accesses zero DOM nodes.
 
-### 3. Self-Contained Payload Building
+### 3. Self-Contained Payload Building via buildSendBriefPayload()
+
+All flows now delegate to `buildSendBriefPayload()`:
 
 ```js
 // In runDirectAPIStandalone
-var payload = {
+var payload = buildSendBriefPayload({
   name: contactInfo.name,
   email: contactInfo.email,
-  prompt: promptText,       // from dataOverride.prompt or default
-  lang: 'es',               // hardcoded default
-  formData: formDataPayload // from dataOverride.formData or {}
-};
+  prompt: promptText,
+  formData: formDataPayload,
+  source: 'standalone'
+});
 ```
 
-No external state needed — everything comes from parameters.
+The builder normalizes fields, deep-copies formData, and always injects `submittedAt: Date.now()`.
 
 ---
 
@@ -266,8 +309,7 @@ console commands, API tests, lifecycle debugging, and failure mode diagnosis.
 ## Limitations
 
 | Limitation | Detail | Impact |
-|---|---|---|
-| No `submittedAt` field | `runBriefE2EConsole` does not set `submittedAt` in payload | May trigger timing check rejection in strict environments |
+|---|---|---|---|
 | Fire-and-forget Neon | Lifecycle writes are async, not awaited | Brief entry may not appear in `/api/logs` if function terminates too early |
 | In-memory only queue state | Queue depth, active workers, retry state all ephemeral | Dashboard queue metrics reset on cold start |
 | Single-instance queue | No cross-Vercel-instance queue coordination | Concurrent requests to different instances each have their own queue |
