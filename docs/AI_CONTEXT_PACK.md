@@ -76,6 +76,10 @@ Layer 2 — Execution Layer (Internal Queue Scheduler)
 ├── dashboard-preview.html     # Preview renderer (iframe, approval)
 ├── dashboard-api.js           # Shared API v1 integration layer
 ├── test-data.json             # Test fixture (Salmos Café)
+├── public/scripts/
+│   ├── sendBrief-payload.js        Shared utility — production-grade payload builder (zero E2E dep)
+│   ├── e2e-brief-bypass-wizard.js  Testing layer — E2E tooling, uses payload builder
+│   └── load-e2e.js                 Legacy dynamic loader
 │
 ├── api/
 │   ├── sendContact.js         # Contact form (2 emails, queue-based)
@@ -410,15 +414,26 @@ Frontend auto-retry on 429:
 
 Global functions available on all pages:
 
-### `buildSendBriefPayload(opts)` — Unified Payload Builder
+### Architecture: Shared Utility + Testing Layer
+
+The payload builder lives in **`public/scripts/sendBrief-payload.js`** (shared utility, production-grade, zero E2E dependencies). The E2E testing layer lives in **`public/scripts/e2e-brief-bypass-wizard.js`** and depends on the shared utility — not the other way around.
+
+| Layer | File | Purpose |
+|---|---|---|
+| Shared Utility | `sendBrief-payload.js` | Defines `window.buildSendBriefPayload()` — used by production and testing |
+| Testing Layer | `e2e-brief-bypass-wizard.js` | Defines `runBriefE2E()`, `runBriefE2EConsole()`, `ensureE2E()` — uses builder from shared utility |
+
+`brief-maestro.html` loads `sendBrief-payload.js` first, then the E2E script. If the E2E script fails to load, `submitContact()` continues working because the payload builder is already on `window`.
+
+### `buildSendBriefPayload(opts)` — Unified Payload Builder (in `sendBrief-payload.js`)
 Single source of truth for all `/api/sendBrief` payloads. Called by wizard, direct API, and console flows. Always includes `submittedAt: Date.now()`, deep copies `formData` (no mutation), emits `[PAYLOAD:SOURCE]` debug logs. Parameters: `{ name, email, company, phone, message, prompt, formData, lang, source }`.
 
-### `runBriefE2E(mode, contactInfo?, dataOverride?)`
+### `runBriefE2E(mode, contactInfo?, dataOverride?)` (in `e2e-brief-bypass-wizard.js`)
 - **Mode 1**: Via `submitContact()` DOM function (requires brief-maestro.html)
-- **Mode 2**: Direct API fetch (works from any page, delegates to builder)
+- **Mode 2**: Direct API fetch (works from any page, delegates to shared builder)
 
-### `runBriefE2EConsole(data)`
-- Self-contained console API (no DOM, no globals). Calls builder directly + `_sendPayload()`. Returns `{ response, body, elapsed, validation }`.
+### `runBriefE2EConsole(data)` (in `e2e-brief-bypass-wizard.js`)
+- Self-contained console API (no DOM, no globals). Uses shared builder via `window.buildSendBriefPayload()`. Returns `{ response, body, elapsed, validation }`. Never generates null/empty prompt — defaults to `"E2E validation prompt for brief submission testing"`.
 
 ### `ensureE2E()`
 - Verifies E2E module loaded correctly

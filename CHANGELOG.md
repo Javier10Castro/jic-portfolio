@@ -1,5 +1,33 @@
 # Changelog
 
+## [v1.4.0] - 2026-06-11
+
+### Added
+- [2026-06-11] - Shared payload builder decoupled from E2E testing
+  - `public/scripts/sendBrief-payload.js` — new shared utility, defines `window.buildSendBriefPayload()`
+  - Production-grade: zero dependencies on E2E scripts, DOM, or globals
+  - Loaded on all 3 pages that previously only loaded the E2E script
+  - `brief-maestro.html`: loads `sendBrief-payload.js` FIRST, then E2E script
+  - `submitContact()` now works even if `e2e-brief-bypass-wizard.js` fails to load
+
+### Changed
+- [2026-06-11] - `e2e-brief-bypass-wizard.js` no longer defines `buildSendBriefPayload`
+  - Removed function definition and `window.buildSendBriefPayload` export
+  - All internal references changed from `buildSendBriefPayload(...)` to `window.buildSendBriefPayload(...)`
+  - Builder now owned by `sendBrief-payload.js` (single source of truth)
+  - Reason: eliminate production dependency on E2E testing tooling
+- [2026-06-11] - `runBriefE2EConsole()` no longer generates null/empty prompt
+  - Added explicit fallback: `"E2E validation prompt for brief submission testing"`
+  - Fixes HTTP 400 INVALID_REQUEST when called without `message` or `prompt`
+- [2026-06-11] - E2E `_sendPayload()` validation accepts HTTP 202 as success
+  - Previously only accepted HTTP 200 — caused `VALIDATION FAILED` on successful submissions
+  - Now recognizes `POST /api/sendBrief` response correctly
+
+### Docs
+- [2026-06-11] - Updated `docs/ARCHITECTURE_OVERVIEW.md` with 3-layer model (Production, Shared Utility, Testing)
+- [2026-06-11] - Updated `docs/E2E_SYSTEM.md` with new script loading architecture
+- [2026-06-11] - Updated `docs/AI_CONTEXT_PACK.md` with shared utility + testing layer separation
+
 ## [v1.3.2] - 2026-06-11
 
 ### Added

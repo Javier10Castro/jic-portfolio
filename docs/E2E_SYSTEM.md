@@ -23,8 +23,10 @@ ensureE2E()
 
 Single source of truth for all `/api/sendBrief` payloads. Used by `submitContact()` (wizard), `runBriefE2E(2)`, and `runBriefE2EConsole()`.
 
+**Source**: `public/scripts/sendBrief-payload.js` — shared utility, production-grade, zero E2E dependencies.
+
 ```js
-var payload = buildSendBriefPayload({
+var payload = window.buildSendBriefPayload({
   name, email, company, phone,
   message,        // Used as prompt if prompt is not provided
   prompt,         // Master prompt string (takes precedence over message)
@@ -223,11 +225,21 @@ Branding agency dataset (available via `load-e2e.js` dynamic loader). Different 
 
 ---
 
-## How The Script Loads
+## How Scripts Load
 
-### Automatic (production)
+The frontend loads two scripts in a specific order to guarantee production independence:
+
+### Layer separation
+
+```
+sendBrief-payload.js   (Shared Utility — always loads first)
+e2e-brief-bypass-wizard.js  (Testing Layer — loads second, optional for production)
+```
+
+### On all pages
 
 ```html
+<script src="/scripts/sendBrief-payload.js" defer></script>
 <script src="/scripts/e2e-brief-bypass-wizard.js" defer></script>
 ```
 
@@ -237,7 +249,12 @@ Present on:
 - `brief-maestro.html` — brief wizard
 - `dashboard-logs.html` — observability dashboard
 
-The `defer` attribute ensures execution after HTML parsing. Since the IIFE only defines global functions and logs a status message — no DOM interaction at load time — it is safe on any page.
+### Why this order
+
+1. `sendBrief-payload.js` defines `window.buildSendBriefPayload` — the only production dependency.
+2. `e2e-brief-bypass-wizard.js` references `window.buildSendBriefPayload` — if it fails to load, production flows (`submitContact()`) continue working because the payload builder is already on `window`.
+
+The `defer` attribute ensures execution after HTML parsing in declaration order. `sendBrief-payload.js` runs first, then `e2e-brief-bypass-wizard.js`.
 
 ### Manual (backward compat via load-e2e.js)
 

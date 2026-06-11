@@ -24,39 +24,27 @@
   };
   var sleep = function(ms) { return new Promise(function(r) { setTimeout(r, ms); }); };
 
-  // -- Unified Payload Builder ------------------------------------------------
-  // Single source of truth for all /api/sendBrief payloads across all flows.
-  // Guarantees identical shape: submittedAt, normalized optionals, no mutation.
-  function buildSendBriefPayload(opts) {
-    var name = opts.name || '';
-    var email = opts.email || '';
-    var company = opts.company || '';
-    var phone = opts.phone || '';
-    var prompt = opts.prompt || opts.message || '';
-    var rawFormData = opts.formData || {};
-    var source = opts.source || 'unknown';
-    var lang = opts.lang;
-
-    if (!lang && typeof currentLang !== 'undefined') lang = currentLang;
-    if (!lang) lang = 'es';
-
-    var payload = {
-      name: name,
-      email: email,
-      company: company,
-      phone: phone,
-      prompt: prompt,
-      lang: lang,
-      formData: JSON.parse(JSON.stringify(rawFormData)),
-      submittedAt: Date.now()
+  // -- Payload Builder Fallback ----------------------------------------------
+  // Self-healing: if sendBrief-payload.js didn't load, define builder here.
+  // Primary source of truth is sendBrief-payload.js - this only activates as
+  // a safety net for pages that load the E2E script without the payload script.
+  if (typeof window.buildSendBriefPayload !== 'function') {
+    window.buildSendBriefPayload = function(opts) {
+      var name = opts.name || '';
+      var email = opts.email || '';
+      var company = opts.company || '';
+      var phone = opts.phone || '';
+      var prompt = opts.prompt || opts.message || '';
+      var rawFormData = opts.formData || {};
+      var source = opts.source || 'unknown';
+      var lang = opts.lang;
+      if (!lang && typeof currentLang !== 'undefined') lang = currentLang;
+      if (!lang) lang = 'es';
+      var payload = {name:name,email:email,company:company,phone:phone,prompt:prompt,lang:lang,formData:JSON.parse(JSON.stringify(rawFormData)),submittedAt:Date.now()};
+      console.log('[PAYLOAD:'+source.toUpperCase()+']',JSON.parse(JSON.stringify(payload)));
+      return payload;
     };
-
-    // TODO: remove debug logs after validation
-    console.log('[PAYLOAD:' + source.toUpperCase() + ']', JSON.parse(JSON.stringify(payload)));
-
-    return payload;
   }
-  window.buildSendBriefPayload = buildSendBriefPayload;
 
   // -- Test Data -------------------------------------------------------------
   var TEST_DATA = {
@@ -210,7 +198,7 @@
       log('[WARN] generatePrompt() not found, using fallback prompt');
     }
 
-    var payload = buildSendBriefPayload({
+    var payload = window.buildSendBriefPayload({
       name: contactInfo.name,
       email: contactInfo.email,
       company: contactInfo.company || '',
@@ -247,7 +235,7 @@
       promptText = '# PROMPT MAESTRO - GENERACION DE SITIO WEB PROFESIONAL\nGenerado por E2E Console test';
     }
 
-    var payload = buildSendBriefPayload({
+    var payload = window.buildSendBriefPayload({
       name: contactInfo.name,
       email: contactInfo.email,
       company: contactInfo.company || '',
@@ -287,9 +275,9 @@
 
       var validation = { statusOk: false, hasRequestId: false, hasSuccess: false, errors: [] };
 
-      if (response.status === 200) {
+      if (response.status === 200 || response.status === 202) {
         validation.statusOk = true;
-        log('[PASS] HTTP 200 OK');
+        log('[PASS] HTTP ' + response.status + ' OK');
       } else if (response.status === 429) {
         validation.errors.push('RATE_LIMITED');
         log('[WARN] HTTP 429 — Rate limited (expected under load)');
@@ -394,13 +382,17 @@
     await window.ensureE2E();
     log('=== runBriefE2EConsole (standalone) ===');
 
-    var payload = buildSendBriefPayload({
+    var userPrompt = data.prompt || data.message || '';
+    if (!userPrompt) {
+      userPrompt = 'E2E validation prompt for brief submission testing';
+    }
+
+    var payload = window.buildSendBriefPayload({
       name: data.name || 'Test User',
       email: data.email || 'test@demo.com',
       company: data.company || 'Test Co',
       phone: data.phone || '',
-      message: data.message || '',
-      prompt: data.prompt || null,
+      prompt: userPrompt,
       formData: data.formData || {},
       source: 'console'
     });

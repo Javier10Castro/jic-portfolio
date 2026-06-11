@@ -102,10 +102,32 @@ POST /api/sendBrief
 
 ### 1. Frontend Layer
 
+```
+public/
+├── sendBrief-payload.js (Shared Utility — Production + Testing)
+├── e2e-brief-bypass-wizard.js (Testing Layer only — E2E tooling)
+└── brief-maestro.html (Production Layer — loads sendBrief-payload.js)
+```
+
+The frontend is organized into three sub-layers:
+
+#### 1a. Production Layer
+
+Files that ship to real users:
+
 - **Portfolio** (`index.html`): Landing page, contact form, services, projects
 - **Brief Maestro** (`brief-maestro.html`): 14-section wizard, generates prompt, submits to `/api/sendBrief`
 - **Dashboards**: Project management, execution logs, preview, pipeline control
-- **E2E Testing** (`e2e-brief-bypass-wizard.js`): Global script loaded on all pages, exposes `buildSendBriefPayload`, `runBriefE2E`, `runBriefE2EConsole`, `ensureE2E`
+
+Zero dependency on any E2E/testing script. All production flows use only `sendBrief-payload.js`.
+
+#### 1b. Shared Utilities Layer
+
+- **Payload Builder** (`public/scripts/sendBrief-payload.js`): Single source of truth for all `/api/sendBrief` payloads. Defines `window.buildSendBriefPayload()`. Pure function — no DOM, no globals, no E2E dependencies. Loaded on all pages.
+
+#### 1c. Testing Layer
+
+- **E2E Testing** (`public/scripts/e2e-brief-bypass-wizard.js`): Global script loaded on all pages, exposes `runBriefE2E`, `runBriefE2EConsole`, `ensureE2E`. Uses `window.buildSendBriefPayload` (from shared utility layer). Can fail to load without affecting production.
 
 No frameworks, no build step, no TypeScript.
 
@@ -223,8 +245,9 @@ public/
 ├── dashboard-preview.html  Visual preview renderer
 ├── icon.ico            Site favicon
 ├── scripts/
-│   ├── e2e-brief-bypass-wizard.js  Global E2E testing module
-│   └── load-e2e.js     Legacy dynamic loader (load-e2e)
+│   ├── sendBrief-payload.js        Shared utility — production payload builder (zero E2E dep)
+│   ├── e2e-brief-bypass-wizard.js  Testing layer — E2E tooling, uses payload builder
+│   └── load-e2e.js                 Legacy dynamic loader (load-e2e)
 data/
 └── migrations/
     └── 006_request_logs.sql  Table schema
