@@ -1,14 +1,18 @@
 // =============================================================================
-// E2E Brief Maestro - Bypass del Wizard v1
+// E2E Brief Maestro - Bypass del Wizard v2
 //
 // Modo 1: submitContact() direct (usa la funcion interna real, necesita DOM)
-// Modo 2: fetch directo a /api/sendBrief (no necesita DOM, puro bypass)
-// =============================================================================
-// Pega todo el script en DevTools console de brief-maestro.html
+// Modo 2: fetch directo a /api/sendBrief
+//   - Con formData global: usa generatePrompt() (brief-maestro.html)
+//   - Sin formData global: standalone (cualquier pagina)
+//
+// Funciones globales expuestas:
+//   runBriefE2E(mode, contactInfo, dataOverride)
+//   runBriefE2EConsole(data)
+//   ensureE2E()
 // =============================================================================
 // NOTA: Este archivo usa solo ASCII. NO contiene emojis, box-drawing ni
-// caracteres Unicode fuera del rango basico. Esto garantiza que copiar y
-// pegar desde cualquier terminal funcione sin corruption de encoding.
+// caracteres Unicode fuera del rango basico.
 // =============================================================================
 
 (function() {
@@ -21,7 +25,6 @@
   var sleep = function(ms) { return new Promise(function(r) { setTimeout(r, ms); }); };
 
   // -- Test Data -------------------------------------------------------------
-  // Los acentos espanoles se mantienen porque son datos que el backend espera.
   var TEST_DATA = {
     biz_name: 'Salmos Cafe',
     biz_tagline: 'Experiencias memorables alrededor de una taza de cafe',
@@ -101,24 +104,20 @@
   };
 
   // -- Modo 1: via submitContact() interna ----------------------------------
-  // Requiere que los elementos del DOM existan (inp-name, inp-email, etc.)
-  async function runViaSubmitContact(contactInfo, dataOverride) {
+  function runViaSubmitContact(contactInfo, dataOverride) {
     log('=== Modo 1: submitContact() interno ===');
 
-    // 1. Poblar formData global
     var data = dataOverride || TEST_DATA;
     Object.assign(formData, JSON.parse(JSON.stringify(data)));
     if (typeof save === 'function') save();
     log('formData loaded with test data');
     log('  fields:' + Object.keys(formData).length);
 
-    // 2. Asegurar que contact-page este visible (para que los inputs sean accesibles)
     var app = document.getElementById('app');
     var contactPage = document.getElementById('contact-page');
     if (app) app.classList.remove('active');
     if (contactPage) contactPage.classList.add('active');
 
-    // 3. Llenar inputs de contacto
     document.getElementById('inp-name').value = contactInfo.name;
     document.getElementById('inp-email').value = contactInfo.email;
     document.getElementById('inp-company').value = contactInfo.company || '';
@@ -126,7 +125,6 @@
 
     log('Contact fields set: name=' + contactInfo.name + ' email=' + contactInfo.email);
 
-    // 4. Interceptar fetch para capturar response
     var origFetch = window.fetch;
     window.fetch = async function() {
       var args = arguments;
@@ -152,7 +150,6 @@
       return response;
     };
 
-    // 5. Ejecutar submitContact() - la funcion interna real
     log('Calling submitContact()...');
     if (typeof submitContact === 'function') {
       submitContact();
@@ -162,17 +159,14 @@
     }
   }
 
-  // -- Modo 2: fetch directo a /api/sendBrief ---------------------------------
-  // No necesita DOM. Construye el payload exacto que espera el backend.
+  // -- Modo 2: fetch directo a /api/sendBrief (necesita formData global) ----
   async function runDirectAPI(contactInfo, dataOverride) {
     log('=== Modo 2: fetch directo a /api/sendBrief ===');
 
-    // 1. Poblar formData (necesario para generatePrompt)
     var data = dataOverride || TEST_DATA;
     Object.assign(formData, JSON.parse(JSON.stringify(data)));
     if (typeof save === 'function') save();
 
-    // 2. Generar el prompt maestro usando la funcion interna
     var prompt = '';
     if (typeof generatePrompt === 'function') {
       prompt = generatePrompt();
@@ -182,7 +176,6 @@
       log('[WARN] generatePrompt() not found, using fallback prompt');
     }
 
-    // 3. Construir payload exacto
     var payload = {
       name: contactInfo.name,
       email: contactInfo.email,
@@ -193,16 +186,54 @@
       formData: JSON.parse(JSON.stringify(formData || data))
     };
 
-    log('Payload built');
-    log('  endpoint: /api/sendBrief');
+    return _sendPayload(payload);
+  }
+
+  // -- Modo 2 Standalone: sin dependencia de formData/DOM --------------------
+  async function runDirectAPIStandalone(contactInfo, dataOverride) {
+    log('=== Modo 2: Standalone (sin DOM) ===');
+
+    var formDataPayload = {};
+    var promptText = '';
+
+    if (dataOverride) {
+      if (dataOverride.prompt) {
+        promptText = dataOverride.prompt;
+        delete dataOverride.prompt;
+      }
+      if (dataOverride.formData) {
+        formDataPayload = dataOverride.formData;
+        delete dataOverride.formData;
+      } else {
+        formDataPayload = JSON.parse(JSON.stringify(dataOverride));
+      }
+    }
+
+    if (!promptText) {
+      promptText = '# PROMPT MAESTRO - GENERACION DE SITIO WEB PROFESIONAL\nGenerado por E2E Console test';
+    }
+
+    var payload = {
+      name: contactInfo.name,
+      email: contactInfo.email,
+      company: contactInfo.company || '',
+      phone: contactInfo.phone || '',
+      prompt: promptText,
+      lang: 'es',
+      formData: formDataPayload
+    };
+
+    log('Payload built (standalone, no DOM)');
     log('  name: ' + payload.name);
     log('  email: ' + payload.email);
-    log('  lang: ' + payload.lang);
     log('  prompt length: ' + payload.prompt.length);
-    log('  formData keys: ' + Object.keys(payload.formData).length);
 
-    // 4. Enviar
-    log('[SEND] Sending request...');
+    return _sendPayload(payload);
+  }
+
+  // -- Helper de envio (compartido por Modo 2 y Standalone) ------------------
+  async function _sendPayload(payload) {
+    log('[SEND] Sending request to /api/sendBrief...');
     var startTime = Date.now();
 
     try {
@@ -220,7 +251,6 @@
       log('  status: ' + response.status);
       log('  ok: ' + response.ok);
 
-      // --- Response Validation ---
       var validation = { statusOk: false, hasRequestId: false, hasSuccess: false, errors: [] };
 
       if (response.status === 200) {
@@ -250,9 +280,9 @@
       validation.passed = validation.statusOk && validation.hasRequestId;
 
       if (validation.passed) {
-        log('[RESULT] ✅ VALIDATION PASSED');
+        log('[RESULT] VALIDATION PASSED');
       } else {
-        log('[RESULT] ❌ VALIDATION FAILED — ' + validation.errors.join(', '));
+        log('[RESULT] VALIDATION FAILED — ' + validation.errors.join(', '));
       }
 
       if (body && body.queuePosition !== undefined) log('  queuePosition: ' + body.queuePosition);
@@ -287,19 +317,21 @@
     log('Contact: ' + contactInfo.name + ' <' + contactInfo.email + '>');
     log('========================================');
 
-    // Verificar que estamos en brief-maestro.html
-    if (typeof formData === 'undefined') {
-      log('[ERR] formData global not found. Are you on brief-maestro.html?');
-      return;
-    }
+    var hasFormData = (typeof formData !== 'undefined');
 
     try {
       if (mode === 1) {
-        await runViaSubmitContact(contactInfo, dataOverride);
+        if (!hasFormData) {
+          log('[ERR] Mode 1 requires formData global (needs brief-maestro.html)');
+          return;
+        }
+        runViaSubmitContact(contactInfo, dataOverride);
       } else {
-        var result = await runDirectAPI(contactInfo, dataOverride);
-        log('[OK] Direct API call complete');
-        return result;
+        if (hasFormData) {
+          return await runDirectAPI(contactInfo, dataOverride);
+        } else {
+          return await runDirectAPIStandalone(contactInfo, dataOverride);
+        }
       }
     } catch (err) {
       log('[ERR] E2E test failed: ' + err.message);
@@ -307,14 +339,43 @@
     }
   };
 
+  // -- Auto-repair loader ----------------------------------------------------
+  window.ensureE2E = async function() {
+    if (typeof window.runBriefE2E === 'function') return;
+    await new Promise(function(resolve, reject) {
+      var s = document.createElement('script');
+      s.src = '/scripts/e2e-brief-bypass-wizard.js';
+      s.onload = resolve;
+      s.onerror = function() {
+        console.error('[E2E-Brief] Failed to load script');
+        reject(new Error('Failed to load e2e-brief-bypass-wizard.js'));
+      };
+      document.head.appendChild(s);
+    });
+  };
+
+  // -- Console-safe API ------------------------------------------------------
+  window.runBriefE2EConsole = async function(data) {
+    await window.ensureE2E();
+    return window.runBriefE2E(2, {
+      name: data.name || 'Test User',
+      email: data.email || 'test@demo.com',
+      company: data.company || 'Test Co',
+      phone: data.phone || ''
+    }, {
+      prompt: data.message || 'E2E test submission via console',
+      formData: data.formData || {}
+    });
+  };
+
   log('========================================');
   log('E2E Brief Maestro script loaded');
   log('');
   log('Usage:');
-  log('  runBriefE2E(1)             -> Mode 1: submitContact() interno (usa DOM)');
+  log('  runBriefE2E(1)             -> Mode 1: submitContact() interno (needs DOM)');
   log('  runBriefE2E(2)             -> Mode 2: fetch directo a /api/sendBrief');
-  log('  runBriefE2E(m, c, data)    -> Modo m, contacto c, formData data');
-  log('  runBriefE2E(1, { name, email, company?, phone? }) -> custom contact');
+  log('  runBriefE2E(m, c, d)       -> Modo m, contacto c, dataOverride d');
+  log('  runBriefE2EConsole({ name, email, company, message })  -> Desde cualquier pagina');
   log('');
   log('Ejemplo: runBriefE2E(2)');
   log('========================================');
