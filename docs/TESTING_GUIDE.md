@@ -621,26 +621,134 @@ The contact form retries 429 responses automatically with exponential backoff (0
 
 ---
 
-## Known Limitation — Health Endpoint Lifecycle Metrics
+## Lifecycle Metrics Persistence
 
-The `lifecycle` block exposed by `/api/health` and `/api/health?section=queue` shows **always 0** in production.
+Since v1.3.0, lifecycle metrics persist to Neon PostgreSQL and are accessible across all Vercel instances via `/api/health`, `/api/health?section=queue`, and `/api/logs`.
 
-**Reason**: Vercel isolates each API route into separate serverless functions. `api/health.js` runs in a different process than `api/sendContact.js`, so it cannot access the in-memory `request-registry` Map or `BackgroundQueue` instance that contains the actual request data.
+```bash
+# All three endpoints return the same lifecycle data (read from Neon)
+curl "https://web-portfolio-kappa-wheat.vercel.app/api/health?section=queue"
+curl "https://web-portfolio-kappa-wheat.vercel.app/api/logs"
+```
 
-**Individual metrics**:
+**Expected response includes:**
 
-| Metric | In health endpoint | In `GET /api/sendContact?id=X` |
+```json
+{
+  "lifecycle": {
+    "totalRequests": 5,
+    "completedRequests": 4,
+    "failedRequests": 1,
+    "averageExecutionTimeMs": 450,
+    "averageQueueWaitTimeMs": 120
+  }
+}
+```
+
+For per-request diagnostics:
+
+```bash
+curl "https://web-portfolio-kappa-wheat.vercel.app/api/logs?id=<requestId>"
+```
+
+Returns full lifecycle record from Neon (survives cold starts).
+
+---
+
+## E2E Browser Console Testing
+
+The E2E testing module is loaded automatically on all pages via `<script defer>`. Functions available globally:
+
+- `runBriefE2E(mode, contactInfo?, dataOverride?)` — Full brief submission
+- `runBriefE2EConsole(data)` — Console-safe wrapper, no DOM needed
+- `ensureE2E()` — Auto-repair if script is missing
+
+### Console Commands Quick Reference
+
+```js
+// Quick full pipeline test (any page)
+runBriefE2EConsole({ name: 'Test', email: 't@t.com', message: 'Quick test' })
+// Mode 2 with default Salmos Cafe data (any page)
+runBriefE2E(2)
+// Mode 2 with custom contact (any page)
+runBriefE2E(2, { name: 'Custom', email: 'c@c.com', company: 'Custom Co' })
+// Mode 1 via real wizard (brief-maestro.html only)
+runBriefE2E(1)
+// Auto-repair if script missing
+await window.ensureE2E()
+// Check E2E module is loaded
+typeof window.runBriefE2E === 'function'
+```
+
+### Quick Pipeline Test (Any Page)
+
+```js
+// Open any page console and run:
+runBriefE2EConsole({
+  name: 'QA Test',
+  email: 'qa@test.com',
+  company: 'QA Corp',
+  message: 'E2E validation run'
+})
+```
+
+### Mode 2 with Default Test Data (Any Page)
+
+```js
+runBriefE2E(2)
+// Uses embedded Salmos Cafe fixture (~95 form fields)
+```
+
+### Mode 1 via Real Wizard (brief-maestro.html Only)
+
+```js
+runBriefE2E(1)
+// Uses real DOM inputs and submitContact() function
+```
+
+### Auto-Repair
+
+```js
+// If script didn't load (rare), run:
+await window.ensureE2E()
+runBriefE2EConsole({ name: 'Test', email: 't@t.com', message: 'Repair test' })
+```
+
+### Expected Console Output
+
+```
+[E2E-Brief] E2E Brief Maestro script loaded
+[E2E-Brief] ========================================
+[E2E-Brief] Mode: 2 (1=submitContact, 2=direct API)
+[E2E-Brief] Contact: QA Test <qa@test.com>
+[E2E-Brief] ========================================
+[E2E-Brief] === Modo 2: Standalone (sin DOM) ===
+[E2E-Brief] Payload built (standalone, no DOM)
+[E2E-Brief] [SEND] Sending request to /api/sendBrief...
+[E2E-Brief] [RECV] Response received (XXXms)
+[E2E-Brief]   status: 202
+[E2E-Brief] [PASS] requestId: <uuid>
+[E2E-Brief] [PASS] success: true
+[E2E-Brief] [RESULT] VALIDATION PASSED
+```
+
+### Rate Limit Test from Console
+
+```js
+for (let i = 0; i < 5; i++) {
+  runBriefE2E(2)
+  await new Promise(r => setTimeout(r, 200))
+}
+// At ~30+ req/min, expect some 429 responses
+```
+
+### Version Compatibility
+
+| Version | Functions | Load Method |
 |---|---|---|
-| `totalRequests` | Always 0 (cross-function) | ✅ Correct within same instance |
-| `completedRequests` | Always 0 | ✅ Correct |
-| `failedRequests` | Always 0 | ✅ Correct |
-| `averageExecutionTimeMs` | Always 0 | ✅ Correct (persisted since v1.2.1) |
-| `averageQueueWaitTimeMs` | Always 0 | ✅ Correct (persisted since v1.2.1) |
+| v1 | `runBriefE2E()` only | Dynamic via `load-e2e.js` |
+| v2 | `runBriefE2E()`, `ensureE2E()`, `runBriefE2EConsole()` | `<script defer>` on all pages |
 
-**Use instead**:
+Legacy helpers (`e2eSalmos`, `e2eInkognita`, `e2eCustom` from `load-e2e.js`) remain available but are deprecated.
 
-```
-GET /api/sendContact?id=<requestId>
-```
-
-This provides per-request lifecycle diagnostics when the lookup runs on the same Vercel instance that processed the request. Individual metrics are accurate — the limitation only affects cross-function aggregation in the health endpoint.
+For full E2E module documentation, see `docs/E2E_SYSTEM.md`.
