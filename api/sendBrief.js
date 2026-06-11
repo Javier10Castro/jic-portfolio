@@ -144,6 +144,7 @@ module.exports = async (req, res) => {
 
   const tc = timingCheck(parsed);
   if (tc.blocked) {
+    log.event('validation.failed', req, { stage: 'timingCheck', reason: tc.reason, submittedAtType: typeof (parsed || {}).submittedAt, submittedAtValue: (parsed || {}).submittedAt, hasSubmittedAt: 'submittedAt' in (parsed || {}) });
     log.warn(req, 'Timing check failed', { ip, reason: tc.reason });
     log.event('timing_check.blocked', req, { reason: tc.reason });
     return json(400, { 'Content-Type': 'application/json', ...deployHeaders(req), ...reqHeaders(req) }, resPayload(req, { success: false, error: 'INVALID_REQUEST' }))(res);
@@ -154,14 +155,15 @@ module.exports = async (req, res) => {
 
   const nameCheck = sanitizeAndValidateName(rawName);
   if (!nameCheck.valid) {
-    log.debugLog(req, 'Name validation failed', { ip, reason: nameCheck.reason });
-    log.event('validation.fail', req, { field: 'name', reason: nameCheck.reason });
+    log.event('validation.failed', req, { stage: 'sanitizeAndValidateName', reason: nameCheck.reason, nameType: typeof rawName, nameLength: rawName ? rawName.length : 0, namePreview: rawName ? String(rawName).substring(0, 50) : null });
+    log.warn(req, 'Name validation failed', { ip, reason: nameCheck.reason });
     return json(400, { 'Content-Type': 'application/json', ...deployHeaders(req), ...reqHeaders(req) }, resPayload(req, { success: false, error: 'INVALID_REQUEST' }))(res);
   }
   const safeName = nameCheck.value;
   const safeCompany = company && typeof company === 'string' ? company.replace(/<[^>]*>/g, '').trim().slice(0, 200) : '';
 
   if (!validateEmail(email)) {
+    log.event('validation.failed', req, { stage: 'validateEmail', reason: 'invalid_format', emailType: typeof email, emailLength: email ? email.length : 0, emailPreview: email ? maskEmail(email) : null });
     log.warn(req, 'Invalid email', { ip, email: maskEmail(email), reason: RATE_LIMIT_REASON.VALIDATION });
     log.event('validation.fail', req, { field: 'email' });
     return json(400, { 'Content-Type': 'application/json', ...deployHeaders(req), ...reqHeaders(req) }, resPayload(req, { success: false, error: 'INVALID_REQUEST' }))(res);
@@ -169,6 +171,7 @@ module.exports = async (req, res) => {
 
   const promptCheck = validatePrompt(prompt);
   if (!promptCheck.valid) {
+    log.event('validation.failed', req, { stage: 'validatePrompt', reason: promptCheck.reason, promptType: typeof prompt, promptLength: prompt ? prompt.length : 0, promptPreview: prompt ? String(prompt).substring(0, 200) : null });
     log.debugLog(req, 'Prompt validation failed', { ip, reason: promptCheck.reason });
     log.event('validation.fail', req, { field: 'prompt', reason: promptCheck.reason });
     return json(400, { 'Content-Type': 'application/json', ...deployHeaders(req), ...reqHeaders(req) }, resPayload(req, { success: false, error: 'INVALID_REQUEST' }))(res);

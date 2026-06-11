@@ -752,3 +752,107 @@ for (let i = 0; i < 5; i++) {
 Legacy helpers (`e2eSalmos`, `e2eInkognita`, `e2eCustom` from `load-e2e.js`) remain available but are deprecated.
 
 For full E2E module documentation, see `docs/E2E_SYSTEM.md`.
+
+---
+
+## Cómo diagnosticar INVALID_REQUEST
+
+Cuando el endpoint `/api/sendBrief` devuelve `400 { success: false, error: 'INVALID_REQUEST' }`, una de 4 validaciones falló durante la ingesta.
+
+### Cadena de validación
+
+Las validaciones se ejecutan en este orden estricto:
+
+| # | Stage | Ubicación | Condición de fallo |
+|---|---|---|---|
+| 1 | `timingCheck` | `sendBrief.js:145` | `submittedAt` ausente, skew > 10s futuro, o stale > 2h pasado |
+| 2 | `sanitizeAndValidateName` | `sendBrief.js:155` | `name` vacío, no-string, o falla `escapeHTML`/sanitize |
+| 3 | `validateEmail` | `sendBrief.js:166` | `email` no pasa regex `/^[^\s@]+@[^\s@]+\.[^\s@]+$/` |
+| 4 | `validatePrompt` | `sendBrief.js:172` | `prompt` ausente, vacío, o muy corto/largo |
+
+### Cómo identificar el stage exacto
+
+**Opción 1 — Revisar logs de Vercel (recomendado):**
+
+```powershell
+vercel logs --follow | Select-String -Pattern "validation.failed"
+```
+
+Busca en el JSON estructurado:
+
+```json
+{ "type": "observability", "event": "validation.failed", "stage": "timingCheck", "reason": "...", ... }
+```
+
+Cada evento incluye:
+- **timingCheck**: `submittedAtType`, `submittedAtValue`, `hasSubmittedAt`
+- **sanitizeAndValidateName**: `nameType`, `nameLength`, `namePreview`
+- **validateEmail**: `emailType`, `emailLength`, `emailPreview` (masked)
+- **validatePrompt**: `promptType`, `promptLength`, `promptPreview`
+
+**Opción 2 — Reconstrucción manual (sin logs):**
+
+Examina el payload enviado:
+
+```js
+// Desde consola del navegador, intercepta el payload:
+const originalFetch = window.fetch;
+window.fetch = (...args) => {
+  if (args[0].includes('/api/sendBrief')) {
+    console.log('[INTERCEPT] Payload:', JSON.parse(args[1].body));
+  }
+  return originalFetch(...args);
+};
+// Luego ejecuta runBriefE2E(2) y observa el payload
+```
+
+Revisa estos campos contra la tabla:
+
+| Campo | Valor válido | Falla si |
+|---|---|---|
+| `submittedAt` | Unix ms, < now+10s, > now-2h | ausente, futuro, stale |
+| `name` | string no vacío, < 200 chars | vacío, no-string, XSS |
+| `email` | string que pasa regex email | formato inválido |
+| `prompt` | string, 10-10000 chars | ausente, vacío, < 10 chars |
+
+### Causas comunes
+
+| Síntoma | Causa probable |
+|---|---|
+| `submittedAt` ausente en payload | El caller no lo incluye (ej: `runBriefE2EConsole()` sin `submittedAt`) |
+| `prompt` vacío en payload | `message` se usa como fallback de `prompt`, pero si `message` también está ausente → empty |
+| `prompt` muy corto (< 10 chars) | El campo `prompt` se trunca o contiene solo whitespace después de trim |
+| 400 solo en producción, no en local | La versión deployada no incluye `submittedAt` (commit anterior al fix e2eb4e7) |
+| Error intermitente | Rate limiting retorna 429, no 400 — si ves 400 inconsistente, revisa la red (proxy, cache) |
+
+### Diferencia entre endpoints
+
+| Endpoint | Valida prompt? | Valida submittedAt? | Valida message? |
+|---|---|---|---|
+| `/api/sendBrief` | Sí (obligatorio, min 10 chars) | Sí | No (usa solo `prompt`) |
+| `/api/sendContact` | No | Sí | Sí (obligatorio, min 10 chars) |
+
+### Test directo desde PowerShell
+
+Reemplaza `<stage>` con el nombre sospechado y compara el error real:
+
+```powershell
+# Test timingCheck (sin submittedAt)
+$body = @{
+  name = "Test"; email = "t@t.com"; prompt = "Build a landing page for a coffee shop."
+} | ConvertTo-Json
+
+Invoke-RestMethod -Uri "https://web-portfolio-kappa-wheat.vercel.app/api/sendBrief" `
+  -Method POST -ContentType "application/json" -Body $body
+# → 400 INVALID_REQUEST (timingCheck)
+
+# Test validatePrompt (sin prompt)
+$body = @{
+  name = "Test"; email = "t@t.com"
+  submittedAt = [DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds()
+} | ConvertTo-Json
+
+Invoke-RestMethod -Uri "https://web-portfolio-kappa-wheat.vercel.app/api/sendBrief" `
+  -Method POST -ContentType "application/json" -Body $body
+# → 400 INVALID_REQUEST (validatePrompt — prompt ausente)
+```
