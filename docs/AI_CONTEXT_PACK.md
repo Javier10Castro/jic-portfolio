@@ -416,6 +416,8 @@ Validation failures (`status: 'rejected'`) carry 3 diagnostic fields that must s
 
 **Backward compatibility**: Old `request_logs` rows have `NULL` for all 3 validation columns. The dashboard renderer checks for their presence before displaying.
 
+**Production verification**: See `docs/VALIDATION_PERSISTENCE_VERIFICATION.md` — confirmed working end-to-end (commit `42efb28`).
+
 ---
 
 ## 12. Client Retry Strategy (Contact Form)

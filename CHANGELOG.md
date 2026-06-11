@@ -8,8 +8,17 @@
   - Confirmed `GET /api/logs?id=<requestId>` returns 200 with `validationStage`, `validationField`, `validationReason`
   - Confirmed cross-instance retrieval (separate Vercel Function, shared Neon source of truth)
   - Docs: `docs/VALIDATION_PERSISTENCE_VERIFICATION.md` (production verification report)
-  - Docs: `AGENTS.md` — added Validation Diagnostics Persistence section, `/api/logs` endpoint docs, and verification checklist step
+  - Docs: `AGENTS.md` — added Validation Persistence section, `/api/logs` endpoint docs, and verification checklist step
   - Test IDs: `85b2cccc-5c21-4c44-aeb2-c2e592d48819`, `e0e2fea1-4167-47da-833d-f452b2ce9534`
+
+### Validation persistence
+
+Verification completed 2026-06-11.
+
+Production testing confirmed rejected requests are stored in Neon and exposed through /api/logs.
+
+Reference:
+`docs/VALIDATION_PERSISTENCE_VERIFICATION.md`
 
 ## [v1.4.0] - 2026-06-11
 

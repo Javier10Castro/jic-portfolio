@@ -974,6 +974,16 @@ Diagnostic endpoint: `GET /api/sendContact?id=<requestId>` returns `{ requestId,
 
 Limitations: in-memory only, per-instance, 1,000 entries, 5min TTL.
 
+### Validation Persistence
+
+Validation failures are persisted before HTTP 400 responses are returned.
+
+Reference:
+`docs/VALIDATION_PERSISTENCE_VERIFICATION.md`
+
+Implemented in:
+42efb28
+
 ### Validation Diagnostics Persistence
 
 Validation failures (`400 INVALID_REQUEST`) persist 3 diagnostic fields through Neon `request_logs`:
