@@ -11,6 +11,7 @@ const {
   validateEmail, sanitizeAndValidateName, validatePrompt, clientIp, maskEmail,
 } = require('../lib/rate-limit');
 const log = require('../lib/logger');
+const registry = require('../lib/request-registry');
 
 function json(status, headers, payload) {
   return res => { res.writeHead(status, headers).end(JSON.stringify(payload)); };
@@ -262,6 +263,7 @@ module.exports = async (req, res) => {
 
       stage(req, 'after_email_send');
       log.info(req, 'Brief emails sent', { name: safeName, email: maskEmail(email) });
+      registry.registerLifecycle(log.requestId(req), { status: 'completed', executionFinishedAt: Date.now() });
     },
     req,
     label: 'sendBrief',
@@ -274,6 +276,13 @@ module.exports = async (req, res) => {
   }
 
   const { queueId, position, depth } = queueResult;
+  registry.registerLifecycle(log.requestId(req), {
+    status: 'queued',
+    receivedAt: start,
+    queuedAt: Date.now(),
+    queuePosition: position,
+    queueDepth: depth,
+  });
   log.event('queue.queued', req, { queueId, position, depth, endpoint: 'sendBrief' });
   log.debugLog(req, 'Brief emails queued', { queueId, position, depth });
   return json(202, withSoftHeaders(req, {

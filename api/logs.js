@@ -8,13 +8,13 @@ module.exports = async (req, res) => {
   const headers = { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' };
 
   if (id) {
-    const entry = lookupRequest(id);
+    const entry = await lookupRequest(id);
     if (!entry) return res.writeHead(404, headers).end(JSON.stringify({ error: 'Request not found' }));
     return res.writeHead(200, headers).end(JSON.stringify(entry));
   }
 
-  const entries = listEntries(limit);
-  const metrics = getAggregateMetrics();
+  const entries = await listEntries(limit);
+  const metrics = await getAggregateMetrics();
 
   res.writeHead(200, headers).end(JSON.stringify({ entries, metrics }));
 };

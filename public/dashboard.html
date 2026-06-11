@@ -140,8 +140,7 @@ const api = window.DASHBOARD_API;
 const ctx = api.getContext();
 if (ctx.workspace_id) document.getElementById('inpWs').value = ctx.workspace_id;
 if (ctx.user_id) document.getElementById('inpUid').value = ctx.user_id;
-if (api.isReady()) { document.getElementById('ctxStatus').textContent = 'Connected'; document.getElementById('btnCreate').disabled = false; load(); }
-else { loadDemo(); }
+loadSystemHealth(); if (api.isReady()) { document.getElementById('ctxStatus').textContent = 'Connected'; document.getElementById('btnCreate').disabled = false; load(); }
 
 function setCtx(){
   const w = document.getElementById('inpWs').value.trim();
@@ -162,19 +161,13 @@ function ago(d){if(!d)return'—';const s=Math.floor((Date.now()-new Date(d))/10
 
 let pollStop = null;
 
-async function loadDemo(){
-  const loading = document.getElementById('loading');
-  const sub = document.getElementById('subHeader');
+async function loadSystemHealth(){
   const stats = document.getElementById('stats');
   const tbody = document.getElementById('tbody');
   const table = document.getElementById('table');
   const empty = document.getElementById('empty');
-  loading.style.display = 'block';
-  loading.textContent = 'Loading system health...';
   try {
     const [health, logs] = await Promise.all([api.getHealth(), api.getRecentLogs(10)]);
-    loading.style.display = 'none';
-    sub.innerHTML = 'System Health <span style="font-size:11px;color:var(--muted);margin-left:8px">⚡ Demo Mode — <a href="#" onclick="document.getElementById(\'inpWs\').focus();return false" style="color:var(--accent)">Connect a workspace</a> for full features</span>';
     const q = health.queue || {};
     const lc = health.lifecycle || {};
     stats.innerHTML =
@@ -185,21 +178,24 @@ async function loadDemo(){
       `<div class="stat-card"><div class="num">${lc.totalRequests||0}</div><div class="label">Lifecycle Total</div></div>` +
       `<div class="stat-card"><div class="num">${lc.completedRequests||0}</div><div class="label">Lifecycle Done</div></div>`;
     const entries = logs.entries || [];
-    if (!entries.length) { empty.style.display = 'block'; empty.textContent = 'No recent brief submissions. Try submitting a brief from the Maestro tool.'; return; }
-    table.style.display = '';
-    tbody.innerHTML = entries.map(e => {
-      const st = e.status || 'unknown';
-      const dt = e.receivedAt || e.updatedAt;
-      return `<tr onclick="location.href='/dashboard-logs.html?id=${escapeHTML(e.requestId)}'">
-        <td><div class="mono id-cell">${escapeHTML(e.requestId ? e.requestId.substring(0, 8) + '...' : '—')}</div></td>
-        <td>${statusBadge(st)}</td>
-        <td style="font-size:12px">${escapeHTML(e.event || 'brief')}</td>
-        <td style="font-size:12px;color:var(--muted)">${dt ? ago(dt) : '—'}</td>
-      </tr>`;
-    }).join('');
+    if (entries.length) {
+      table.style.display = '';
+      tbody.innerHTML = entries.map(e => {
+        const st = e.status || 'unknown';
+        const dt = e.receivedAt || e.updatedAt;
+        return `<tr onclick="location.href='/dashboard-logs.html?id=${escapeHTML(e.requestId)}'">
+          <td><div class="mono id-cell">${escapeHTML(e.requestId ? e.requestId.substring(0, 8) + '...' : '—')}</div></td>
+          <td>${statusBadge(st)}</td>
+          <td style="font-size:12px">${escapeHTML(e.event || 'brief')}</td>
+          <td style="font-size:12px;color:var(--muted)">${dt ? ago(dt) : '—'}</td>
+        </tr>`;
+      }).join('');
+    } else {
+      empty.style.display = 'block';
+      empty.textContent = 'No recent brief submissions. Submit one from the Maestro tool to see data here.';
+    }
   } catch(e) {
-    loading.style.display = 'none';
-    sub.innerHTML = '<span class="error-banner">Could not load system data: ' + escapeHTML(e.message) + '</span>';
+    // system health fetch failed — non-critical, dashboards work without it
   }
 }
 
@@ -213,8 +209,6 @@ async function load(){
   const stats = document.getElementById('stats');
   loading.textContent = 'Loading projects...';
   loading.style.display = 'block';
-  table.style.display = 'none';
-  empty.style.display = 'none';
   if (pollStop) { pollStop(); pollStop = null; }
   try {
     const data = await api.listProjects(100, 0);

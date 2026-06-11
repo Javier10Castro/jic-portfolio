@@ -9,7 +9,7 @@ module.exports = async (req, res) => {
   const di = deployInfo();
 
   if (section === 'queue') {
-    const detailed = emailQueue.getDetailedStats();
+    const detailed = await emailQueue.getDetailedStats();
     const stats = emailQueue.stats();
     const body = JSON.stringify({
       status: 'ok',
@@ -76,7 +76,7 @@ module.exports = async (req, res) => {
   }
 
   const queueStats = emailQueue.stats();
-  const detailed = emailQueue.getDetailedStats();
+  const detailed = await emailQueue.getDetailedStats();
   const rlSnapshot = getSnapshot();
 
   const body = JSON.stringify({

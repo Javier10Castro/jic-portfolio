@@ -241,7 +241,7 @@ function startLogEvents(execId){
   });
 }
 
-async function loadDemoLogs(){
+async function loadRecentRequests(){
   const content = document.getElementById('content');
   const loading = document.getElementById('loading');
   const sub = document.getElementById('sub');
@@ -252,7 +252,7 @@ async function loadDemoLogs(){
     const entries = data.entries || [];
     const metrics = data.metrics || {};
     loading.style.display = 'none';
-    sub.innerHTML = 'Recent Brief Submissions <span style="font-size:11px;color:var(--muted);margin-left:8px">⚡ Demo Mode — <a href="/dashboard.html" style="color:var(--accent)">Connect a workspace</a> for full execution logs</span>';
+    sub.textContent = 'Recent requests — persistent log (' + entries.length + ' entries)';
     let html = '';
     if (metrics.totalRequests > 0) {
       html += `<div class="exec-header"><div class="row"><div style="font-size:13px;color:var(--text-strong)">Aggregate Metrics</div></div><div class="meta">Total: ${metrics.totalRequests} · Completed: ${metrics.completedRequests} · Failed: ${metrics.failedRequests} · Avg Exec: ${metrics.averageExecutionTimeMs}ms · Avg Wait: ${metrics.averageQueueWaitTimeMs}ms</div></div>`;
@@ -260,11 +260,11 @@ async function loadDemoLogs(){
     if (entries.length) {
       html += entries.map(renderRegistryEntry).join('');
     } else {
-      html = '<div class="empty">No recent requests. Submit a brief from the <a href="/brief-maestro.html" style="color:var(--accent)">Maestro tool</a> to see data here.</div>';
+      html = '<div class="empty">No requests recorded yet. Submit a brief from the <a href="/brief-maestro.html" style="color:var(--accent)">Maestro tool</a> to see data here.</div>';
     }
     content.innerHTML = html;
     if (entries.some(e => e.status === 'processing' || e.status === 'queued')) {
-      if (!pollStopExec) pollStopExec = api.poll(5000, loadDemoLogs);
+      if (!pollStopExec) pollStopExec = api.poll(5000, loadRecentRequests);
     }
   } catch(e) {
     loading.style.display = 'none';
@@ -277,14 +277,9 @@ async function loadExec(){
   const loading = document.getElementById('loading');
   const sub = document.getElementById('sub');
 
-  if (!execId && !projectId) {
-    if (api.isReady()) {
-      loading.style.display = 'none';
-      content.innerHTML = '<div class="empty">Pass ?id=PROJECT_ID or ?exec=EXECUTION_ID to view logs</div>';
-      return;
+    if (!execId && !projectId) {
+      return loadRecentRequests();
     }
-    return loadDemoLogs();
-  }
 
   if (!api.isReady()) {
     loading.style.display = 'none';

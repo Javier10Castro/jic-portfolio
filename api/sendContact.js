@@ -95,7 +95,7 @@ async function handleStatusLookup(req, res) {
   if (!rid) {
     return json(400, { 'Content-Type': 'application/json' }, { error: 'INVALID_REQUEST', message: 'id query parameter is required' })(res);
   }
-  const entry = registry.lookupRequest(rid);
+  const entry = await registry.lookupRequest(rid);
   if (!entry) {
     return json(404, { 'Content-Type': 'application/json' }, { error: 'NOT_FOUND', message: 'No lifecycle data found for this requestId', requestId: rid })(res);
   }
