@@ -60,6 +60,23 @@
 - Low-severity headers: `X-Deploy-SHA`, `X-Deploy-Env`, `X-Body-Parse-Method`, queue state headers — standard API metadata
 - Coverage matrix reports 15 reachable / 12 unreachable (env/edge documented limitations)
 
+## [v1.8.2] — 2026-06-12
+
+### Added
+- [2026-06-12] - `docs/FINAL_PRODUCTION_ACCEPTANCE_REPORT.md` — full closeout audit
+
+### Changed
+- [2026-06-12] - No code changes in v1.8.2 — documentation and acceptance validation only
+
+### Validation Results
+- Full real sendBrief user journey: ✅ accepted, queue processed, PDF generated, emails sent
+- Full real sendContact user journey: ✅ accepted, queue processed, emails sent
+- Lifecycle transition (submitted→processing→completed): ✅ confirmed via coverage + registry
+- Concurrency test (10 simultaneous requests): 10/10 accepted, queue drain to 0
+- Queue health: depth=0, active=0, success rate=100%
+- Final coverage: 58% (19/33) — 14 remaining paths require edge-case inputs
+- Lifecycle aggregates: 801 total, 6 completed, 2 failed, avg queue wait=175ms
+
 ## [v1.8.1] — 2026-06-12
 
 ### Fixed

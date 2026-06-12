@@ -443,6 +443,7 @@ The Agent Pack follows semantic versioning:
 - `v1.7.1` — Observability stabilization (recreated /api/logs + /api/traces, handlerError traces for PDF/enqueue failures, 27 total paths)
 - `v1.8.0` — Observability hardening audit (heatmap, timeline, coverage matrix script, leakage audit, all 27 paths validated)
 - `v1.8.1` — Queue worker fix (Vercel freeze root cause, waitUntilEmpty, endpoint population, lifecycle traces, 33 paths)
+- `v1.8.2` — Production acceptance validation (real user journeys, concurrency test, final coverage 58%, closeout audit)
 - `v2.0.0` — Architecture changes or new agent system
 
 ---
