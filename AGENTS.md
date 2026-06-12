@@ -201,7 +201,7 @@ Lead generation and client onboarding through contact forms, AI-powered brief co
 ### `GET /api/telemetry` — Consolidated observability endpoint
 - **`?type=logs&limit=N`**: Returns recent lifecycle entries + aggregate metrics. Default limit 20, max 200. `?type=logs&id=X` returns single entry. Source of truth: Neon `request_logs` table.
 - **`?type=traces&id=X`**: Returns merged trace events (memory live + Neon historical), deduplicated by `(requestId, pathId)`. Shows per-source counts (memory, neon, merged).
-- **`?type=coverage`**: Returns true system coverage: 23 pathIds merged from memory + Neon (24h history). Response includes `source: 'merged'` with `memory` and `neon` breakdowns.
+- **`?type=coverage`**: Returns true system coverage: 25 pathIds merged from memory + Neon (24h history). Response includes `source: 'merged'` with `memory` and `neon` breakdowns.
 - **`?type=range&hours=N`**: Returns aggregated trace analytics — per-path hit counts, first/last seen timestamps, hourly bucket stats.
 - **`?type=health`**: System health — queue depth/throughput, lifecycle aggregates, rate-limit state, memory usage. `?type=health&section=queue` or `&section=rate-limit` for detailed views.
 - **Storage**: Two-tier — in-memory Map (5min TTL) + Neon `request_traces` table (persistent, cross-instance). All writes are fire-and-forget (non-blocking).
@@ -367,16 +367,17 @@ vercel --prod
 
 Before deployment, verify:
 
+- [ ] Run `node scripts/run-production-tests.js` — smoke suite passes (unique emails, coverage check)
 - [ ] Run `npm run audit` — 9/9 validation persistence tests pass (100%)
 - [ ] Contact form submits successfully (including retry on 429)
 - [ ] Retry UI shows correct language text and attempt counter
 - [ ] Validation diagnostics persist through Neon on INVALID_REQUEST (400):
   - [ ] POST /api/sendBrief with invalid email returns 400 with requestId
   - [ ] POST /api/sendContact with invalid email returns 400 with requestId
-  - [ ] GET /api/logs?id=<requestId> returns 200 with validationStage, validationField, validationReason (both endpoints)
+  - [ ] GET /api/telemetry?type=logs&id=<requestId> returns 200 with validationStage, validationField, validationReason (both endpoints)
   - [ ] Neon request_logs row contains all 3 validation columns
-- [ ] Lifecycle observability: `GET /api/sendContact?id=<requestId>` returns `completed` status with all timestamps
-- [ ] Queue health: `/api/health?section=queue` includes `lifecycle` block with aggregate metrics
+- [ ] Lifecycle observability: `GET /api/telemetry?type=logs&id=<requestId>` returns `completed` status with all timestamps
+- [ ] Queue health: `/api/telemetry?type=health&section=queue` includes `lifecycle` block with aggregate metrics
 - [ ] Structured log: `lifecycle.complete` stage emitted on every request completion
 - [ ] Brief submission sends successfully
 - [ ] PDF attachment generated and attached to admin email
@@ -384,12 +385,13 @@ Before deployment, verify:
 - [ ] Client confirmation delivered to both `[email, GMAIL_USER]`
 - [ ] Timezone displays correct `America/Tijuana` time
 - [ ] No console errors in browser
-- [ ] Trace events persist to Neon: `GET /api/traces?id=<requestId>` returns trace events for rejected requests
-- [ ] Merged coverage: `GET /api/traces?coverage=true` returns `source: 'merged'` with memory + neon breakdown
-- [ ] Range analytics: `GET /api/traces?range=24h` returns per-path hit counts and hourly buckets
+- [ ] Trace events persist to Neon: `GET /api/telemetry?type=traces&id=<requestId>` returns trace events for rejected requests
+- [ ] Merged coverage: `GET /api/telemetry?type=coverage` returns `source: 'merged'` with memory + neon breakdown
+- [ ] Range analytics: `GET /api/telemetry?type=range&hours=24` returns per-path hit counts and hourly buckets
 - [ ] No Vercel Function errors (500/502)
 - [ ] Both languages (es/en) render correctly
 - [ ] Dark mode renders correctly in email clients
+- [ ] `tracer.drain()` is silent (no console.log per request in production)
 
 ---
 
@@ -426,7 +428,7 @@ The Agent Pack follows semantic versioning:
 - `v1.2.0` — Observability hardening (TTL enforcement, single executionStartedAt, unified lifecycle.complete, pre-queue rejection tracking)
 - `v1.2.1` — Derived metric persistence + aggregate TTL purge (fixed averageExecutionTimeMs and averageQueueWaitTimeMs always being 0; getAggregateMetrics now evicts expired entries)
 - `v1.6.0` — SaaS multi-tenant architecture design (design phase)
-- `v1.7.0` — SaaS Runtime Layer v1 + API v1 implementation
+- `v1.7.0` — Request tracing production audit (auto-table-creation, eager require, array drain, success traces, 28% coverage validated)
 - `v2.0.0` — Architecture changes or new agent system
 
 ---

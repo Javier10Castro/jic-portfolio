@@ -199,20 +199,24 @@ Layer 2 — Execution Layer (Internal Queue Scheduler)
 
 **Before queue**: PDF generated synchronously, form responses persisted to Neon `form_responses` table (non-blocking, best-effort — failure does not block email).
 
-### 5c. Observability Endpoints
+### 5c. Observability Endpoints (Consolidated)
+
+All observability is served by a single endpoint to save serverless function slots:
 
 | Endpoint | Returns |
 |---|---|
-| `GET /api/health` | Queue, lifecycle, rate-limit summary, instance info, memory |
-| `GET /api/health?section=queue` | Queue depth, active workers, throughput, lifecycle aggregates |
-| `GET /api/health?section=rate-limit` | IP entries, email dedup cache, thresholds, window info |
-| `GET /api/logs?limit=20` | Recent request registry entries + aggregate metrics |
-| `GET /api/logs?id=<requestId>` | Single lifecycle entry (or 404) |
-| `GET /api/traces?id=<requestId>` | Validation path trace events (merged: memory + Neon) |
-| `GET /api/traces?coverage=true` | True system coverage: 23 pathIds, merged memory + 24h Neon history |
-| `GET /api/traces?range=24h` | Aggregated trace analytics: per-path hit counts, hourly buckets |
+| `GET /api/telemetry?type=logs&limit=20` | Recent request registry entries + aggregate metrics |
+| `GET /api/telemetry?type=logs&id=<requestId>` | Single lifecycle entry (or 404) |
+| `GET /api/telemetry?type=traces&id=<requestId>` | Validation path trace events (merged: memory + Neon) |
+| `GET /api/telemetry?type=coverage` | True system coverage: 25 pathIds, merged memory + 24h Neon history |
+| `GET /api/telemetry?type=range&hours=24` | Aggregated trace analytics: per-path hit counts, hourly buckets |
+| `GET /api/telemetry?type=health` | Queue, lifecycle, rate-limit summary, instance info, memory |
+| `GET /api/telemetry?type=health&section=queue` | Queue depth, active workers, throughput, lifecycle aggregates |
+| `GET /api/telemetry?type=health&section=rate-limit` | IP entries, email dedup cache, thresholds, window info |
 
-**Important**: Each `api/` file is a separate Vercel Function instance. They do NOT share memory. Health endpoint will NOT see lifecycle data from sendContact's instance. The traces endpoint bridges this via Neon persistence — `GET /api/traces?coverage=true` merges per-instance memory with cross-instance Neon data.
+**Important**: Each `api/` file is a separate Vercel Function instance. They do NOT share memory. Telemetry bridges cross-instance gaps via Neon persistence — e.g. `?type=coverage` merges per-instance memory with cross-instance Neon data.
+
+**Removed endpoints (v1.6.0)**: `GET /api/health`, `GET /api/logs`, `GET /api/traces` — all consolidated into `GET /api/telemetry`.
 
 ---
 
@@ -435,9 +439,9 @@ Each validation rejection path records a deterministic trace event to `request_t
 
 **Unique constraint**: `UNIQUE (request_id, path_id)` — a single request cannot produce duplicate trace events for the same path.
 
-**Coverage**: `GET /api/traces?coverage=true` returns merged coverage from memory (live) + Neon (24h history), producing `source: 'merged'` with breakdown.
+**Coverage**: `GET /api/telemetry?type=coverage` returns merged coverage from memory (live) + Neon (24h history), producing `source: 'merged'` with breakdown.
 
-**Range analytics**: `GET /api/traces?range=24h` returns per-path hit counts, first/last seen, and hourly bucket stats.
+**Range analytics**: `GET /api/telemetry?type=range&hours=24` returns per-path hit counts, first/last seen, and hourly bucket stats.
 
 **Files**:
 - `lib/tracer.js` v2 — in-memory + Neon persistence
@@ -503,7 +507,7 @@ Single source of truth for all `/api/sendBrief` payloads. Called by wizard, dire
 
 ### Diagnosing INVALID_REQUEST
 
-Every `/api/sendBrief` validation failure registers in the request registry with the exact stage. Query via `GET /api/logs?id=<requestId>`:
+Every `/api/sendBrief` validation failure registers in the request registry with the exact stage. Query via `GET /api/telemetry?type=logs&id=<requestId>`:
 
 ```json
 {
@@ -583,7 +587,7 @@ DEPLOYMENT (lib/deployment/) — Git init, commit, GitHub repo, push (optional)
 
 - Gmail App Password may expire — must regenerate if emails fail to send
 - Vercel Serverless Functions do NOT share memory — cross-function observability requires Neon/Redis
-- `GET /api/health` and `POST /api/sendContact` are separate instances — health sees 0 lifecycle from contact
+- `GET /api/telemetry` and `POST /api/sendContact` are separate instances — telemetry sees 0 lifecycle from contact's in-memory registry (Neon persists cross-instance for logs/traces)
 - Non-UUID `workspace_id` is rejected immediately with `INVALID_ID_FORMAT` (no hashing, no conversion)
 - **Body parse fail path (sendContact path 2)**: Vercel edge intercepts invalid JSON before the function runs. When `Content-Type: application/json` body is not valid JSON, Vercel returns 400 with empty body — our code never executes. This is a platform limitation, not a bug.
 
@@ -686,9 +690,16 @@ Upstash Redis (7 day fallback). Each api/* file is an isolated Vercel Function i
 with no shared memory. Key env vars: GMAIL_USER, GMAIL_APP_PASSWORD, DATABASE_URL.
 Validation persistence: Both sendBrief (11 paths) and sendContact (12 paths) persist validationStage/validationField/
 validationReason to Neon via await persistImmediate() before returning 400/405/429/503 
-responses — 100% deterministic across all 23 early-return paths. GET /api/logs?id=<requestId> 
+responses — 100% deterministic across all 23 early-return paths. GET /api/telemetry?type=logs&id=<requestId> 
 returns full diagnostics cross-instance. One platform limitation: Vercel edge intercepts invalid 
 JSON before sendContact runs (path 2, body parse fail — no requestId returned).
+
+Request tracing: 25 pathIds across both endpoints, each instrumented with tracer.trace() before 
+every early return and on success (submitted). Two-tier storage: in-memory Map (5min TTL) + 
+Neon request_traces table (auto-created on cold start via _ensureTable()). Drain is deterministic 
+(array splice + finally block, silent in production). Coverage endpoint: /api/telemetry?type=coverage 
+returns merged (memory + Neon 24h) across all 25 paths. Current coverage: ~28% (7/25) — remaining 
+paths require diverse inputs (non-POST, bot patterns, invalid JSON, IP burst) not yet seen in testing.
 
 ---
 
@@ -699,12 +710,13 @@ If you want to give another AI the **complete context** of this project, copy th
 - Understand the two-layer execution model (rate gate → async queue)
 - Know the 5 lifecycle states and 3-tier persistence
 - Recognize the validation persistence pattern for both endpoints (23 total paths)
+- Understand the request tracing architecture (25 pathIds, two-tier storage, auto-table-creation)
 - Be aware of the Vercel platform limitations (no shared memory, body parse edge intercept)
 - Know the project structure, API endpoints, DB schemas, email/PDF standards
 - Understand the validation order and all reject paths
-- Be able to diagnose INVALID_REQUEST responses via `/api/logs?id=`
+- Be able to diagnose INVALID_REQUEST responses via `/api/telemetry?type=logs&id=`
 - Know the retry strategy, E2E testing utilities, and localStorage keys
-- Be aware of the latest production-verified state (v1.4.4, audit script at `scripts/audit-validation-coverage.js`)
+- Be aware of the latest production-verified state (v1.7.0, audit scripts at `scripts/audit-validation-coverage.js` and `scripts/run-production-tests.js`)
 
 ---
 
@@ -723,7 +735,23 @@ node scripts/audit-validation-coverage.js
 The script tests 9 validation reject scenarios across both endpoints, verifying that each one:
 1. Returns an HTTP error with `requestId`
 2. Persists `validationStage`, `validationField`, `validationReason` to Neon
-3. Makes diagnostics available cross-instance via `GET /api/logs?id=<requestId>`
+3. Makes diagnostics available cross-instance via `GET /api/telemetry?type=logs&id=<requestId>`
 
 Exit code: 0 if all pass, 1 if any fail. See `docs/REQUEST_PERSISTENCE_AUDIT_FINAL.md` for full audit documentation.
+
+### Production Smoke Suite
+
+A complementary test suite exists at `scripts/run-production-tests.js`:
+
+```bash
+node scripts/run-production-tests.js
+```
+
+This tests 4 end-to-end scenarios with unique email per run (`RUN_ID` env var):
+1. Valid brief submission → 202
+2. Valid contact submission → 202
+3. Invalid email (brief) → 400 + trace persistence
+4. Missing name (contact) → 400 + trace persistence
+
+Also validates coverage endpoint returns `source: 'merged'` and trace events survive cross-instance lookup.
 

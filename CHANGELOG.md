@@ -1,5 +1,48 @@
 # Changelog
 
+## [v1.7.0] - 2026-06-12
+
+### Fixed
+- [2026-06-12] - `request_traces` table auto-creation on cold start (`_ensureTable()` in `lib/db/requestTraces.js`)
+  - Table + 4 indexes created via `CREATE TABLE IF NOT EXISTS` at module load time
+  - `saveTrace()` awaits `_tableReady` before INSERT — no race condition
+- [2026-06-12] - Lazy init masking Neon module load errors in `lib/tracer.js`
+  - Changed from `_tryInitNeon()` with silent catch to eager `require()` with visible error logging
+- [2026-06-12] - Set-based `_pending` array defeating `drain()`
+  - Auto-cleaning via `p.finally(() => _pending.delete(p))` removed fulfilled promises before `drain()` inspected them
+  - Fixed: `_pending` is now a simple array with splice-based atomic drain
+- [2026-06-12] - Fire-and-forget Neon writes cut short by Vercel function termination
+  - Added `finally { await tracer.drain() }` in both `sendBrief.js` and `sendContact.js`
+- [2026-06-12] - No success-path traces (coverage stuck at 0% for valid submissions)
+  - Added `sendBrief:submitted` and `sendContact:submitted` trace emissions
+- [2026-06-12] - Verbose `console.log` in `tracer.drain()` removed — production log noise
+
+### Added
+- [2026-06-12] - `docs/REQUEST_TRACING_FINAL_AUDIT.md` — full production audit report
+- [2026-06-12] - `docs/PRODUCTION_TEST_REPORT.md` — verification test results
+- [2026-06-12] - `scripts/run-production-tests.js` — idempotent production smoke suite
+  - Unique emails per run via `RUN_ID` suffix, validates 4 core tests, checks coverage
+
+### Changed
+- [2026-06-12] - `lib/tracer.js`:
+  - Eager `require('./db/requestTraces')` at module load (was lazy init)
+  - `drain()` is now silent (no per-request console.log)
+  - Exports `neonReady` getter
+- [2026-06-12] - `lib/db/requestTraces.js`:
+  - `_ensureTable()` auto-creates table + indexes on cold start
+  - `saveTrace()` awaits `_tableReady` before INSERT
+  - Error logging in all catch blocks
+- [2026-06-12] - `api/sendBrief.js`: success trace + `tracer.drain()` in finally
+- [2026-06-12] - `api/sendContact.js`: success trace + `tracer.drain()` in finally
+
+### Removed
+- [2026-06-12] - `X-Tracer-Debug` diagnostic header from sendBrief 202 response
+
+### Coverage
+- Current: 28% (7/25 paths)
+- All 25 paths instrumented — remaining 18 require diverse inputs not yet seen in production
+- Verified trace persistence via Neon + merged coverage endpoint
+
 ## [v1.6.0] - 2026-06-12
 
 ### Added

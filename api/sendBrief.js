@@ -332,7 +332,6 @@ module.exports = async (req, res) => {
     'X-Queue-Depth': String(depth),
     'X-Queue-Position': String(position),
     'X-Processing-Mode': depth > 0 ? 'queued' : 'immediate',
-    'X-Tracer-Debug': tracer.neonReady ? 'neon' : 'no-neon',
   }), resPayload(req, { success: true, queued: true, position, depth }))(res);
 } finally {
     await tracer.drain();
