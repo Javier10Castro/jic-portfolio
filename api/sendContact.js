@@ -104,7 +104,8 @@ async function handleStatusLookup(req, res) {
 }
 
 module.exports = async (req, res) => {
-  if (req.method === 'GET') return handleStatusLookup(req, res);
+  try {
+    if (req.method === 'GET') return handleStatusLookup(req, res);
 
   const start = Date.now();
   const ip = clientIp(req);
@@ -373,6 +374,9 @@ module.exports = async (req, res) => {
     'X-RateLimit-Limit': String(edge.limit),
     'X-RateLimit-Remaining': String(Math.max(0, edge.remaining)),
   }), resPayload(req, { success: true, status: 'queued', queued: true, position, depth, queuePosition: position, queueDepth: depth }))(res);
+} finally {
+    await tracer.drain();
+  }
 };
 
 function buildContactHTML({ name, email, company, project, message, dateStr, lang }, type) {

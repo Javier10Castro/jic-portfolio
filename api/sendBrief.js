@@ -113,8 +113,9 @@ async function redisSlidingWindow(key, maxReqs, windowMs) {
 }
 
 module.exports = async (req, res) => {
-  const start = Date.now();
-  const ip = clientIp(req);
+  try {
+    const start = Date.now();
+    const ip = clientIp(req);
   req._debugEndpoint = 'sendBrief';
   log.requestId(req);
   log.event('request.start', req, { ip, method: req.method, endpoint: 'sendBrief' });
@@ -331,6 +332,9 @@ module.exports = async (req, res) => {
     'X-Queue-Position': String(position),
     'X-Processing-Mode': depth > 0 ? 'queued' : 'immediate',
   }), resPayload(req, { success: true, queued: true, position, depth }))(res);
+} finally {
+    await tracer.drain();
+  }
 };
 
 /* ─── Email templates (unchanged) ──────────────────────────────── */
