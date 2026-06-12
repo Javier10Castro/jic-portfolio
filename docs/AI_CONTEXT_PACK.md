@@ -673,5 +673,26 @@ If you want to give another AI the **complete context** of this project, copy th
 - Understand the validation order and all reject paths
 - Be able to diagnose INVALID_REQUEST responses via `/api/logs?id=`
 - Know the retry strategy, E2E testing utilities, and localStorage keys
-- Be aware of the latest production-verified state (v1.4.3, all 23 paths fully tracked)
+- Be aware of the latest production-verified state (v1.4.4, audit script at `scripts/audit-validation-coverage.js`)
+
+---
+
+## 22. Audit Script
+
+An automated validation persistence audit tool exists at `scripts/audit-validation-coverage.js`.
+
+```bash
+# Run the audit (no dependencies required)
+npm run audit
+
+# Or directly:
+node scripts/audit-validation-coverage.js
+```
+
+The script tests 9 validation reject scenarios across both endpoints, verifying that each one:
+1. Returns an HTTP error with `requestId`
+2. Persists `validationStage`, `validationField`, `validationReason` to Neon
+3. Makes diagnostics available cross-instance via `GET /api/logs?id=<requestId>`
+
+Exit code: 0 if all pass, 1 if any fail. See `docs/REQUEST_PERSISTENCE_AUDIT_FINAL.md` for full audit documentation.
 

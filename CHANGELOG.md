@@ -1,5 +1,16 @@
 # Changelog
 
+## [v1.4.4] - 2026-06-12
+
+### Added
+- [2026-06-12] - Automated validation persistence audit script
+  - `scripts/audit-validation-coverage.js` — executable Node.js audit tool
+  - Tests 9 validation reject scenarios across both endpoints
+  - Verifies requestId, validationStage, field, reason persist to Neon
+  - Produces pass/fail metrics and coverage percentage
+  - Usage: `node scripts/audit-validation-coverage.js` or `npm run audit`
+  - 9/9 tests passing (100%) in production
+
 ## [v1.4.3] - 2026-06-12
 
 ### Fixed

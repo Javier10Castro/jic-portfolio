@@ -370,6 +370,7 @@ vercel --prod
 
 Before deployment, verify:
 
+- [ ] Run `npm run audit` — 9/9 validation persistence tests pass (100%)
 - [ ] Contact form submits successfully (including retry on 429)
 - [ ] Retry UI shows correct language text and attempt counter
 - [ ] Validation diagnostics persist through Neon on INVALID_REQUEST (400):

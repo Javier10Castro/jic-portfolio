@@ -8,7 +8,8 @@
     "db:repl": "node scripts/query.js --repl",
     "db:reset": "node scripts/db-reset.js --force",
     "db:migrate": "node scripts/run-migrations.js",
-    "db:seed": "node scripts/seed-test.js"
+    "db:seed": "node scripts/seed-test.js",
+    "audit": "node scripts/audit-validation-coverage.js"
   },
   "dependencies": {
     "@upstash/redis": "^1.38.0",
