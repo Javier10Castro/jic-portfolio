@@ -985,23 +985,9 @@ Reference:
 
 Implemented in:
 - `42efb28` (sendBrief — initial fix)
-- `THIS_COMMIT` (sendContact — same pattern applied)
+- `6baa6bb` (sendBrief — all 11 paths now tracked)
 
-### Validation Diagnostics Persistence
-
-Validation failures (`400 INVALID_REQUEST`) persist 3 diagnostic fields through Neon `request_logs`:
-
-| Field | SQL column | Example |
-|---|---|---|
-| `validationStage` | `validation_stage` | `validateEmail` |
-| `validationField` | `validation_field` | `email` |
-| `validationReason` | `validation_reason` | `invalid_format` |
-
-**Flow**: `sendBrief.js` / `sendContact.js` → `registry.registerLifecycle()` → in-memory Map → `registry.persistImmediate()` → `_neon.saveLog()` → `request_logs` table.
-
-**Retrieval**: `GET /api/logs?id=<requestId>` reads from Neon (cross-instance source of truth). Entries with `status: "rejected"` include all 3 validation fields.
-
-**Critical implementation detail**: The `persistImmediate()` function (added in commit `42efb28`, extended to sendContact in `94c5a8b`, extended to all sendBrief untracked paths in `THIS_COMMIT`) `await`s the Neon INSERT before returning the response. This is necessary because Vercel may freeze the serverless function immediately after the response is sent — a fire-and-forget Promise may never complete. See `lib/request-registry.js:132-139`.
+  **Critical implementation detail**: The `persistImmediate()` function (added in commit `42efb28`, extended to sendContact in `94c5a8b`, extended to all sendBrief untracked paths in `6baa6bb`) `await`s the Neon INSERT before returning the response. This is necessary because Vercel may freeze the serverless function immediately after the response is sent — a fire-and-forget Promise may never complete. See `lib/request-registry.js:132-139`.
 
 ### sendBrief Reject Paths (11 paths, all fixed — NOW fully tracked)
 

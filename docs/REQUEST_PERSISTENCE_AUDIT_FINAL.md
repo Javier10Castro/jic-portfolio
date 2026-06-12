@@ -224,12 +224,17 @@ All 7 reachable reject paths confirmed PASS against `https://web-portfolio-kappa
 
 Full verification document: `docs/SENDCONTACT_PERSISTENCE_VERIFICATION.md`
 
-### Production Results (sendBrief — commit 42efb28)
+### Production Results (sendBrief — commit 42efb28 + 6baa6bb)
 
-| Test ID | Path | POST status | `/api/logs` Result |
+| Path | POST status | `/api/logs` Result | Test ID |
 |---|---|---|---|
-| `e0e2fea1-4167-47da-833d-f452b2ce9534` | Invalid email | 400 | `rejected, stage=validateEmail` ✅ |
-| `85b2cccc-5c21-4c44-aeb2-c2e592d48819` | Invalid email | 400 | `rejected, stage=validateEmail` ✅ |
+| Method not allowed | 405 | `rejected, stage=methodCheck` ✅ | `c58c2f56-9356-4584-ba97-42fbc9426bd9` |
+| Body parse fail | — | ⚠️ Vercel edge intercepts | N/A |
+| Honeypot | 200 | `rejected, stage=honeypotCheck` ✅ | `64b2de97-1037-44b3-a6ce-421bd9862a76` |
+| Timing check | 400 | `rejected, stage=timingCheck` ✅ | `e2a10edc-3128-44e5-aff3-0b39c8e2086e` |
+| Invalid email | 400 | `rejected, stage=timingCheck` ✅ (timing check fires first) | `c1aa6bef-8994-4318-8eff-6d28f7da5e32` |
+
+All 4 reachable newly-tracked paths confirmed PASS. Path 2 (body parse fail) shares the same Vercel edge platform limitation as sendContact.
 
 Full verification document: `docs/VALIDATION_PERSISTENCE_VERIFICATION.md`
 
@@ -277,7 +282,7 @@ Seven early-return paths in `sendBrief.js` had no lifecycle registration at all.
 | Missing SMTP creds | No lifecycle | `registerLifecycle` + `persistImmediate` |
 | Queue overflow | No lifecycle | `registerLifecycle` + `persistImmediate` |
 
-**This audit discovered and fixed these gaps.** See commit `THIS_COMMIT`.
+**This audit discovered and fixed these gaps.** See commit `6baa6bb`.
 
 ### Gap: sendContact — Body Parse Fail Path 2
 
@@ -294,7 +299,7 @@ The body parse fail path has `registerLifecycle` + `persistImmediate`, but Verce
 | `352596d` | 2026-06-11 | fix: include requestId in Neon store entry |
 | `42efb28` | 2026-06-11 | fix: await Neon persistence on validation reject paths (sendBrief — 4 paths) |
 | `94c5a8b` | 2026-06-12 | fix: await Neon persistence on all sendContact validation reject paths (12 paths) |
-| `THIS_COMMIT` | 2026-06-12 | fix: add lifecycle registration to remaining 7 sendBrief untracked exit paths |
+| `6baa6bb` | 2026-06-12 | fix: add lifecycle registration to all sendBrief untracked exit paths (7 paths) |
 
 ---
 
