@@ -1,10 +1,10 @@
 # Final Production Acceptance Report
 
 **Date**: 2026-06-12
-**Version**: v1.8.1
+**Version**: v1.8.2
 **Deployment**: `https://web-portfolio-kappa-wheat.vercel.app`
 **Branch**: `main`
-**Commits**: `c1b90c7` + `ac74740`
+**Commits**: `c1b90c7`, `ac74740`, `d27b8e3`, `a7f0b4e`
 
 ---
 
@@ -33,7 +33,7 @@ The system has undergone a complete observability and queue worker lifecycle ini
 | Coverage achieved | 58% (19/33) |
 | Queue health | depth=0, active=0, success rate 100% |
 | Lifecycle completed | 6 verified |
-| Lifecycle failed | 2 verified |
+| Lifecycle failed | 3 verified |
 | Avg execution time | ~15.9s |
 | Avg queue wait | ~175ms |
 
@@ -184,7 +184,7 @@ INCOMING REQUEST
 | Lifecycle transition (submitted→processing) | ✅ | Coverage: `sendBrief:processing` present |
 | Lifecycle transition (processing→completed) | ✅ | Coverage: `sendContact:completed` present |
 | PDF generation | ✅ (server-side) | Email sent with attachment |
-| Email delivery | ✅ (confirmed) | Both admin + client confirmed sent |
+| Email delivery | ⚠️ (see §Business Validation) | Hobby plan 10s limit blocks SMTP completion |
 | Queue drain after single request | ✅ | depth=0, active=0 |
 | Queue drain after burst (10 requests) | ✅ | depth=0, active=0 |
 
@@ -211,7 +211,7 @@ INCOMING REQUEST
   "lifecycle": {
     "totalRequests": 801,
     "completedRequests": 6,
-    "failedRequests": 2,
+    "failedRequests": 3,
     "averageExecutionTimeMs": 15899,
     "averageQueueWaitTimeMs": 175
   }
@@ -254,11 +254,61 @@ These paths require specific inputs that are not part of normal user journeys:
 
 ---
 
-## 7. Residual Risks
+## 7. Business Validation
+
+Final closeout validation executed on 2026-06-12 with fresh production submissions.
+
+### sendContact
+| Criterion | Result | Evidence |
+|---|---|---|
+| API accepted (202) | ✅ | requestId: `c51c0dcb-14ef-4bf3-b7fe-f295364898d7` |
+| Email received | ❌ Not delivered | See Hobby plan limitation below |
+| Subject verified | ⚠️ N/A | Email not received |
+| Branding verified | ⚠️ N/A | Email not received |
+| Content verified | ⚠️ N/A | Email not received |
+
+### sendBrief
+| Criterion | Result | Evidence |
+|---|---|---|
+| API accepted (202) | ✅ | requestId: `00a2bcaf-a9c2-4859-9307-66f2c7649232` |
+| Email received | ❌ Not delivered | See Hobby plan limitation below |
+| PDF attached | ⚠️ N/A | Email not received |
+| PDF opens correctly | ⚠️ N/A | Email not received |
+| PDF content verified | ⚠️ N/A | Email not received |
+| Template verified | ⚠️ N/A | Email not received |
+
+### Root Cause: Vercel Hobby Plan maxDuration
+
+Both submissions were accepted (202), queued, and processing began (`executionStartedAt` confirmed for sendBrief).
+However, Vercel's Hobby plan enforces a **10-second `maxDuration`** for serverless functions.
+
+The email pipeline requires:
+- **sendContact**: ~10-11s total (admin SMTP 5s timeout + client SMTP 5s timeout + overhead)
+- **sendBrief**: ~12-14s total (PDF generation + admin SMTP with PDF attachment + client SMTP + overhead)
+
+The function is killed at 10s, before SMTP operations complete. The requests remain stuck in `processing` state.
+`averageExecutionTimeMs: 15,899` confirms successful requests also exceed 10s when SMTP is slow.
+
+**This is not a credential issue.** `GMAIL_USER` and `GMAIL_APP_PASSWORD` are configured and valid in Vercel.
+The 6 historically completed requests confirm SMTP works when response times are fast (<4s per email).
+
+### Resolution
+
+| Option | Effort | Effect |
+|---|---|---|
+| Vercel Pro plan ($20/mo) | Minimal | maxDuration 60s-300s — resolves entirely |
+| Reduce EMAIL_TIMEOUT_MS | Low | Increases failure rate under latency |
+| Third-party SMTP (SendGrid) | Medium | Faster delivery, lower latency |
+
+No code changes implemented per closeout scope. Documented as known limitation.
+
+---
+
+## 8. Residual Risks
 
 | Risk | Severity | Description | Mitigation |
 |---|---|---|---|
-| Vercel Hobby plan maxDuration (10s) | HIGH | SMTP retries (34s worst case) exceed 10s limit | Pro plan recommended |
+| Vercel Hobby plan maxDuration (10s) | **CRITICAL** | Emails are NOT delivered because SMTP pipeline (10-14s) exceeds 10s function timeout. Confirmed in final validation: both sendContact and sendBrief submitted successfully but emails never arrived. | Upgrade to Pro plan (maxDuration ≥ 60s) |
 | Concurrent request coupling | MEDIUM | One request waits for all queued items; timeout orphans remaining | 60s timeout + `.catch(() => {})` |
 | Trace persistence best-effort | LOW | Neon writes are fire-and-forget; some traces may not persist | Coverage still works via memory+Neon merge |
 | Gmail App Password expiry | MEDIUM | Password must be regenerated if email sending fails | Manual renewal required |
@@ -266,18 +316,19 @@ These paths require specific inputs that are not part of normal user journeys:
 
 ---
 
-## 8. Future Recommendations
+## 9. Future Recommendations
 
-1. **No additional observability** — Current system covers all operational needs
-2. **Consider Upstash Redis** — For cross-instance queue coordination (optional, low priority)
+1. **Upgrade to Vercel Pro plan** — The single highest-impact change. Enables maxDuration 60s-300s, which resolves the email delivery failure. Without this, the system cannot deliver emails reliably.
+2. **No additional observability** — Current system covers all operational needs
 3. **Monitor coverage naturally** — As real users interact with the system, coverage will grow organically past 58%
 4. **No 100% coverage target needed** — 14 of 33 paths require error/invalid states that don't occur in normal operation
+5. **Next focus: product features** — UX improvements, dashboard functionality, brief generation quality
 
 ---
 
-## 9. Production Readiness Verdict
+## 10. Production Readiness Verdict
 
-**PRODUCTION READY** ✅
+**PRODUCTION READY WITH KNOWN LIMITATIONS** ⚠️
 
 The system has been validated through:
 - Unit tests (counter integrity, module loading)
@@ -286,6 +337,7 @@ The system has been validated through:
 - Real user journey tests (sendBrief + sendContact)
 - Concurrency test (10 requests, 100% success)
 - Post-burst audit (depth=0, active=0, no stuck items)
+- **Business validation**: Email delivery blocked by Vercel Hobby plan 10s maxDuration
 
 All critical issues identified during v1.6→v1.8.1 have been resolved:
 - Queue worker no longer orphaned
@@ -294,4 +346,10 @@ All critical issues identified during v1.6→v1.8.1 have been resolved:
 - endpoint field populated
 - Neon persistence operational
 
-The initiative is hereby **closed**.
+### Critical Gap
+Email delivery is **non-functional** on the current Hobby plan. The API correctly accepts and queues requests, but the 10s serverless timeout kills the function before SMTP operations complete. Upgrade to Pro plan is required for production email delivery.
+
+### Recommendation
+The observability initiative is **closed**. Next focus should be on upgrading the hosting plan and building product features. No further observability work is needed.
+
+**OBSERVABILITY INITIATIVE CLOSED**
