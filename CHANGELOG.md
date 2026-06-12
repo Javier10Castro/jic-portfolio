@@ -30,6 +30,36 @@
 - All 27 paths instrumented — 2 new `handlerError` paths protect against PDF/enqueue failures
 - New: `/api/logs` backward-compatible for all existing scripts and tools
 
+## [v1.8.0] - 2026-06-12
+
+### Added
+- [2026-06-12] - `GET /api/traces?heatmap=true` — failure aggregation endpoint
+  - Groups trace events by `(path_id, endpoint, stage)` with hit counts and percentages
+  - Supports `&hours=N` parameter (default 24)
+  - Neon-backed, returns `{ total, rows[{ pathId, endpoint, stage, hitCount, percentage, firstSeen, lastSeen }] }`
+- [2026-06-12] - `GET /api/traces?timeline=true` — request lifecycle ordering endpoint
+  - All trace events ordered chronologically, grouped by requestId
+  - Per-request deltaMs between consecutive events
+  - Supports `&hours=N&limit=N` parameters
+- [2026-06-12] - `scripts/run-coverage-matrix.js` — automated path exerciser
+  - Exercises 15 reachable validation paths via HTTP
+  - Verifies Neon persistence, heatmap, timeline, health endpoints
+  - Performs leakage scan on responses
+  - Outputs JSON + Markdown reports to `data/coverage-matrix-report.*`
+- [2026-06-12] - `docs/OBSERVABILITY_HARDENING_AUDIT.md` — comprehensive audit report
+
+### Changed
+- [2026-06-12] - `lib/db/requestTraces.js`: added `getHeatmap()` and `getTimeline()` aggregation functions
+- [2026-06-12] - `api/traces.js`: added heatmap and timeline routing, `hours` param support
+
+### Audit
+- All 27 paths audited for trace persistence — all call `tracer.trace()` with detailed pathId matching `ALL_PATHS`
+- All 27 paths call `persistImmediate()` before returning (validation failures) or `tracer.drain()` (success paths)
+- No sensitive data leaked in any response body (all errors are generic static strings)
+- No `X-Tracer-Debug` header present (verified in both handlers)
+- Low-severity headers: `X-Deploy-SHA`, `X-Deploy-Env`, `X-Body-Parse-Method`, queue state headers — standard API metadata
+- Coverage matrix reports 15 reachable / 12 unreachable (env/edge documented limitations)
+
 ## [v1.7.0] - 2026-06-12
 
 ### Fixed

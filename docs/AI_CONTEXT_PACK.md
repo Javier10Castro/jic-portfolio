@@ -210,13 +210,18 @@ All observability is served by a single endpoint to save serverless function slo
 | `GET /api/telemetry?type=traces&id=<requestId>` | Validation path trace events (merged: memory + Neon) |
 | `GET /api/telemetry?type=coverage` | True system coverage: 27 pathIds, merged memory + 24h Neon history |
 | `GET /api/telemetry?type=range&hours=24` | Aggregated trace analytics: per-path hit counts, hourly buckets |
+| `GET /api/traces?heatmap=true&hours=24` | Failure aggregation by (path_id, endpoint, stage) with hit counts and percentages |
+| `GET /api/traces?timeline=true&hours=24&limit=200` | Request lifecycle ordering with per-request deltaMs between events |
+| `node scripts/run-coverage-matrix.js <url>` | Automated path exerciser: exercises 15 reachable paths, verifies persistence, checks for leaks |
 | `GET /api/telemetry?type=health` | Queue, lifecycle, rate-limit summary, instance info, memory |
 | `GET /api/telemetry?type=health&section=queue` | Queue depth, active workers, throughput, lifecycle aggregates |
 | `GET /api/telemetry?type=health&section=rate-limit` | IP entries, email dedup cache, thresholds, window info |
 
 **Important**: Each `api/` file is a separate Vercel Function instance. They do NOT share memory. Telemetry bridges cross-instance gaps via Neon persistence — e.g. `?type=coverage` merges per-instance memory with cross-instance Neon data.
 
-**Removed endpoints (v1.6.0)**: `GET /api/health`, `GET /api/logs`, `GET /api/traces` — all consolidated into `GET /api/telemetry`.
+**Recreated endpoints (v1.7.1)**:
+- `GET /api/traces` — backward-compatible, merged memory + Neon coverage, range analytics, heatmap, timeline
+- `GET /api/logs` — backward-compatible, proxies to `GET /api/telemetry?type=logs`
 
 ---
 
@@ -442,6 +447,12 @@ Each validation rejection path records a deterministic trace event to `request_t
 **Coverage**: `GET /api/telemetry?type=coverage` returns merged coverage from memory (live) + Neon (24h history), producing `source: 'merged'` with breakdown.
 
 **Range analytics**: `GET /api/telemetry?type=range&hours=24` returns per-path hit counts, first/last seen, and hourly bucket stats.
+
+**Heatmap** (v1.8.0): `GET /api/traces?heatmap=true&hours=24` aggregates trace events by `(path_id, endpoint, stage)` with hit counts and percentage of total. Useful for identifying failure hotspots.
+
+**Timeline** (v1.8.0): `GET /api/traces?timeline=true&hours=24&limit=200` returns all trace events chronologically, grouped by `requestId` with `deltaMs` between consecutive events per request. Useful for lifecycle debugging.
+
+**Coverage Matrix** (v1.8.0): `node scripts/run-coverage-matrix.js <url>` exercises all 15 reachable validation paths, verifies Neon persistence, validates heatmap/timeline/health endpoints, and performs a leakage scan on all response bodies and headers. Outputs JSON + Markdown reports to `data/coverage-matrix-report.*`.
 
 **Files**:
 - `lib/tracer.js` v2 — in-memory + Neon persistence

@@ -198,6 +198,13 @@ Lead generation and client onboarding through contact forms, AI-powered brief co
   1. Admin notification to `GMAIL_USER`
   2. Client confirmation to `[email, GMAIL_USER]`
 
+### `GET /api/traces` — Backward-compatible trace events endpoint
+- **`?id=X`**: Returns merged trace events (memory + Neon), deduplicated. Shows per-source counts.
+- **`?coverage=true`**: Returns merged coverage (memory + Neon, 24h). Shows `source: 'merged'` with breakdowns.
+- **`?range=24h`**: Range analytics — per-path hit counts, first/last seen, hourly buckets.
+- **`?heatmap=true&hours=24`**: Failure aggregation — groups by `(path_id, endpoint, stage)` with hit counts and percentages. Returns `{ total, rows[] }`.
+- **`?timeline=true&hours=24&limit=200`**: Request lifecycle ordering — all trace events chronologically grouped by `requestId` with `deltaMs` between consecutive events.
+
 ### `GET /api/telemetry` — Consolidated observability endpoint
 - **`?type=logs&limit=N`**: Returns recent lifecycle entries + aggregate metrics. Default limit 20, max 200. `?type=logs&id=X` returns single entry. Source of truth: Neon `request_logs` table.
 - **`?type=traces&id=X`**: Returns merged trace events (memory live + Neon historical), deduplicated by `(requestId, pathId)`. Shows per-source counts (memory, neon, merged).
@@ -388,6 +395,10 @@ Before deployment, verify:
 - [ ] Trace events persist to Neon: `GET /api/telemetry?type=traces&id=<requestId>` returns trace events for rejected requests
 - [ ] Merged coverage: `GET /api/telemetry?type=coverage` returns `source: 'merged'` with memory + neon breakdown
 - [ ] Range analytics: `GET /api/telemetry?type=range&hours=24` returns per-path hit counts and hourly buckets
+- [ ] Heatmap: `GET /api/traces?heatmap=true&hours=24` returns aggregated path entries with `total` and `rows`
+- [ ] Timeline: `GET /api/traces?timeline=true&hours=24&limit=100` returns events grouped by `requestId` with `deltaMs`
+- [ ] Coverage matrix: `node scripts/run-coverage-matrix.js <url>` passes all 15 reachable paths
+- [ ] Leakage scan: coverage matrix script reports no sensitive data leaked in response bodies/headers
 - [ ] No Vercel Function errors (500/502)
 - [ ] Both languages (es/en) render correctly
 - [ ] Dark mode renders correctly in email clients
@@ -430,6 +441,7 @@ The Agent Pack follows semantic versioning:
 - `v1.6.0` — SaaS multi-tenant architecture design (design phase)
 - `v1.7.0` — Request tracing production audit (auto-table-creation, eager require, array drain, success traces, 28%→32% coverage)
 - `v1.7.1` — Observability stabilization (recreated /api/logs + /api/traces, handlerError traces for PDF/enqueue failures, 27 total paths)
+- `v1.8.0` — Observability hardening audit (heatmap, timeline, coverage matrix script, leakage audit, all 27 paths validated)
 - `v2.0.0` — Architecture changes or new agent system
 
 ---
