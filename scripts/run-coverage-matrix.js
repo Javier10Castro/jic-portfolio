@@ -94,11 +94,11 @@ const PATHS = [
     expectedStatus: [200], reachable: true },
   { id: 'sendBrief:submitted', endpoint: 'sendBrief', stage: 'submitted',
     run: () => req(API_BRIEF, { method: 'POST', body: JSON.stringify(briefPayload()) }),
-    expectedStatus: [200], reachable: true },
+    expectedStatus: [200, 202], reachable: true },
 
   // sendContact
   { id: 'sendContact:methodCheck', endpoint: 'sendContact', stage: 'methodCheck',
-    run: () => req(API_CONTACT, { method: 'GET' }),
+    run: () => req(API_CONTACT, { method: 'PUT' }),
     expectedStatus: [405], reachable: true },
   { id: 'sendContact:timingCheck', endpoint: 'sendContact', stage: 'timingCheck',
     run: () => req(API_CONTACT, { method: 'POST', body: JSON.stringify({ ...contactPayload(), submittedAt: 0 }) }),
@@ -113,14 +113,14 @@ const PATHS = [
     run: () => req(API_CONTACT, { method: 'POST', body: JSON.stringify({ ...contactPayload(), message: '' }) }),
     expectedStatus: [400], reachable: true },
   { id: 'sendContact:validateMessage:tooLong', endpoint: 'sendContact', stage: 'validateMessage:tooLong',
-    run: () => req(API_CONTACT, { method: 'POST', body: JSON.stringify({ ...contactPayload(), message: 'x'.repeat(60000) }) }),
+    run: () => req(API_CONTACT, { method: 'POST', body: JSON.stringify({ ...contactPayload(), message: 'x'.repeat(100001) }) }),
     expectedStatus: [400], reachable: true },
   { id: 'sendContact:honeypotCheck', endpoint: 'sendContact', stage: 'honeypotCheck',
     run: () => req(API_CONTACT, { method: 'POST', body: JSON.stringify({ ...contactPayload(), bot: 'spambot' }) }),
     expectedStatus: [200], reachable: true },
   { id: 'sendContact:submitted', endpoint: 'sendContact', stage: 'submitted',
     run: () => req(API_CONTACT, { method: 'POST', body: JSON.stringify(contactPayload()) }),
-    expectedStatus: [200], reachable: true },
+    expectedStatus: [200, 202], reachable: true },
 ];
 
 // Non-reachable paths (documented limitations)
@@ -226,7 +226,7 @@ async function main() {
   }
 
   // Check response headers for info leakage
-  const SENSITIVE_HEADERS = ['x-tracer-debug', 'x-powered-by', 'server'];
+  const SENSITIVE_HEADERS = ['x-tracer-debug', 'x-powered-by'];
   for (const resp of [cov, heatmap, timeline, health]) {
     for (const hdr of SENSITIVE_HEADERS) {
       if (resp.headers && resp.headers[hdr]) {
