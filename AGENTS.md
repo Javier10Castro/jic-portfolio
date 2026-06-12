@@ -64,13 +64,8 @@ Lead generation and client onboarding through contact forms, AI-powered brief co
 ├── api/                       # Vercel Serverless Functions
 │   ├── sendBrief.js           # Brief submission (2 emails + PDF)
 │   ├── sendContact.js         # Contact form (2 emails)
-│   └── v1/                    # SaaS API v1 (tenant-safe)
+│   └── telemetry.js           # Consolidated observability (replaces logs, traces, health)
 ├── public/                    # Static assets served by Vercel
-│   ├── dashboard-api.js       # Shared API v1 integration layer (workspace auth, polling)
-│   ├── dashboard.html         # Project list with status badges, create form, auto-refresh
-│   ├── dashboard-project.html # Project control center (pipeline tracker, scoring, controls)
-│   ├── dashboard-logs.html    # Live execution logs + AI decision viewer
-│   ├── dashboard-preview.html # Preview renderer (iframe, version selector, approval)
 │   ├── index.html             # Portfolio landing page
 │   ├── brief-maestro.html     # Brief Maestro tool (14 sections)
 │   ├── icon.ico               # Favicon
@@ -88,9 +83,7 @@ Lead generation and client onboarding through contact forms, AI-powered brief co
 ├── api/
 │   ├── sendBrief.js          # Vercel Function: brief submission (2 emails + PDF)
 │   ├── sendContact.js        # Vercel Function: contact form (2 emails)
-│   ├── health.js             # Health endpoint
-│   ├── logs.js               # Registry reader
-│   └── v1/                   # SaaS API v1 (tenant-safe)
+│   └── telemetry.js          # Consolidated observability (replaces logs, traces, health)
 ├── lib/                       # Internal system modules
 │   ├── queue.js               # Background FIFO queue
 │   ├── rate-limit.js          # Edge gate (IP, timing, dedup, honeypot)
@@ -205,10 +198,14 @@ Lead generation and client onboarding through contact forms, AI-powered brief co
   1. Admin notification to `GMAIL_USER`
   2. Client confirmation to `[email, GMAIL_USER]`
 
-### `GET /api/logs`
-- **`?id=<requestId>`**: Returns single lifecycle entry (200) or 404. Entries with `status: "rejected"` include `validationStage`, `validationField`, `validationReason`.
-- **`?limit=N`**: Returns recent entries + aggregate metrics. Default 20, max 200.
-- **Source of truth**: Neon `request_logs` table — survives Vercel cold starts across all function instances.
+### `GET /api/telemetry` — Consolidated observability endpoint
+- **`?type=logs&limit=N`**: Returns recent lifecycle entries + aggregate metrics. Default limit 20, max 200. `?type=logs&id=X` returns single entry. Source of truth: Neon `request_logs` table.
+- **`?type=traces&id=X`**: Returns merged trace events (memory live + Neon historical), deduplicated by `(requestId, pathId)`. Shows per-source counts (memory, neon, merged).
+- **`?type=coverage`**: Returns true system coverage: 23 pathIds merged from memory + Neon (24h history). Response includes `source: 'merged'` with `memory` and `neon` breakdowns.
+- **`?type=range&hours=N`**: Returns aggregated trace analytics — per-path hit counts, first/last seen timestamps, hourly bucket stats.
+- **`?type=health`**: System health — queue depth/throughput, lifecycle aggregates, rate-limit state, memory usage. `?type=health&section=queue` or `&section=rate-limit` for detailed views.
+- **Storage**: Two-tier — in-memory Map (5min TTL) + Neon `request_traces` table (persistent, cross-instance). All writes are fire-and-forget (non-blocking).
+- **POST**: Accepts internal event logging `{ action: 'trace', requestId, pathId, endpoint, stage }` for trace injection.
 
 ---
 
@@ -387,6 +384,9 @@ Before deployment, verify:
 - [ ] Client confirmation delivered to both `[email, GMAIL_USER]`
 - [ ] Timezone displays correct `America/Tijuana` time
 - [ ] No console errors in browser
+- [ ] Trace events persist to Neon: `GET /api/traces?id=<requestId>` returns trace events for rejected requests
+- [ ] Merged coverage: `GET /api/traces?coverage=true` returns `source: 'merged'` with memory + neon breakdown
+- [ ] Range analytics: `GET /api/traces?range=24h` returns per-path hit counts and hourly buckets
 - [ ] No Vercel Function errors (500/502)
 - [ ] Both languages (es/en) render correctly
 - [ ] Dark mode renders correctly in email clients

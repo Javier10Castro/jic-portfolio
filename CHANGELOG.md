@@ -1,5 +1,60 @@
 # Changelog
 
+## [v1.6.0] - 2026-06-12
+
+### Added
+- [2026-06-12] - `/api/telemetry.js` — consolidated observability module replacing logs.js, traces.js, health.js
+  - `?type=logs` — lifecycle entries + aggregate metrics (replaces `/api/logs`)
+  - `?type=traces&id=X` — merged memory + Neon trace events (replaces `/api/traces`)
+  - `?type=coverage` — 23-path coverage with memory + Neon merged (replaces `/api/traces?coverage=true`)
+  - `?type=health` — system health, queue, rate-limit, memory (replaces `/api/health`)
+  - `?type=range&hours=N` — time-bucket trace analytics
+  - POST — internal event logging for trace injection
+  - Saves 3 serverless function slots on Vercel Hobby plan
+
+### Removed
+- [2026-06-12] - `api/health.js` — consolidated into `/api/telemetry?type=health`
+- [2026-06-12] - `api/logs.js` — consolidated into `/api/telemetry?type=logs`
+- [2026-06-12] - `api/traces.js` — consolidated into `/api/telemetry?type=traces&id=X`
+- [2026-06-12] - `api/v1/` (8 experimental SaaS endpoints) — removed entirely; no production dependencies
+  - `projects/create.js`, `projects/list.js`, `projects/[id]/run.js`
+  - `projects/[id]/approve.js`, `projects/[id]/preview.js`
+  - `projects/[id]/deploy.js`, `executions/[id].js`, `events/stream.js`
+
+### Changed
+- [2026-06-12] - `public/dashboard-api.js` — `getHealth()` → `/api/telemetry?type=health`, `getRecentLogs()` → `/api/telemetry?type=logs`
+- [2026-06-12] - `scripts/verify-traces.js` — updated to use `/api/telemetry?type=coverage`
+- [2026-06-12] - `smoke-test.js` — replaced all v1 endpoint tests with telemetry endpoint tests
+- [2026-06-12] - `docs/ARCHITECTURE.md` — updated endpoint diagram and observability table
+- [2026-06-12] - `docs/CONTEXT.md` — updated serverless function references
+
+### Architecture
+- Function count: 12+ → 3 (sendBrief.js, sendContact.js, telemetry.js) — fits well within Vercel Hobby 12-function limit with 9 slots available
+- Observability unified under single endpoint with query-parameter routing
+- All existing `tracer.trace()` calls in sendBrief/sendContact remain unchanged (21 trace points, non-blocking)
+- `lib/` modules (tracer.js, request-registry.js, requestTraces.js, queue.js, rate-limit.js) — zero changes
+
+## [v1.5.0] - 2026-06-12
+
+### Added
+- [2026-06-12] - Persistent trace observability layer (survives cold starts + serverless restarts)
+  - `lib/tracer.js` v2 — upgraded: keeps in-memory Map for fast path + async fire-and-forget Neon persistence via `requestTraces.saveTrace()`
+  - `lib/db/requestTraces.js` — new Neon CRUD module for `request_traces` table (saveTrace, getTracesByRequestId, getDistinctPathsSince, getAggregatedPaths, getTimeBucketStats)
+  - `data/migrations/008_request_traces.sql` — new table with unique index on `(request_id, path_id)`, indexes for time-range and endpoint queries
+  - `api/traces.js` v2 — merged coverage: memory (live) + Neon (historical) deduplicated by `requestId + pathId`; new `?range=24h` time-bucket analytics
+  - `scripts/audit-validation-coverage.js` v2 — true system coverage computed from union of live traces, merged endpoint, and range analytics
+  - Tracing is ALWAYS non-blocking — `requestTraces.saveTrace()` is fire-and-forget, never awaited. Zero impact on request latency.
+
+### Changed
+- [2026-06-12] - `api/traces.js?coverage=true` now returns `source: 'merged'` with breakdown of memory + Neon contributions
+- [2026-06-12] - Audit script now reports coverage from 3 independent sources (live, merged endpoint, range analytics) for validation
+
+### Architecture
+- Tracing tier: L1 (in-memory) + L2 (Neon `request_traces`) — dual-layer persistence
+- Trace writes are fire-and-forget (never block) — distinct from `persistImmediate()` which awaits Neon on reject paths
+- Cross-instance coverage: `GET /api/traces?coverage=true` merges per-instance memory with 24h Neon history
+- `GET /api/traces?range=24h` returns per-path hit counts, first/last seen, and hourly bucket stats
+
 ## [v1.4.4] - 2026-06-12
 
 ### Added

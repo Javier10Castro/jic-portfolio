@@ -13,24 +13,23 @@
 │         │           dashboard-api.js         │                       │
 └─────────┼─────────────────┼─────────────────┼───────────────────────┘
           │                 │                 │
-    POST /api/sendBrief   POST /api/       GET /api/v1/*
-                          sendContact      GET /api/health
-                                           GET /api/logs
+    POST /api/sendBrief   POST /api/       GET /api/telemetry
+                          sendContact     ?type=health|logs|traces|coverage|range
           │                 │                 │
           ▼                 ▼                 ▼
-┌──────────────────┐ ┌────────────────┐ ┌──────────────────────┐
-│  sendBrief.js    │ │ sendContact.js │ │  v1/ (SaaS Runtime)  │
-│  ┌────────────┐  │ │ ┌────────────┐ │ │  ┌──────────────┐   │
-│  │ PDFKit     │  │ │ │ Nodemailer │ │ │  │/projects/*   │   │
-│  │ (PDF gen)  │  │ │ └────────────┘ │ │  │/executions/*  │   │
-│  └────────────┘  │ │                │ │  │/events/*      │   │
-│  ┌────────────┐  │ └────────────────┘ │  └──────────────┘   │
-│  │Nodemailer  │  │                    │                      │
-│  │ (2 emails) │  │                    │  ┌──────────────┐   │
-│  └────────────┘  │                    │  │  lib/runtime  │   │
-└──────┬───────────┘                    │  │  (orchestr.)  │   │
-       │                                │  └──────────────┘   │
-       ▼                                └──────────────────────┘
+┌──────────────────┐ ┌────────────────┐ ┌────────────────────────┐
+│  sendBrief.js    │ │ sendContact.js │ │  telemetry.js          │
+│  ┌────────────┐  │ │ ┌────────────┐ │ │  ┌──────────────────┐  │
+│  │ PDFKit     │  │ │ │ Nodemailer │ │ │  │ type=health      │  │
+│  │ (PDF gen)  │  │ │ └────────────┘ │ │  │ type=logs        │  │
+│  └────────────┘  │ │                │ │  │ type=traces      │  │
+│  ┌────────────┐  │ └────────────────┘ │  │ type=coverage    │  │
+│  │Nodemailer  │  │                    │  │ type=range       │  │
+│  │ (2 emails) │  │                    │  └──────────────────┘  │
+│  └────────────┘  │                    │                         │
+└──────┬───────────┘                    └────────────────────────┘
+       │
+       ▼
 ┌──────────────────────────────────────────────────┐
 │              Shared Libraries                     │
 │  ┌──────────────┐ ┌──────────────┐ ┌───────────┐ │
@@ -68,15 +67,19 @@
 
 | Mode | Condition | Data Sources |
 |---|---|---|
-| **Demo** | No workspace_id/user_id | `/api/health`, `/api/logs` |
-| **Workspace** | workspace_id + user_id set | `/api/v1/projects`, `/api/v1/executions` |
+| **Demo** | No workspace_id/user_id | `/api/telemetry` |
+| **Workspace** | workspace_id + user_id set | (SaaS API — experimental, removed) |
 
 ## Logging & Observability
 
 | Endpoint | Purpose |
 |---|---|
-| `/api/health` | Queue depth, throughput, lifecycle, rate limit, memory |
-| `/api/logs` | Recent request registry entries + aggregate metrics |
+| `GET /api/telemetry?type=health` | Queue depth, throughput, lifecycle, rate limit, memory |
+| `GET /api/telemetry?type=logs&limit=N` | Recent request registry entries + aggregate metrics |
+| `GET /api/telemetry?type=traces&id=<requestId>` | Single request trace events (merged memory + Neon) |
+| `GET /api/telemetry?type=coverage` | 23-path coverage (memory + Neon merged) |
+| `GET /api/telemetry?type=health&section=queue` | Queue-specific metrics + lifecycle aggregates |
+| `GET /api/telemetry?type=health&section=rate-limit` | Rate limit state (IP entries, email dedup) |
+| `GET /api/telemetry?type=range&hours=24` | Time-bucket trace analytics |
 | `GET /api/sendBrief?id=<requestId>` | Single request lifecycle trace |
-| `GET /api/health?section=queue` | Queue-specific metrics + lifecycle aggregates |
-| `GET /api/health?section=rate-limit` | Rate limit state (IP entries, email dedup) |
+| `GET /api/sendContact?id=<requestId>` | Single request lifecycle trace |

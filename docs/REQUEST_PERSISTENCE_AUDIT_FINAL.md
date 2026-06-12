@@ -467,3 +467,57 @@ The request validation persistence system is fully deterministic. Every early-re
 The only exception is the body-parse-fail path when Vercel edge intercepts invalid JSON — a platform limitation that does not affect legitimate traffic.
 
 All gaps discovered during this audit (7 untracked paths in `sendBrief.js`) have been fixed and are included in this final report.
+
+---
+
+## 13. Post-Audit Extension: Persistent Trace Observability (v1.5.0)
+
+After the audit was completed, the tracing system was upgraded from in-memory-only to a durable two-tier observability layer.
+
+### Trace Events (`request_traces` table)
+
+Each validation rejection path now records a deterministic **trace event** with these fields:
+
+| Field | Type | Example |
+|---|---|---|
+| `requestId` | UUID | `0195d8c0-...` |
+| `pathId` | string | `sendContact:validateEmail` |
+| `endpoint` | string | `sendContact` |
+| `stage` | string | `validateEmail` |
+| `timestamp` | BIGINT (ms) | `1718200000123` |
+
+The `request_traces` table has a unique constraint on `(request_id, path_id)` — a single request cannot produce duplicate trace events for the same path.
+
+### Two-Tier Architecture
+
+| Tier | Storage | Purpose | Blocking? |
+|---|---|---|---|
+| **L1** | In-memory Map (per-instance) | Fast path, 5min TTL | Never |
+| **L2** | Neon `request_traces` | Durable, cross-instance, survives cold starts | Never (fire-and-forget) |
+
+Trace writes are **fire-and-forget** — distinct from `persistImmediate()` which awaits Neon on validation reject paths. Tracing never impacts request latency.
+
+### Merged Coverage
+
+The `GET /api/traces?coverage=true` endpoint computes true system coverage by merging:
+
+1. **Memory traces** — live events from the same Vercel Function instance
+2. **Neon traces** — all events persisted in the last 24 hours (cross-instance)
+
+Result: `{ source: 'merged', memory: {...}, neon: {...}, coveredPaths: [...], percentage: N }`
+
+### Time-Range Analytics
+
+`GET /api/traces?range=24h` returns:
+- Per-path hit counts, first/last seen timestamps
+- Hourly bucket stats (events per hour, distinct paths per hour)
+
+### Files Changed
+
+| File | Change |
+|---|---|
+| `lib/tracer.js` | Added async fire-and-forget Neon persistence via `requestTraces.saveTrace()` |
+| `lib/db/requestTraces.js` | New module: CRUD for `request_traces` table |
+| `data/migrations/008_request_traces.sql` | New migration: `request_traces` table + 4 indexes |
+| `api/traces.js` | Rewritten: merges memory + Neon, deduplicates, `?range=24h` analytics |
+| `scripts/audit-validation-coverage.js` | Updated: true system coverage from 3 sources |

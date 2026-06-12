@@ -137,7 +137,7 @@ Every requestId traces through 5 explicit lifecycle states with 4 timestamps and
 
 `/api/health?section=queue` exposes a `lifecycle` block with aggregate stats. `/api/health` (default summary) also includes `lifecycle`.
 
-**Note**: These metrics are per-instance only — Vercel isolates `api/health.js` and `api/sendContact.js` into separate serverless functions without shared memory. The health endpoint always shows 0 lifecycle entries for a different function instance. Within the same instance (`GET /api/sendContact?id=X`), derived metrics and aggregates are now accurate, with `averageExecutionTimeMs` and `averageQueueWaitTimeMs` reflecting real averages instead of always 0.
+**Note**: These metrics are per-instance only — Vercel isolates `api/sendContact.js` and `api/telemetry.js` into separate serverless functions without shared memory. The health endpoint always shows 0 lifecycle entries for a different function instance. Within the same instance (`GET /api/sendContact?id=X`), derived metrics and aggregates are now accurate, with `averageExecutionTimeMs` and `averageQueueWaitTimeMs` reflecting real averages instead of always 0.
 
 ---
 
@@ -176,8 +176,8 @@ The contact form (`index.html`) implements automatic retry with exponential back
 This project runs on **Vercel Serverless Functions**. Each file inside `/api` is deployed as an independent function:
 
 - `api/sendContact.js`
-- `api/health.js`
 - `api/sendBrief.js`
+- `api/telemetry.js`
 
 These functions **DO NOT** share:
 

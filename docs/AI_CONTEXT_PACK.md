@@ -208,8 +208,11 @@ Layer 2 — Execution Layer (Internal Queue Scheduler)
 | `GET /api/health?section=rate-limit` | IP entries, email dedup cache, thresholds, window info |
 | `GET /api/logs?limit=20` | Recent request registry entries + aggregate metrics |
 | `GET /api/logs?id=<requestId>` | Single lifecycle entry (or 404) |
+| `GET /api/traces?id=<requestId>` | Validation path trace events (merged: memory + Neon) |
+| `GET /api/traces?coverage=true` | True system coverage: 23 pathIds, merged memory + 24h Neon history |
+| `GET /api/traces?range=24h` | Aggregated trace analytics: per-path hit counts, hourly buckets |
 
-**Important**: Each `api/` file is a separate Vercel Function instance. They do NOT share memory. Health endpoint will NOT see lifecycle data from sendContact's instance.
+**Important**: Each `api/` file is a separate Vercel Function instance. They do NOT share memory. Health endpoint will NOT see lifecycle data from sendContact's instance. The traces endpoint bridges this via Neon persistence — `GET /api/traces?coverage=true` merges per-instance memory with cross-instance Neon data.
 
 ---
 
@@ -413,6 +416,34 @@ Validation failures (`status: 'rejected'`) carry 3 diagnostic fields that must s
 | `validation_reason` | `validationReason` | `invalid_format` |
 
 **Why cross-instance persistence matters**: `sendBrief.js` and `logs.js` are separate Vercel function instances. The in-memory registry Map is per-instance. Without Neon persistence, a request to `logs.js` (different instance) cannot see validation details written by `sendBrief.js`. Neon bridges this gap as the shared source of truth.
+
+### Trace Event Persistence (v1.5.0)
+
+Each validation rejection path records a deterministic trace event to `request_traces` table (Neon):
+
+| Field | Type | Example |
+|---|---|---|
+| `request_id` | VARCHAR(64) | `0195d8c0-...` |
+| `path_id` | VARCHAR(128) | `sendContact:validateEmail` |
+| `endpoint` | VARCHAR(32) | `sendContact` |
+| `stage` | VARCHAR(64) | `validateEmail` |
+| `timestamp` | BIGINT | `1718200000123` |
+
+**Two-tier architecture**: In-memory Map (fast, 5min TTL) + Neon `request_traces` (persistent, cross-instance).
+
+**Non-blocking guarantee**: Trace writes are ALWAYS fire-and-forget — unlike `persistImmediate()` which awaits Neon on validation reject paths. Tracing never impacts request latency.
+
+**Unique constraint**: `UNIQUE (request_id, path_id)` — a single request cannot produce duplicate trace events for the same path.
+
+**Coverage**: `GET /api/traces?coverage=true` returns merged coverage from memory (live) + Neon (24h history), producing `source: 'merged'` with breakdown.
+
+**Range analytics**: `GET /api/traces?range=24h` returns per-path hit counts, first/last seen, and hourly bucket stats.
+
+**Files**:
+- `lib/tracer.js` v2 — in-memory + Neon persistence
+- `lib/db/requestTraces.js` — Neon CRUD for request_traces
+- `data/migrations/008_request_traces.sql` — table + indexes
+- `api/traces.js` v2 — merged traces + range analytics
 
 **Backward compatibility**: Old `request_logs` rows have `NULL` for all 3 validation columns. The dashboard renderer checks for their presence before displaying.
 
