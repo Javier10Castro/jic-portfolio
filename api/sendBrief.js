@@ -123,6 +123,8 @@ module.exports = async (req, res) => {
 
   if (req.method !== 'POST') {
     log.warn(req, 'Method not allowed', { ip, method: req.method, reason: RATE_LIMIT_REASON.VALIDATION });
+    registry.registerLifecycle(log.requestId(req), { status: 'rejected', reason: 'validation', validationStage: 'methodCheck', validationField: 'method', validationReason: 'not_allowed', receivedAt: Date.now() });
+    await registry.persistImmediate(log.requestId(req));
     return json(405, { 'Content-Type': 'application/json', ...deployHeaders(req), ...reqHeaders(req) }, resPayload(req, { success: false, error: 'Method Not Allowed' }))(res);
   }
 
@@ -131,6 +133,8 @@ module.exports = async (req, res) => {
   const parsed = await parseBody(req);
   if (!parsed) {
     log.event('body_parse.fail', req, { bodyType: bt, parseMethod: req._bodyParseMethod || 'unknown' });
+    registry.registerLifecycle(log.requestId(req), { status: 'rejected', reason: 'bad_request', validationStage: 'parseBody', validationField: 'body', validationReason: 'parse_failed', receivedAt: Date.now() });
+    await registry.persistImmediate(log.requestId(req));
     return json(400, { 'Content-Type': 'application/json', ...deployHeaders(req), ...reqHeaders(req) }, resPayload(req, { success: false, error: 'INVALID_BODY' }))(res);
   }
   log.event('body_parse.ok', req, { bodyType: bt, parseMethod: req._bodyParseMethod || 'unknown' });
@@ -139,6 +143,8 @@ module.exports = async (req, res) => {
   if (hp.triggered) {
     log.warn(req, 'Honeypot triggered', { ip, field: hp.field, reason: RATE_LIMIT_REASON.BOT });
     log.event('honeypot.triggered', req, { field: hp.field });
+    registry.registerLifecycle(log.requestId(req), { status: 'rejected', reason: 'validation', validationStage: 'honeypotCheck', validationField: hp.field, validationReason: 'bot_detected', receivedAt: Date.now() });
+    await registry.persistImmediate(log.requestId(req));
     return json(200, { 'Content-Type': 'application/json', ...deployHeaders(req), ...reqHeaders(req), ...debugHeaders({ allowed: false }, RATE_LIMIT_REASON.BOT) }, resPayload(req, { success: true }))(res);
   }
 
@@ -191,6 +197,8 @@ module.exports = async (req, res) => {
   if (!edge.allowed) {
     log.warn(req, 'Edge blocked', { ip, retryAfter: edge.retryAfter, reason: RATE_LIMIT_REASON.IP_BURST });
     log.event('rate_limit.blocked', req, { layer: 'edge', reason: RATE_LIMIT_REASON.IP_BURST, retryAfter: edge.retryAfter, remaining: edge.remaining });
+    registry.registerLifecycle(log.requestId(req), { status: 'rejected', reason: 'rate_limit', validationStage: 'rateLimit', validationField: 'ip', validationReason: 'burst', receivedAt: Date.now() });
+    await registry.persistImmediate(log.requestId(req));
     return json(429, { ...deployHeaders(req), ...reqHeaders(req), ...rateLimitHeaders(edge), ...debugHeaders(edge, RATE_LIMIT_REASON.IP_BURST) }, resPayload(req, { success: false, error: 'RATE_LIMITED' }))(res);
   }
 
@@ -198,6 +206,8 @@ module.exports = async (req, res) => {
   if (!dedupCheck.allowed) {
     log.warn(req, 'Email dedup blocked', { email: maskEmail(email), retryAfter: dedupCheck.retryAfter, reason: RATE_LIMIT_REASON.EMAIL_DUP });
     log.event('rate_limit.blocked', req, { layer: 'dedup', reason: RATE_LIMIT_REASON.EMAIL_DUP, retryAfter: dedupCheck.retryAfter, email: maskEmail(email) });
+    registry.registerLifecycle(log.requestId(req), { status: 'rejected', reason: 'rate_limit', validationStage: 'rateLimit', validationField: 'email', validationReason: 'duplicate', receivedAt: Date.now() });
+    await registry.persistImmediate(log.requestId(req));
     return json(429, { ...deployHeaders(req), ...reqHeaders(req), ...rateLimitHeaders(dedupCheck), ...debugHeaders(dedupCheck, RATE_LIMIT_REASON.EMAIL_DUP) }, resPayload(req, { success: false, error: 'RATE_LIMITED' }))(res);
   }
 
@@ -220,6 +230,8 @@ module.exports = async (req, res) => {
   if (!GMAIL_USER || !GMAIL_APP_PASSWORD) {
     log.error(req, 'Missing GMAIL_USER or GMAIL_APP_PASSWORD', null, { ip });
     log.event('smtp.misconfigured', req, { ip });
+    registry.registerLifecycle(log.requestId(req), { status: 'rejected', reason: 'bad_request', validationStage: 'configCheck', validationField: 'smtp', validationReason: 'missing_credentials', receivedAt: Date.now() });
+    await registry.persistImmediate(log.requestId(req));
     return json(500, { 'Content-Type': 'application/json', ...deployHeaders(req), ...reqHeaders(req) }, resPayload(req, { success: false, error: 'Email service misconfigured' }))(res);
   }
 
@@ -283,6 +295,8 @@ module.exports = async (req, res) => {
   if (!queueResult) {
     log.warn(req, 'Queue overflow', { ip });
     log.event('queue.overflow', req, { ip, endpoint: 'sendBrief' });
+    registry.registerLifecycle(log.requestId(req), { status: 'rejected', reason: 'bad_request', validationStage: 'queueCheck', validationField: 'queue', validationReason: 'overflow', receivedAt: Date.now() });
+    await registry.persistImmediate(log.requestId(req));
     return json(503, { 'Content-Type': 'application/json', ...deployHeaders(req), ...reqHeaders(req) }, resPayload(req, { success: false, error: 'QUEUE_OVERFLOW' }))(res);
   }
 

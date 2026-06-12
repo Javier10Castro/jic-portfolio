@@ -1001,7 +1001,25 @@ Validation failures (`400 INVALID_REQUEST`) persist 3 diagnostic fields through 
 
 **Retrieval**: `GET /api/logs?id=<requestId>` reads from Neon (cross-instance source of truth). Entries with `status: "rejected"` include all 3 validation fields.
 
-**Critical implementation detail**: The `persistImmediate()` function (added in commit `42efb28`, extended to sendContact in `THIS_COMMIT`) `await`s the Neon INSERT before returning the response. This is necessary because Vercel may freeze the serverless function immediately after the response is sent — a fire-and-forget Promise may never complete. See `lib/request-registry.js:132-139`.
+**Critical implementation detail**: The `persistImmediate()` function (added in commit `42efb28`, extended to sendContact in `94c5a8b`, extended to all sendBrief untracked paths in `THIS_COMMIT`) `await`s the Neon INSERT before returning the response. This is necessary because Vercel may freeze the serverless function immediately after the response is sent — a fire-and-forget Promise may never complete. See `lib/request-registry.js:132-139`.
+
+### sendBrief Reject Paths (11 paths, all fixed — NOW fully tracked)
+
+All 11 early-return paths in `api/sendBrief.js` call `await registry.persistImmediate(log.requestId(req))` before returning:
+
+| # | Line | Trigger | Status | `validationStage` | `validationField` | `validationReason` |
+|---|---|---|---|---|---|---|
+| 1 | 126-128 | Method not POST | 405 | `methodCheck` | `method` | `not_allowed` |
+| 2 | 135-137 | Body parse fail | 400 | `parseBody` | `body` | `parse_failed` |
+| 3 | 144-147 | Honeypot triggered | 200 | `honeypotCheck` | `hp.field` | `bot_detected` |
+| 4 | 151-153 | Timing check fail | 400 | `timingCheck` | `submittedAt` | `tc.reason` |
+| 5 | 164-166 | Name validation fail | 400 | `sanitizeAndValidateName` | `name` | `nameCheck.reason` |
+| 6 | 175-177 | Invalid email | 400 | `validateEmail` | `email` | `invalid_format` |
+| 7 | 185-187 | Invalid prompt | 400 | `validatePrompt` | `prompt` | `promptCheck.reason` |
+| 8 | 195-197 | Edge rate limit | 429 | `rateLimit` | `ip` | `burst` |
+| 9 | 202-204 | Email dedup | 429 | `rateLimit` | `email` | `duplicate` |
+| 10 | 226-228 | Missing SMTP creds | 500 | `configCheck` | `smtp` | `missing_credentials` |
+| 11 | 288-290 | Queue overflow | 503 | `queueCheck` | `queue` | `overflow` |
 
 ### sendContact Reject Paths (12 paths, all fixed)
 

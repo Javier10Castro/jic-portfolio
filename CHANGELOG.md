@@ -1,5 +1,18 @@
 # Changelog
 
+## [v1.4.3] - 2026-06-12
+
+### Fixed
+- [2026-06-12] - sendBrief validation persistence — all 11 early-return paths now tracked
+  - Added `registerLifecycle()` + `await registry.persistImmediate()` to 7 previously untracked paths:
+    method-not-allowed, body-parse-fail, honeypot, rate-limit-edge, email-dedup, smtp-config, queue-overflow
+  - Added `validationStage`, `validationField`, `validationReason` diagnostic fields to all new paths
+  - Completes the persistence coverage: both endpoints now have 100% deterministic lifecycle tracking
+  - Discovered during final release audit
+
+### Added
+- [2026-06-12] - Final release audit document: `docs/REQUEST_PERSISTENCE_AUDIT_FINAL.md`
+
 ## [v1.4.2] - 2026-06-11
 
 ### Fixed

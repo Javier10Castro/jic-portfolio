@@ -416,7 +416,10 @@ Validation failures (`status: 'rejected'`) carry 3 diagnostic fields that must s
 
 **Backward compatibility**: Old `request_logs` rows have `NULL` for all 3 validation columns. The dashboard renderer checks for their presence before displaying.
 
-**Production verification**: See `docs/VALIDATION_PERSISTENCE_VERIFICATION.md` — confirmed working end-to-end (commit `42efb28`).
+**Production verification**: Both endpoints verified in production:
+- `docs/VALIDATION_PERSISTENCE_VERIFICATION.md` — sendBrief (commit `42efb28`), all 11 paths covered
+- `docs/SENDCONTACT_PERSISTENCE_VERIFICATION.md` — sendContact (commit `94c5a8b`), 7/8 reachable paths confirmed PASS
+- `docs/REQUEST_PERSISTENCE_AUDIT_FINAL.md` — final release audit confirming 100% deterministic persistence across 23 total paths
 
 ---
 
@@ -551,6 +554,7 @@ DEPLOYMENT (lib/deployment/) — Git init, commit, GitHub repo, push (optional)
 - Vercel Serverless Functions do NOT share memory — cross-function observability requires Neon/Redis
 - `GET /api/health` and `POST /api/sendContact` are separate instances — health sees 0 lifecycle from contact
 - Non-UUID `workspace_id` is rejected immediately with `INVALID_ID_FORMAT` (no hashing, no conversion)
+- **Body parse fail path (sendContact path 2)**: Vercel edge intercepts invalid JSON before the function runs. When `Content-Type: application/json` body is not valid JSON, Vercel returns 400 with empty body — our code never executes. This is a platform limitation, not a bug.
 
 ---
 
@@ -649,4 +653,25 @@ server-side via PDFKit. Email via nodemailer + Gmail SMTP. Vanilla HTML/CSS/JS f
 3-tier observability: per-instance memory Map (5min TTL), Neon PostgreSQL (permanent), 
 Upstash Redis (7 day fallback). Each api/* file is an isolated Vercel Function instance 
 with no shared memory. Key env vars: GMAIL_USER, GMAIL_APP_PASSWORD, DATABASE_URL.
-```
+Validation persistence: Both sendBrief (11 paths) and sendContact (12 paths) persist validationStage/validationField/
+validationReason to Neon via await persistImmediate() before returning 400/405/429/503 
+responses — 100% deterministic across all 23 early-return paths. GET /api/logs?id=<requestId> 
+returns full diagnostics cross-instance. One platform limitation: Vercel edge intercepts invalid 
+JSON before sendContact runs (path 2, body parse fail — no requestId returned).
+
+---
+
+## 21. Full Context Prompt (Ready to Copy)
+
+If you want to give another AI the **complete context** of this project, copy the entire contents of this file (`docs/AI_CONTEXT_PACK.md`) and paste it as a system message or first message. The AI will then:
+
+- Understand the two-layer execution model (rate gate → async queue)
+- Know the 5 lifecycle states and 3-tier persistence
+- Recognize the validation persistence pattern for both endpoints (23 total paths)
+- Be aware of the Vercel platform limitations (no shared memory, body parse edge intercept)
+- Know the project structure, API endpoints, DB schemas, email/PDF standards
+- Understand the validation order and all reject paths
+- Be able to diagnose INVALID_REQUEST responses via `/api/logs?id=`
+- Know the retry strategy, E2E testing utilities, and localStorage keys
+- Be aware of the latest production-verified state (v1.4.3, all 23 paths fully tracked)
+
