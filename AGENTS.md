@@ -429,7 +429,7 @@ The Agent Pack follows semantic versioning:
 - `v1.2.1` — Derived metric persistence + aggregate TTL purge (fixed averageExecutionTimeMs and averageQueueWaitTimeMs always being 0; getAggregateMetrics now evicts expired entries)
 - `v1.6.0` — SaaS multi-tenant architecture design (design phase)
 - `v1.7.0` — Request tracing production audit (auto-table-creation, eager require, array drain, success traces, 28%→32% coverage)
-- `v1.7.1` — Observability stabilization (recreated /api/logs, handlerError traces for PDF/enqueue failures, 27 total paths)
+- `v1.7.1` — Observability stabilization (recreated /api/logs + /api/traces, handlerError traces for PDF/enqueue failures, 27 total paths)
 - `v2.0.0` — Architecture changes or new agent system
 
 ---

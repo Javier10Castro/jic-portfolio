@@ -32,6 +32,12 @@ Since Vercel auto-deploys files in `/api/` as serverless functions, removing `/a
 - Is a separate Vercel Function (4th function slot) — well within Hobby 12-slot limit
 - No changes to `/api/telemetry.js` — both coexist
 
+**Also recreated `/api/traces.js`** for full backward compatibility:
+- Handles `?id=<requestId>` → merged memory + Neon trace events
+- Handles `?coverage=true` → merged coverage across all 27 paths
+- Handles `?range=24h` → time-bucket trace analytics
+- Uses same `lib/tracer.js` and `lib/db/requestTraces.js` modules
+
 ---
 
 ## 2. Trace Coverage Gaps — `handlerError` Paths
@@ -89,10 +95,11 @@ The `handlerError` path does NOT call `registry.persistImmediate()` — it only 
 
 ```
 /api/
-├── sendBrief.js     — Brief submission (12 trace paths + handlerError)
+├── sendBrief.js     — Brief submission (13 trace paths + handlerError)
 ├── sendContact.js   — Contact form (13 trace paths + handlerError)
 ├── telemetry.js     — Consolidated observability (logs, traces, coverage, health, range)
-└── logs.js          — [RECREATED] Backward-compatible logs endpoint
+├── logs.js          — [RECREATED] Backward-compatible logs endpoint
+└── traces.js        — [RECREATED] Backward-compatible traces endpoint
 ```
 
 ### Trace Coverage — All 27 Paths
@@ -176,7 +183,7 @@ This affects:
 
 | Metric | Value |
 |---|---|
-| Serverless function slots used | 4 of 12 (Hobby plan) |
+| Serverless function slots used | 5 of 12 (Hobby plan) |
 | Instrumented trace paths | 27 |
 | Coverage (recent) | ~30% (varies by test scenario) |
 | Neon tables | `request_logs`, `request_traces`, `form_responses` |

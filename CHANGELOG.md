@@ -6,8 +6,10 @@
 - [2026-06-12] - `/api/logs` endpoint returning NOT_FOUND — recreated as thin proxy to `/api/telemetry?type=logs`
   - Backward-compatible: `GET /api/logs?id=X`, `GET /api/logs?limit=N` both work
   - Uses same `lib/request-registry.js` modules as telemetry
+- [2026-06-12] - `/api/traces` endpoint returning NOT_FOUND — recreated for backward compatibility
+  - Supports `?id=X`, `?coverage=true`, `?range=24h`
+  - Uses same `lib/tracer.js` + `lib/db/requestTraces.js` modules as telemetry
 - [2026-06-12] - Missing trace emission on PDF generation failure in `sendBrief.js`
-  - Added `sendBrief:handlerError` trace emission in outer catch block
 - [2026-06-12] - Missing trace emission on enqueue failure in `sendContact.js`
   - Added `sendContact:handlerError` trace emission in outer catch block
 - [2026-06-12] - `ALL_PATHS` list missing `handlerError` paths (27 total, was 25)
