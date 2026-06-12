@@ -363,6 +363,7 @@ module.exports = async (req, res) => {
   log.structured(req, { stage: 'queue.assign', status: 'ok', queueId, position, depth });
   log.addTrace(req, 'queue.waitStart', 'ok');
   log.structured(req, { stage: 'queue.waitStart', status: 'ok', position, depth });
+  tracer.trace(log.requestId(req), 'sendContact', 'submitted', 'sendContact:submitted');
   return json(202, withSoftHeaders(req, {
     'Content-Type': 'application/json',
     ...deployHeaders(req),

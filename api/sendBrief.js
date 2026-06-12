@@ -323,6 +323,7 @@ module.exports = async (req, res) => {
   });
   log.event('queue.queued', req, { queueId, position, depth, endpoint: 'sendBrief' });
   log.debugLog(req, 'Brief emails queued', { queueId, position, depth });
+  tracer.trace(log.requestId(req), 'sendBrief', 'submitted', 'sendBrief:submitted');
   return json(202, withSoftHeaders(req, {
     'Content-Type': 'application/json',
     ...deployHeaders(req),
@@ -331,6 +332,7 @@ module.exports = async (req, res) => {
     'X-Queue-Depth': String(depth),
     'X-Queue-Position': String(position),
     'X-Processing-Mode': depth > 0 ? 'queued' : 'immediate',
+    'X-Tracer-Debug': tracer.neonReady ? 'neon' : 'no-neon',
   }), resPayload(req, { success: true, queued: true, position, depth }))(res);
 } finally {
     await tracer.drain();
