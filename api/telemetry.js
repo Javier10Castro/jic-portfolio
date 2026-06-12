@@ -6,7 +6,7 @@
  *
  * GET ?type=logs&limit=50         — Request lifecycle logs
  * GET ?type=traces&id=<rqId>      — Trace events (merged memory + Neon)
- * GET ?type=coverage              — Coverage metrics (23 pathIds)
+ * GET ?type=coverage              — Coverage metrics (27 pathIds)
  * GET ?type=health                — System health (queue, rate-limit, memory)
  * GET ?type=health&section=queue  — Queue-specific health
  * GET ?type=health&section=rate-limit — Rate-limit-specific health

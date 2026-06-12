@@ -208,7 +208,7 @@ All observability is served by a single endpoint to save serverless function slo
 | `GET /api/telemetry?type=logs&limit=20` | Recent request registry entries + aggregate metrics |
 | `GET /api/telemetry?type=logs&id=<requestId>` | Single lifecycle entry (or 404) |
 | `GET /api/telemetry?type=traces&id=<requestId>` | Validation path trace events (merged: memory + Neon) |
-| `GET /api/telemetry?type=coverage` | True system coverage: 25 pathIds, merged memory + 24h Neon history |
+| `GET /api/telemetry?type=coverage` | True system coverage: 27 pathIds, merged memory + 24h Neon history |
 | `GET /api/telemetry?type=range&hours=24` | Aggregated trace analytics: per-path hit counts, hourly buckets |
 | `GET /api/telemetry?type=health` | Queue, lifecycle, rate-limit summary, instance info, memory |
 | `GET /api/telemetry?type=health&section=queue` | Queue depth, active workers, throughput, lifecycle aggregates |
@@ -694,12 +694,13 @@ responses — 100% deterministic across all 23 early-return paths. GET /api/tele
 returns full diagnostics cross-instance. One platform limitation: Vercel edge intercepts invalid 
 JSON before sendContact runs (path 2, body parse fail — no requestId returned).
 
-Request tracing: 25 pathIds across both endpoints, each instrumented with tracer.trace() before 
-every early return and on success (submitted). Two-tier storage: in-memory Map (5min TTL) + 
-Neon request_traces table (auto-created on cold start via _ensureTable()). Drain is deterministic 
-(array splice + finally block, silent in production). Coverage endpoint: /api/telemetry?type=coverage 
-returns merged (memory + Neon 24h) across all 25 paths. Current coverage: ~28% (7/25) — remaining 
-paths require diverse inputs (non-POST, bot patterns, invalid JSON, IP burst) not yet seen in testing.
+Request tracing: 27 pathIds across both endpoints, each instrumented with tracer.trace() before 
+every early return, on success (submitted), and on unexpected handler errors (handlerError). 
+Two-tier storage: in-memory Map (5min TTL) + Neon request_traces table (auto-created on cold 
+start via _ensureTable()). Drain is deterministic (array splice + finally block, silent in 
+production). Coverage endpoint: /api/telemetry?type=coverage returns merged (memory + Neon 24h) 
+across all 27 paths. Current coverage: ~30% (8/27) — remaining paths require diverse inputs 
+(non-POST, bot patterns, invalid JSON, IP burst, PDF failure) not yet seen in testing.
 
 ---
 

@@ -333,7 +333,12 @@ module.exports = async (req, res) => {
     'X-Queue-Position': String(position),
     'X-Processing-Mode': depth > 0 ? 'queued' : 'immediate',
   }), resPayload(req, { success: true, queued: true, position, depth }))(res);
-} finally {
+} catch (err) {
+    const rid = log.requestId(req);
+    tracer.trace(rid, 'sendBrief', 'handlerError', 'sendBrief:handlerError');
+    log.error(req, 'Unexpected error in sendBrief', { error: err.message });
+    return json(500, { 'Content-Type': 'application/json', ...deployHeaders(req), ...reqHeaders(req) }, resPayload(req, { success: false, error: 'INTERNAL_ERROR' }))(res);
+  } finally {
     await tracer.drain();
   }
 };

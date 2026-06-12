@@ -375,7 +375,12 @@ module.exports = async (req, res) => {
     'X-RateLimit-Limit': String(edge.limit),
     'X-RateLimit-Remaining': String(Math.max(0, edge.remaining)),
   }), resPayload(req, { success: true, status: 'queued', queued: true, position, depth, queuePosition: position, queueDepth: depth }))(res);
-} finally {
+} catch (err) {
+    const rid = log.requestId(req);
+    tracer.trace(rid, 'sendContact', 'handlerError', 'sendContact:handlerError');
+    log.error(req, 'Unexpected error in sendContact', { error: err.message });
+    return json(500, { 'Content-Type': 'application/json', ...deployHeaders(req), ...reqHeaders(req) }, resPayload(req, { success: false, status: 'error', error: 'INTERNAL_ERROR' }))(res);
+  } finally {
     await tracer.drain();
   }
 };

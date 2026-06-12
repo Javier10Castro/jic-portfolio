@@ -1,5 +1,33 @@
 # Changelog
 
+## [v1.7.1] - 2026-06-12
+
+### Fixed
+- [2026-06-12] - `/api/logs` endpoint returning NOT_FOUND — recreated as thin proxy to `/api/telemetry?type=logs`
+  - Backward-compatible: `GET /api/logs?id=X`, `GET /api/logs?limit=N` both work
+  - Uses same `lib/request-registry.js` modules as telemetry
+- [2026-06-12] - Missing trace emission on PDF generation failure in `sendBrief.js`
+  - Added `sendBrief:handlerError` trace emission in outer catch block
+- [2026-06-12] - Missing trace emission on enqueue failure in `sendContact.js`
+  - Added `sendContact:handlerError` trace emission in outer catch block
+- [2026-06-12] - `ALL_PATHS` list missing `handlerError` paths (27 total, was 25)
+
+### Added
+- [2026-06-12] - `api/logs.js` — recreated endpoint for backward compatibility
+- [2026-06-12] - `docs/OBSERVABILITY_STABILIZATION_REPORT.md` — root cause analysis, fix documentation
+
+### Changed
+- [2026-06-12] - `api/sendBrief.js`: outer try/catch wraps PDF + enqueue section, emits `sendBrief:handlerError` on failure
+- [2026-06-12] - `api/sendContact.js`: outer try/catch wraps enqueue section, emits `sendContact:handlerError` on failure
+- [2026-06-12] - `lib/db/requestTraces.js`: `ALL_PATHS` now includes `handlerError` variants (27 total)
+- [2026-06-12] - `AGENTS.md`: version v1.7.1, 27 paths, handlerError tables
+- [2026-06-12] - `docs/AI_CONTEXT_PACK.md`: 27 paths, `handlerError` descriptions
+
+### Coverage
+- Current: 30%+ but varies by test scenario
+- All 27 paths instrumented — 2 new `handlerError` paths protect against PDF/enqueue failures
+- New: `/api/logs` backward-compatible for all existing scripts and tools
+
 ## [v1.7.0] - 2026-06-12
 
 ### Fixed

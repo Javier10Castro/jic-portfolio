@@ -201,7 +201,7 @@ Lead generation and client onboarding through contact forms, AI-powered brief co
 ### `GET /api/telemetry` — Consolidated observability endpoint
 - **`?type=logs&limit=N`**: Returns recent lifecycle entries + aggregate metrics. Default limit 20, max 200. `?type=logs&id=X` returns single entry. Source of truth: Neon `request_logs` table.
 - **`?type=traces&id=X`**: Returns merged trace events (memory live + Neon historical), deduplicated by `(requestId, pathId)`. Shows per-source counts (memory, neon, merged).
-- **`?type=coverage`**: Returns true system coverage: 25 pathIds merged from memory + Neon (24h history). Response includes `source: 'merged'` with `memory` and `neon` breakdowns.
+- **`?type=coverage`**: Returns true system coverage: 27 pathIds merged from memory + Neon (24h history). Response includes `source: 'merged'` with `memory` and `neon` breakdowns.
 - **`?type=range&hours=N`**: Returns aggregated trace analytics — per-path hit counts, first/last seen timestamps, hourly bucket stats.
 - **`?type=health`**: System health — queue depth/throughput, lifecycle aggregates, rate-limit state, memory usage. `?type=health&section=queue` or `&section=rate-limit` for detailed views.
 - **Storage**: Two-tier — in-memory Map (5min TTL) + Neon `request_traces` table (persistent, cross-instance). All writes are fire-and-forget (non-blocking).
@@ -428,7 +428,8 @@ The Agent Pack follows semantic versioning:
 - `v1.2.0` — Observability hardening (TTL enforcement, single executionStartedAt, unified lifecycle.complete, pre-queue rejection tracking)
 - `v1.2.1` — Derived metric persistence + aggregate TTL purge (fixed averageExecutionTimeMs and averageQueueWaitTimeMs always being 0; getAggregateMetrics now evicts expired entries)
 - `v1.6.0` — SaaS multi-tenant architecture design (design phase)
-- `v1.7.0` — Request tracing production audit (auto-table-creation, eager require, array drain, success traces, 28% coverage validated)
+- `v1.7.0` — Request tracing production audit (auto-table-creation, eager require, array drain, success traces, 28%→32% coverage)
+- `v1.7.1` — Observability stabilization (recreated /api/logs, handlerError traces for PDF/enqueue failures, 27 total paths)
 - `v2.0.0` — Architecture changes or new agent system
 
 ---
@@ -1009,8 +1010,9 @@ All 11 early-return paths in `api/sendBrief.js` call `await registry.persistImme
 | 9 | 202-204 | Email dedup | 429 | `rateLimit` | `email` | `duplicate` |
 | 10 | 226-228 | Missing SMTP creds | 500 | `configCheck` | `smtp` | `missing_credentials` |
 | 11 | 288-290 | Queue overflow | 503 | `queueCheck` | `queue` | `overflow` |
+| 12 | 340-345 | Unhandled error (PDF/gen) | 500 | `handlerError` | — | `err.message` |
 
-### sendContact Reject Paths (12 paths, all fixed)
+### sendContact Reject Paths (13 paths, all fixed)
 
 All 12 early-return paths in `api/sendContact.js` now call `await registry.persistImmediate(log.requestId(req))` before returning:
 
@@ -1028,6 +1030,7 @@ All 12 early-return paths in `api/sendContact.js` now call `await registry.persi
 | 10 | 237-240 | Email dedup | 429 | `rateLimit` | `email` | `duplicate` |
 | 11 | 256-258 | Missing SMTP creds | 500 | `configCheck` | `smtp` | `missing_credentials` |
 | 12 | 329-331 | Queue overflow | 503 | `queueCheck` | `queue` | `overflow` |
+| 13 | 372-377 | Unhandled error (enqueue/gen) | 500 | `handlerError` | — | `err.message` |
 
 ### Client Retry & Backoff Strategy
 
