@@ -442,6 +442,7 @@ The Agent Pack follows semantic versioning:
 - `v1.7.0` — Request tracing production audit (auto-table-creation, eager require, array drain, success traces, 28%→32% coverage)
 - `v1.7.1` — Observability stabilization (recreated /api/logs + /api/traces, handlerError traces for PDF/enqueue failures, 27 total paths)
 - `v1.8.0` — Observability hardening audit (heatmap, timeline, coverage matrix script, leakage audit, all 27 paths validated)
+- `v1.8.1` — Queue worker fix (Vercel freeze root cause, waitUntilEmpty, endpoint population, lifecycle traces, 33 paths)
 - `v2.0.0` — Architecture changes or new agent system
 
 ---
@@ -1005,9 +1006,9 @@ Implemented in:
 
   **Critical implementation detail**: The `persistImmediate()` function (added in commit `42efb28`, extended to sendContact in `94c5a8b`, extended to all sendBrief untracked paths in `6baa6bb`) `await`s the Neon INSERT before returning the response. This is necessary because Vercel may freeze the serverless function immediately after the response is sent — a fire-and-forget Promise may never complete. See `lib/request-registry.js:132-139`.
 
-### sendBrief Reject Paths (11 paths, all fixed — NOW fully tracked)
+### sendBrief Reject Paths (12 paths, all fixed — NOW fully tracked)
 
-All 11 early-return paths in `api/sendBrief.js` call `await registry.persistImmediate(log.requestId(req))` before returning:
+All 12 paths in `api/sendBrief.js` call `await registry.persistImmediate(log.requestId(req))` before returning:
 
 | # | Line | Trigger | Status | `validationStage` | `validationField` | `validationReason` |
 |---|---|---|---|---|---|---|

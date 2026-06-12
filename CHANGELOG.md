@@ -60,6 +60,43 @@
 - Low-severity headers: `X-Deploy-SHA`, `X-Deploy-Env`, `X-Body-Parse-Method`, queue state headers — standard API metadata
 - Coverage matrix reports 15 reachable / 12 unreachable (env/edge documented limitations)
 
+## [v1.8.1] — 2026-06-12
+
+### Fixed
+- [2026-06-12] - **CRITICAL**: Queue worker orphaned by Vercel function lifecycle
+  - Root cause: `enqueue()` scheduled `setImmediate(() => this.drain())` for the next event loop tick, but Vercel freezes the serverless function after the HTTP response completes, before the `setImmediate` fires
+  - 95 entries stuck permanently in `queued`/`processing` — zero emails sent
+  - Fix: added `await emailQueue.waitUntilEmpty()` to both handlers' `finally` block, polling via `setImmediate` until queue drains (keeps function alive)
+  - 60-second timeout prevents infinite hang
+- [2026-06-12] - `endpoint` field always null in lifecycle log entries
+  - Fix: added `endpoint: 'sendBrief'` / `endpoint: 'sendContact'` to every `registerLifecycle()` call in both handlers
+
+### Added
+- [2026-06-12] - `BackgroundQueue.waitUntilEmpty()` — polls via `setImmediate` until queue is empty and no active items
+- [2026-06-12] - Lifecycle trace events in queue `_process()` for timeline visualization:
+  - `${label}:processing`, `${label}:completed`, `${label}:failed`
+- [2026-06-12] - 6 new lifecycle paths in `ALL_PATHS` (27 → 33 total)
+- [2026-06-12] - `tracer` module loaded in `lib/queue.js` for lifecycle trace emission
+
+### Changed
+- [2026-06-12] - `lib/queue.js` `_process()`: wrapped entire body in try/catch/finally to guarantee `this.active--` executes even if `registerLifecycle()` or `tracer.trace()` throws
+  - Previously: exceptions before `active--` at line 110 would permanently corrupt the active counter, causing `waitUntilEmpty()` to hang until 60s timeout
+  - Now: outer catch logs the error (no unhandled rejections), outer finally decrements active, removes item from _activeItems, and calls drain() to continue processing
+  - Verified with integration test: handler throws, multiple sequential items, waitUntilEmpty — all return to active=0
+- [2026-06-12] - Both handlers' `finally` block: queue drains BEFORE tracer drains
+- [2026-06-12] - `lib/tracer.js` ALL_PATHS: 27 → 33 (lifecycle states)
+- [2026-06-12] - `lib/db/requestTraces.js` ALL_PATHS: synchronized to 33
+
+### Queue Health (Before v1.8.1)
+- 88 queued, 7 processing, 0 failed — email pipeline non-functional
+- 3 completed entries only from stale deployment data
+
+### Queue Health (After — expected)
+- Queue drains before function returns — email pipeline functional
+- Entries transition queued → processing → completed/failed
+- Lifecycle traces visible in timeline with deltaMs
+- `endpoint` field populated in all log entries
+
 ## [v1.7.0] - 2026-06-12
 
 ### Fixed

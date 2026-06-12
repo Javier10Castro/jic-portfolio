@@ -710,7 +710,7 @@ every early return, on success (submitted), and on unexpected handler errors (ha
 Two-tier storage: in-memory Map (5min TTL) + Neon request_traces table (auto-created on cold 
 start via _ensureTable()). Drain is deterministic (array splice + finally block, silent in 
 production). Coverage endpoint: /api/telemetry?type=coverage returns merged (memory + Neon 24h) 
-across all 27 paths. Current coverage: ~30% (8/27) — remaining paths require diverse inputs 
+across all 33 paths. Current coverage: ~59% — remaining paths require diverse inputs 
 (non-POST, bot patterns, invalid JSON, IP burst, PDF failure) not yet seen in testing.
 
 ---
