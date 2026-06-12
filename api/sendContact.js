@@ -128,7 +128,7 @@ module.exports = async (req, res) => {
     log.warn(req, 'Method not allowed', { ip, method: req.method, reason: RATE_LIMIT_REASON.VALIDATION });
     log.addTrace(req, 'validation', 'fail');
     log.structured(req, { stage: 'validation', status: 'fail', reason: 'method_not_allowed' });
-    registry.registerLifecycle(log.requestId(req), { status: 'rejected', reason: 'validation', validationStage: 'methodCheck', validationField: 'method', validationReason: 'not_allowed', receivedAt: req._lifecycle.startTime });
+    registry.registerLifecycle(log.requestId(req), { endpoint: 'sendContact', status: 'rejected', reason: 'validation', validationStage: 'methodCheck', validationField: 'method', validationReason: 'not_allowed', receivedAt: req._lifecycle.startTime });
     tracer.trace(log.requestId(req), 'sendContact', 'methodCheck', 'sendContact:methodCheck');
     await registry.persistImmediate(log.requestId(req));
     return json(405, { 'Content-Type': 'application/json', ...deployHeaders(req), ...reqHeaders(req) }, resPayload(req, { success: false, status: 'rejected', error: 'Method Not Allowed', queuePosition: 0, queueDepth: 0 }))(res);
@@ -141,7 +141,7 @@ module.exports = async (req, res) => {
     log.event('body_parse.fail', req, { bodyType: bt, parseMethod: req._bodyParseMethod || 'unknown' });
     log.addTrace(req, 'body.parse', 'fail');
     log.structured(req, { stage: 'body.parse', status: 'fail', bodyType: bt, parseMethod: req._bodyParseMethod });
-    registry.registerLifecycle(log.requestId(req), { status: 'rejected', reason: 'bad_request', validationStage: 'parseBody', validationField: 'body', validationReason: 'parse_failed', receivedAt: req._lifecycle.startTime });
+    registry.registerLifecycle(log.requestId(req), { endpoint: 'sendContact', status: 'rejected', reason: 'bad_request', validationStage: 'parseBody', validationField: 'body', validationReason: 'parse_failed', receivedAt: req._lifecycle.startTime });
     tracer.trace(log.requestId(req), 'sendContact', 'parseBody', 'sendContact:parseBody');
     await registry.persistImmediate(log.requestId(req));
     return json(400, { 'Content-Type': 'application/json', ...deployHeaders(req), ...reqHeaders(req) }, resPayload(req, { success: false, status: 'rejected', error: 'INVALID_BODY', queuePosition: 0, queueDepth: 0 }))(res);
@@ -156,7 +156,7 @@ module.exports = async (req, res) => {
     log.event('honeypot.triggered', req, { field: hp.field });
     log.addTrace(req, 'validation', 'blocked');
     log.structured(req, { stage: 'validation', status: 'blocked', reason: 'honeypot', field: hp.field });
-    registry.registerLifecycle(log.requestId(req), { status: 'rejected', reason: 'validation', validationStage: 'honeypotCheck', validationField: hp.field, validationReason: 'bot_detected', receivedAt: req._lifecycle.startTime });
+    registry.registerLifecycle(log.requestId(req), { endpoint: 'sendContact', status: 'rejected', reason: 'validation', validationStage: 'honeypotCheck', validationField: hp.field, validationReason: 'bot_detected', receivedAt: req._lifecycle.startTime });
     tracer.trace(log.requestId(req), 'sendContact', 'honeypotCheck', 'sendContact:honeypotCheck');
     await registry.persistImmediate(log.requestId(req));
     return json(200, { 'Content-Type': 'application/json', ...deployHeaders(req), ...reqHeaders(req), ...debugHeaders({ allowed: false }, RATE_LIMIT_REASON.BOT) }, resPayload(req, { success: true, status: 'processed', queuePosition: 0, queueDepth: 0 }))(res);
@@ -168,7 +168,7 @@ module.exports = async (req, res) => {
     log.event('timing_check.blocked', req, { reason: tc.reason });
     log.addTrace(req, 'validation', 'blocked');
     log.structured(req, { stage: 'validation', status: 'blocked', reason: 'timing', detail: tc.reason });
-    registry.registerLifecycle(log.requestId(req), { status: 'rejected', reason: 'validation', validationStage: 'timingCheck', validationField: 'submittedAt', validationReason: tc.reason, receivedAt: req._lifecycle.startTime });
+    registry.registerLifecycle(log.requestId(req), { endpoint: 'sendContact', status: 'rejected', reason: 'validation', validationStage: 'timingCheck', validationField: 'submittedAt', validationReason: tc.reason, receivedAt: req._lifecycle.startTime });
     tracer.trace(log.requestId(req), 'sendContact', 'timingCheck', 'sendContact:timingCheck');
     await registry.persistImmediate(log.requestId(req));
     return json(400, { 'Content-Type': 'application/json', ...deployHeaders(req), ...reqHeaders(req) }, resPayload(req, { success: false, status: 'rejected', error: 'INVALID_REQUEST', queuePosition: 0, queueDepth: 0 }))(res);
@@ -183,7 +183,7 @@ module.exports = async (req, res) => {
     log.event('validation.fail', req, { field: 'name', reason: nameCheck.reason });
     log.addTrace(req, 'validation', 'fail');
     log.structured(req, { stage: 'validation', status: 'fail', field: 'name', reason: nameCheck.reason });
-    registry.registerLifecycle(log.requestId(req), { status: 'rejected', reason: 'validation', validationStage: 'sanitizeAndValidateName', validationField: 'name', validationReason: nameCheck.reason, receivedAt: req._lifecycle.startTime });
+    registry.registerLifecycle(log.requestId(req), { endpoint: 'sendContact', status: 'rejected', reason: 'validation', validationStage: 'sanitizeAndValidateName', validationField: 'name', validationReason: nameCheck.reason, receivedAt: req._lifecycle.startTime });
     tracer.trace(log.requestId(req), 'sendContact', 'sanitizeAndValidateName', 'sendContact:sanitizeAndValidateName');
     await registry.persistImmediate(log.requestId(req));
     return json(400, { 'Content-Type': 'application/json', ...deployHeaders(req), ...reqHeaders(req) }, resPayload(req, { success: false, status: 'rejected', error: 'INVALID_REQUEST', queuePosition: 0, queueDepth: 0 }))(res);
@@ -195,7 +195,7 @@ module.exports = async (req, res) => {
     log.event('validation.fail', req, { field: 'email' });
     log.addTrace(req, 'validation', 'fail');
     log.structured(req, { stage: 'validation', status: 'fail', field: 'email' });
-    registry.registerLifecycle(log.requestId(req), { status: 'rejected', reason: 'validation', validationStage: 'validateEmail', validationField: 'email', validationReason: 'invalid_format', receivedAt: req._lifecycle.startTime });
+    registry.registerLifecycle(log.requestId(req), { endpoint: 'sendContact', status: 'rejected', reason: 'validation', validationStage: 'validateEmail', validationField: 'email', validationReason: 'invalid_format', receivedAt: req._lifecycle.startTime });
     tracer.trace(log.requestId(req), 'sendContact', 'validateEmail', 'sendContact:validateEmail');
     await registry.persistImmediate(log.requestId(req));
     return json(400, { 'Content-Type': 'application/json', ...deployHeaders(req), ...reqHeaders(req) }, resPayload(req, { success: false, status: 'rejected', error: 'INVALID_REQUEST', queuePosition: 0, queueDepth: 0 }))(res);
@@ -206,7 +206,7 @@ module.exports = async (req, res) => {
     log.event('validation.fail', req, { field: 'message', reason: 'empty' });
     log.addTrace(req, 'validation', 'fail');
     log.structured(req, { stage: 'validation', status: 'fail', field: 'message', reason: 'empty' });
-    registry.registerLifecycle(log.requestId(req), { status: 'rejected', reason: 'validation', validationStage: 'validateMessage', validationField: 'message', validationReason: 'empty', receivedAt: req._lifecycle.startTime });
+    registry.registerLifecycle(log.requestId(req), { endpoint: 'sendContact', status: 'rejected', reason: 'validation', validationStage: 'validateMessage', validationField: 'message', validationReason: 'empty', receivedAt: req._lifecycle.startTime });
     tracer.trace(log.requestId(req), 'sendContact', 'validateMessage:empty', 'sendContact:validateMessage:empty');
     await registry.persistImmediate(log.requestId(req));
     return json(400, { 'Content-Type': 'application/json', ...deployHeaders(req), ...reqHeaders(req) }, resPayload(req, { success: false, status: 'rejected', error: 'INVALID_REQUEST', queuePosition: 0, queueDepth: 0 }))(res);
@@ -216,7 +216,7 @@ module.exports = async (req, res) => {
     log.event('validation.fail', req, { field: 'message', reason: 'too_long', length: message.length });
     log.addTrace(req, 'validation', 'fail');
     log.structured(req, { stage: 'validation', status: 'fail', field: 'message', reason: 'too_long', length: message.length });
-    registry.registerLifecycle(log.requestId(req), { status: 'rejected', reason: 'validation', validationStage: 'validateMessage', validationField: 'message', validationReason: 'too_long', receivedAt: req._lifecycle.startTime });
+    registry.registerLifecycle(log.requestId(req), { endpoint: 'sendContact', status: 'rejected', reason: 'validation', validationStage: 'validateMessage', validationField: 'message', validationReason: 'too_long', receivedAt: req._lifecycle.startTime });
     tracer.trace(log.requestId(req), 'sendContact', 'validateMessage:tooLong', 'sendContact:validateMessage:tooLong');
     await registry.persistImmediate(log.requestId(req));
     return json(400, { 'Content-Type': 'application/json', ...deployHeaders(req), ...reqHeaders(req) }, resPayload(req, { success: false, status: 'rejected', error: 'INVALID_REQUEST', queuePosition: 0, queueDepth: 0 }))(res);
@@ -232,7 +232,7 @@ module.exports = async (req, res) => {
     log.event('rate_limit.blocked', req, { layer: 'edge', reason: RATE_LIMIT_REASON.IP_BURST, retryAfter: edge.retryAfter, remaining: edge.remaining });
     log.addTrace(req, 'rateLimit', 'blocked');
     log.structured(req, { stage: 'rateLimit', status: 'blocked', layer: 'edge', retryAfter: edge.retryAfter, limit: edge.limit });
-    registry.registerLifecycle(log.requestId(req), { status: 'rejected', reason: 'rate_limit', validationStage: 'rateLimit', validationField: 'ip', validationReason: 'burst', receivedAt: req._lifecycle.startTime });
+    registry.registerLifecycle(log.requestId(req), { endpoint: 'sendContact', status: 'rejected', reason: 'rate_limit', validationStage: 'rateLimit', validationField: 'ip', validationReason: 'burst', receivedAt: req._lifecycle.startTime });
     tracer.trace(log.requestId(req), 'sendContact', 'rateLimit:ip', 'sendContact:rateLimit:ip');
     await registry.persistImmediate(log.requestId(req));
     const nowMs = Date.now();
@@ -245,7 +245,7 @@ module.exports = async (req, res) => {
     log.event('rate_limit.blocked', req, { layer: 'dedup', reason: RATE_LIMIT_REASON.EMAIL_DUP, retryAfter: dedupCheck.retryAfter, email: maskEmail(email) });
     log.addTrace(req, 'rateLimit', 'blocked');
     log.structured(req, { stage: 'rateLimit', status: 'blocked', layer: 'dedup', retryAfter: dedupCheck.retryAfter, limit: dedupCheck.limit });
-    registry.registerLifecycle(log.requestId(req), { status: 'rejected', reason: 'rate_limit', validationStage: 'rateLimit', validationField: 'email', validationReason: 'duplicate', receivedAt: req._lifecycle.startTime });
+    registry.registerLifecycle(log.requestId(req), { endpoint: 'sendContact', status: 'rejected', reason: 'rate_limit', validationStage: 'rateLimit', validationField: 'email', validationReason: 'duplicate', receivedAt: req._lifecycle.startTime });
     tracer.trace(log.requestId(req), 'sendContact', 'rateLimit:email', 'sendContact:rateLimit:email');
     await registry.persistImmediate(log.requestId(req));
     const nowMs = Date.now();
@@ -265,7 +265,7 @@ module.exports = async (req, res) => {
     log.event('smtp.misconfigured', req, { ip });
     log.addTrace(req, 'smtp', 'fail');
     log.structured(req, { stage: 'smtp', status: 'fail', reason: 'missing_credentials' });
-    registry.registerLifecycle(log.requestId(req), { status: 'rejected', reason: 'bad_request', validationStage: 'configCheck', validationField: 'smtp', validationReason: 'missing_credentials', receivedAt: req._lifecycle.startTime });
+    registry.registerLifecycle(log.requestId(req), { endpoint: 'sendContact', status: 'rejected', reason: 'bad_request', validationStage: 'configCheck', validationField: 'smtp', validationReason: 'missing_credentials', receivedAt: req._lifecycle.startTime });
     tracer.trace(log.requestId(req), 'sendContact', 'configCheck', 'sendContact:configCheck');
     await registry.persistImmediate(log.requestId(req));
     return json(500, { 'Content-Type': 'application/json', ...deployHeaders(req), ...reqHeaders(req) }, resPayload(req, { success: false, status: 'rejected', error: 'Email service misconfigured', queuePosition: 0, queueDepth: 0 }))(res);
@@ -324,7 +324,7 @@ module.exports = async (req, res) => {
       const finalLifecycleStatus = adminOk && clientOk ? 'completed' : 'failed';
       const executionFinishedAt = Date.now();
 
-      registry.registerLifecycle(rid, { status: finalLifecycleStatus, executionFinishedAt });
+      registry.registerLifecycle(rid, { endpoint: 'sendContact', status: finalLifecycleStatus, executionFinishedAt });
 
       log.addTrace(req, 'email.sendEnd', sendStatus);
       log.structured(req, { stage: 'email.sendEnd', status: sendStatus });
@@ -339,7 +339,7 @@ module.exports = async (req, res) => {
     log.event('queue.overflow', req, { ip, endpoint: 'sendContact' });
     log.addTrace(req, 'queue.assign', 'overflow');
     log.structured(req, { stage: 'queue.assign', status: 'overflow' });
-    registry.registerLifecycle(log.requestId(req), { status: 'rejected', reason: 'bad_request', validationStage: 'queueCheck', validationField: 'queue', validationReason: 'overflow', receivedAt: req._lifecycle.startTime });
+    registry.registerLifecycle(log.requestId(req), { endpoint: 'sendContact', status: 'rejected', reason: 'bad_request', validationStage: 'queueCheck', validationField: 'queue', validationReason: 'overflow', receivedAt: req._lifecycle.startTime });
     tracer.trace(log.requestId(req), 'sendContact', 'queueCheck', 'sendContact:queueCheck');
     await registry.persistImmediate(log.requestId(req));
     return json(503, { 'Content-Type': 'application/json', ...deployHeaders(req), ...reqHeaders(req) }, resPayload(req, { success: false, status: 'rejected', error: 'QUEUE_OVERFLOW', queuePosition: 0, queueDepth: 0 }))(res);
@@ -350,8 +350,7 @@ module.exports = async (req, res) => {
   req._lifecycle.queuedAt = queuedAt;
   req._lifecycle.queuePosition = position;
   req._lifecycle.queueDepth = depth;
-  registry.registerLifecycle(log.requestId(req), {
-    status: 'queued',
+  registry.registerLifecycle(log.requestId(req), { endpoint: 'sendContact', status: 'queued',
     receivedAt: req._lifecycle.startTime,
     queuedAt,
     queuePosition: position,
@@ -381,6 +380,7 @@ module.exports = async (req, res) => {
     log.error(req, 'Unexpected error in sendContact', { error: err.message });
     return json(500, { 'Content-Type': 'application/json', ...deployHeaders(req), ...reqHeaders(req) }, resPayload(req, { success: false, status: 'error', error: 'INTERNAL_ERROR' }))(res);
   } finally {
+    await emailQueue.waitUntilEmpty().catch(() => {});
     await tracer.drain();
   }
 };
