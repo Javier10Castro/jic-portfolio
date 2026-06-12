@@ -1,10 +1,10 @@
 /**
  * verify-traces.js — Trace coverage verification
  *
- * Reads /api/traces?coverage=true and checks that all 23 validation paths
+ * Reads /api/telemetry?type=coverage and checks that all 23 validation paths
  * have been executed (memory + Neon history merged).
  *
- * Also falls back to /api/logs?limit=50 if /api/traces is not deployed yet.
+ * Falls back to /api/telemetry?type=logs&limit=50 if coverage endpoint fails.
  *
  * Usage: node scripts/verify-traces.js
  * Environment: Node 18+ (uses global fetch)
@@ -13,13 +13,13 @@
 const BASE_URL = "https://web-portfolio-kappa-wheat.vercel.app";
 
 async function getCoverage() {
-  const res = await fetch(BASE_URL + "/api/traces?coverage=true");
+  const res = await fetch(BASE_URL + "/api/telemetry?type=coverage");
   if (!res.ok) return null;
   return res.json();
 }
 
 async function getLogs() {
-  const res = await fetch(BASE_URL + "/api/logs?limit=50");
+  const res = await fetch(BASE_URL + "/api/telemetry?type=logs&limit=50");
   if (!res.ok) return [];
   const data = await res.json();
   if (Array.isArray(data)) return data;
@@ -30,15 +30,15 @@ async function getLogs() {
 
 (async () => {
   console.log(`\n  TRACE COVERAGE VERIFICATION`);
-  console.log(`  Target: ${BASE_URL}/api/traces?coverage=true`);
+  console.log(`  Target: ${BASE_URL}/api/telemetry?type=coverage`);
   console.log(`  Started: ${new Date().toISOString()}`);
   console.log('');
 
   const data = await getCoverage();
 
   if (!data || !data.coverage) {
-    console.log('  \u26a0\ufe0f  /api/traces endpoint not deployed yet (404)');
-    console.log('  Falling back to /api/logs for coverage estimation...');
+    console.log('  \u26a0\ufe0f  Telemetry coverage not available');
+    console.log('  Falling back to logs for coverage estimation...');
     console.log('');
 
     const logs = await getLogs();
@@ -54,9 +54,7 @@ async function getLogs() {
       console.log(`    ✅ ${s}`);
     }
     console.log('');
-    console.log('  ⚠️  Deploy /api/traces.js to unlock full coverage endpoint');
-    console.log('  Note: Trace events accumulate in memory + Neon,');
-    console.log('  so coverage will be available after deployment.');
+    console.log('  Use /api/telemetry?type=coverage for full coverage data');
     console.log('');
     return;
   }

@@ -12,6 +12,7 @@ const {
 } = require('../lib/rate-limit');
 const log = require('../lib/logger');
 const registry = require('../lib/request-registry');
+const tracer = require('../lib/tracer');
 
 function json(status, headers, payload) {
   return res => { res.writeHead(status, headers).end(JSON.stringify(payload)); };
@@ -124,6 +125,7 @@ module.exports = async (req, res) => {
   if (req.method !== 'POST') {
     log.warn(req, 'Method not allowed', { ip, method: req.method, reason: RATE_LIMIT_REASON.VALIDATION });
     registry.registerLifecycle(log.requestId(req), { status: 'rejected', reason: 'validation', validationStage: 'methodCheck', validationField: 'method', validationReason: 'not_allowed', receivedAt: Date.now() });
+    tracer.trace(log.requestId(req), 'sendBrief', 'methodCheck', 'sendBrief:methodCheck');
     await registry.persistImmediate(log.requestId(req));
     return json(405, { 'Content-Type': 'application/json', ...deployHeaders(req), ...reqHeaders(req) }, resPayload(req, { success: false, error: 'Method Not Allowed' }))(res);
   }
@@ -134,6 +136,7 @@ module.exports = async (req, res) => {
   if (!parsed) {
     log.event('body_parse.fail', req, { bodyType: bt, parseMethod: req._bodyParseMethod || 'unknown' });
     registry.registerLifecycle(log.requestId(req), { status: 'rejected', reason: 'bad_request', validationStage: 'parseBody', validationField: 'body', validationReason: 'parse_failed', receivedAt: Date.now() });
+    tracer.trace(log.requestId(req), 'sendBrief', 'parseBody', 'sendBrief:parseBody');
     await registry.persistImmediate(log.requestId(req));
     return json(400, { 'Content-Type': 'application/json', ...deployHeaders(req), ...reqHeaders(req) }, resPayload(req, { success: false, error: 'INVALID_BODY' }))(res);
   }
@@ -144,6 +147,7 @@ module.exports = async (req, res) => {
     log.warn(req, 'Honeypot triggered', { ip, field: hp.field, reason: RATE_LIMIT_REASON.BOT });
     log.event('honeypot.triggered', req, { field: hp.field });
     registry.registerLifecycle(log.requestId(req), { status: 'rejected', reason: 'validation', validationStage: 'honeypotCheck', validationField: hp.field, validationReason: 'bot_detected', receivedAt: Date.now() });
+    tracer.trace(log.requestId(req), 'sendBrief', 'honeypotCheck', 'sendBrief:honeypotCheck');
     await registry.persistImmediate(log.requestId(req));
     return json(200, { 'Content-Type': 'application/json', ...deployHeaders(req), ...reqHeaders(req), ...debugHeaders({ allowed: false }, RATE_LIMIT_REASON.BOT) }, resPayload(req, { success: true }))(res);
   }
@@ -154,6 +158,7 @@ module.exports = async (req, res) => {
     log.warn(req, 'Timing check failed', { ip, reason: tc.reason });
     log.event('timing_check.blocked', req, { reason: tc.reason });
     registry.registerLifecycle(log.requestId(req), { status: 'rejected', reason: 'validation', validationStage: 'timingCheck', validationField: 'submittedAt', validationReason: tc.reason, receivedAt: Date.now() });
+    tracer.trace(log.requestId(req), 'sendBrief', 'timingCheck', 'sendBrief:timingCheck');
     await registry.persistImmediate(log.requestId(req));
     return json(400, { 'Content-Type': 'application/json', ...deployHeaders(req), ...reqHeaders(req) }, resPayload(req, { success: false, error: 'INVALID_REQUEST' }))(res);
   }
@@ -166,6 +171,7 @@ module.exports = async (req, res) => {
     log.event('validation.failed', req, { stage: 'sanitizeAndValidateName', reason: nameCheck.reason, nameType: typeof rawName, nameLength: rawName ? rawName.length : 0, namePreview: rawName ? String(rawName).substring(0, 50) : null });
     log.warn(req, 'Name validation failed', { ip, reason: nameCheck.reason });
     registry.registerLifecycle(log.requestId(req), { status: 'rejected', reason: 'validation', validationStage: 'sanitizeAndValidateName', validationField: 'name', validationReason: nameCheck.reason, receivedAt: Date.now() });
+    tracer.trace(log.requestId(req), 'sendBrief', 'sanitizeAndValidateName', 'sendBrief:sanitizeAndValidateName');
     await registry.persistImmediate(log.requestId(req));
     return json(400, { 'Content-Type': 'application/json', ...deployHeaders(req), ...reqHeaders(req) }, resPayload(req, { success: false, error: 'INVALID_REQUEST' }))(res);
   }
@@ -177,6 +183,7 @@ module.exports = async (req, res) => {
     log.warn(req, 'Invalid email', { ip, email: maskEmail(email), reason: RATE_LIMIT_REASON.VALIDATION });
     log.event('validation.fail', req, { field: 'email' });
     registry.registerLifecycle(log.requestId(req), { status: 'rejected', reason: 'validation', validationStage: 'validateEmail', validationField: 'email', validationReason: 'invalid_format', receivedAt: Date.now() });
+    tracer.trace(log.requestId(req), 'sendBrief', 'validateEmail', 'sendBrief:validateEmail');
     await registry.persistImmediate(log.requestId(req));
     return json(400, { 'Content-Type': 'application/json', ...deployHeaders(req), ...reqHeaders(req) }, resPayload(req, { success: false, error: 'INVALID_REQUEST' }))(res);
   }
@@ -187,6 +194,7 @@ module.exports = async (req, res) => {
     log.debugLog(req, 'Prompt validation failed', { ip, reason: promptCheck.reason });
     log.event('validation.fail', req, { field: 'prompt', reason: promptCheck.reason });
     registry.registerLifecycle(log.requestId(req), { status: 'rejected', reason: 'validation', validationStage: 'validatePrompt', validationField: 'prompt', validationReason: promptCheck.reason, receivedAt: Date.now() });
+    tracer.trace(log.requestId(req), 'sendBrief', 'validatePrompt', 'sendBrief:validatePrompt');
     await registry.persistImmediate(log.requestId(req));
     return json(400, { 'Content-Type': 'application/json', ...deployHeaders(req), ...reqHeaders(req) }, resPayload(req, { success: false, error: 'INVALID_REQUEST' }))(res);
   }
@@ -198,6 +206,7 @@ module.exports = async (req, res) => {
     log.warn(req, 'Edge blocked', { ip, retryAfter: edge.retryAfter, reason: RATE_LIMIT_REASON.IP_BURST });
     log.event('rate_limit.blocked', req, { layer: 'edge', reason: RATE_LIMIT_REASON.IP_BURST, retryAfter: edge.retryAfter, remaining: edge.remaining });
     registry.registerLifecycle(log.requestId(req), { status: 'rejected', reason: 'rate_limit', validationStage: 'rateLimit', validationField: 'ip', validationReason: 'burst', receivedAt: Date.now() });
+    tracer.trace(log.requestId(req), 'sendBrief', 'rateLimit:ip', 'sendBrief:rateLimit:ip');
     await registry.persistImmediate(log.requestId(req));
     return json(429, { ...deployHeaders(req), ...reqHeaders(req), ...rateLimitHeaders(edge), ...debugHeaders(edge, RATE_LIMIT_REASON.IP_BURST) }, resPayload(req, { success: false, error: 'RATE_LIMITED' }))(res);
   }
@@ -207,6 +216,7 @@ module.exports = async (req, res) => {
     log.warn(req, 'Email dedup blocked', { email: maskEmail(email), retryAfter: dedupCheck.retryAfter, reason: RATE_LIMIT_REASON.EMAIL_DUP });
     log.event('rate_limit.blocked', req, { layer: 'dedup', reason: RATE_LIMIT_REASON.EMAIL_DUP, retryAfter: dedupCheck.retryAfter, email: maskEmail(email) });
     registry.registerLifecycle(log.requestId(req), { status: 'rejected', reason: 'rate_limit', validationStage: 'rateLimit', validationField: 'email', validationReason: 'duplicate', receivedAt: Date.now() });
+    tracer.trace(log.requestId(req), 'sendBrief', 'rateLimit:email', 'sendBrief:rateLimit:email');
     await registry.persistImmediate(log.requestId(req));
     return json(429, { ...deployHeaders(req), ...reqHeaders(req), ...rateLimitHeaders(dedupCheck), ...debugHeaders(dedupCheck, RATE_LIMIT_REASON.EMAIL_DUP) }, resPayload(req, { success: false, error: 'RATE_LIMITED' }))(res);
   }
@@ -231,6 +241,7 @@ module.exports = async (req, res) => {
     log.error(req, 'Missing GMAIL_USER or GMAIL_APP_PASSWORD', null, { ip });
     log.event('smtp.misconfigured', req, { ip });
     registry.registerLifecycle(log.requestId(req), { status: 'rejected', reason: 'bad_request', validationStage: 'configCheck', validationField: 'smtp', validationReason: 'missing_credentials', receivedAt: Date.now() });
+    tracer.trace(log.requestId(req), 'sendBrief', 'configCheck', 'sendBrief:configCheck');
     await registry.persistImmediate(log.requestId(req));
     return json(500, { 'Content-Type': 'application/json', ...deployHeaders(req), ...reqHeaders(req) }, resPayload(req, { success: false, error: 'Email service misconfigured' }))(res);
   }
@@ -296,6 +307,7 @@ module.exports = async (req, res) => {
     log.warn(req, 'Queue overflow', { ip });
     log.event('queue.overflow', req, { ip, endpoint: 'sendBrief' });
     registry.registerLifecycle(log.requestId(req), { status: 'rejected', reason: 'bad_request', validationStage: 'queueCheck', validationField: 'queue', validationReason: 'overflow', receivedAt: Date.now() });
+    tracer.trace(log.requestId(req), 'sendBrief', 'queueCheck', 'sendBrief:queueCheck');
     await registry.persistImmediate(log.requestId(req));
     return json(503, { 'Content-Type': 'application/json', ...deployHeaders(req), ...reqHeaders(req) }, resPayload(req, { success: false, error: 'QUEUE_OVERFLOW' }))(res);
   }
