@@ -52,6 +52,14 @@ async function neonRange(hours) {
   } catch { return null; }
 }
 
+async function neonHeatmap(hours) {
+  try { return await requestTraces.getHeatmap(hours); } catch { return { total: 0, rows: [], rangeHours: hours }; }
+}
+
+async function neonTimeline(hours, limit) {
+  try { return await requestTraces.getTimeline(hours, limit); } catch { return { events: [], byRequest: {}, totalRequests: 0, totalEvents: 0, rangeHours: hours }; }
+}
+
 module.exports = async (req, res) => {
   if (req.method !== 'GET') {
     return json(res, 405, { error: 'Method Not Allowed' });
@@ -61,6 +69,20 @@ module.exports = async (req, res) => {
   const id = q.get('id') || '';
   const coverage = q.get('coverage') === 'true';
   const range = q.get('range') || '';
+  const heatmap = q.get('heatmap') === 'true';
+  const timeline = q.get('timeline') === 'true';
+  const hours = parseInt(q.get('hours') || '24', 10);
+
+  if (heatmap) {
+    const data = await neonHeatmap(hours);
+    return ok(res, { endpoint: 'traces', type: 'heatmap', ...data });
+  }
+
+  if (timeline) {
+    const limit = parseInt(q.get('limit') || '200', 10);
+    const data = await neonTimeline(hours, limit);
+    return ok(res, { endpoint: 'traces', type: 'timeline', ...data });
+  }
 
   if (coverage) {
     const memCoverage = tracer.getCoverage();
@@ -86,8 +108,8 @@ module.exports = async (req, res) => {
   }
 
   if (range) {
-    const hours = parseInt(range.replace('h', ''), 10) || 24;
-    const data = await neonRange(hours);
+    const rangeHours = parseInt(range.replace('h', ''), 10) || 24;
+    const data = await neonRange(rangeHours);
     if (!data) return notFound(res, 'Range data unavailable');
     return ok(res, { endpoint: 'traces', type: 'range', ...data });
   }
