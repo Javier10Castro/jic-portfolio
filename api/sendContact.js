@@ -73,20 +73,23 @@ function resPayload(req, extra) {
 
 async function sendWithTimeout(transporter, mailOptions, timeoutMs, req, label) {
   const sendStart = Date.now();
+  log.structured(req, { stage: `smtp.start.${label}`, status: 'ok', elapsedMs: 0 });
   try {
     await Promise.race([
       transporter.sendMail(mailOptions),
       new Promise((_, reject) => setTimeout(() => reject(Object.assign(new Error('send_timeout'), { timedOut: true })), timeoutMs)),
     ]);
     const elapsed = Date.now() - sendStart;
-    log.debugLog(req, `email_send:${label}`, { elapsed_ms: elapsed });
+    log.structured(req, { stage: `smtp.complete.${label}`, status: 'ok', elapsedMs: elapsed });
     return true;
   } catch (err) {
+    const elapsed = Date.now() - sendStart;
     if (err.timedOut) {
-      log.warn(req, `Email send timed out`, { label, timeout_ms: timeoutMs, elapsed_ms: Date.now() - sendStart });
-      log.debugLog(req, `email_send:${label} (timed_out)`, { elapsed_ms: Date.now() - sendStart });
+      log.warn(req, `Email send timed out`, { label, timeout_ms: timeoutMs, elapsed_ms: elapsed });
+      log.structured(req, { stage: `smtp.timeout.${label}`, status: 'timeout', elapsedMs: elapsed, timeoutMs });
       return false;
     }
+    log.structured(req, { stage: `smtp.error.${label}`, status: 'error', elapsedMs: elapsed, error: err.message });
     throw err;
   }
 }
@@ -292,31 +295,35 @@ module.exports = async (req, res) => {
 
       const rid = log.requestId(req);
 
+      stage(req, 'before_email_send');
       log.addTrace(req, 'email.admin.start', 'ok');
-      log.structured(req, { stage: 'email.admin.start', status: 'ok' });
-      const adminOk = await sendWithTimeout(transporter, {
-        from: `"Javier Ibrahim — Portfolio" <${GMAIL_USER}>`,
-        to: GMAIL_USER,
-        replyTo: email,
-        subject: isES
-          ? `Nuevo mensaje de ${safeName}${company ? ` — ${company}` : ''}`
-          : `New message from ${safeName}${company ? ` — ${company}` : ''}`,
-        html: buildContactHTML(templateData, 'admin'),
-      }, EMAIL_TIMEOUT_MS, req, 'admin');
-      log.addTrace(req, 'email.admin.complete', adminOk ? 'ok' : 'timeout');
-      log.structured(req, { stage: 'email.admin.complete', status: adminOk ? 'ok' : 'timeout' });
-
-      stage(req, 'before_email_client');
       log.addTrace(req, 'email.client.start', 'ok');
+      log.structured(req, { stage: 'email.admin.start', status: 'ok' });
       log.structured(req, { stage: 'email.client.start', status: 'ok' });
-      const clientOk = await sendWithTimeout(transporter, {
-        from: `"Javier Ibrahim" <${GMAIL_USER}>`,
-        to: [email, GMAIL_USER],
-        replyTo: GMAIL_USER,
-        subject: isES ? 'Hemos recibido tu mensaje ✅' : 'We received your message ✅',
-        html: buildContactHTML(templateData, 'client'),
-      }, EMAIL_TIMEOUT_MS, req, 'client');
+      
+      const [adminOk, clientOk] = await Promise.all([
+        sendWithTimeout(transporter, {
+          from: `"Javier Ibrahim — Portfolio" <${GMAIL_USER}>`,
+          to: GMAIL_USER,
+          replyTo: email,
+          subject: isES
+            ? `Nuevo mensaje de ${safeName}${company ? ` — ${company}` : ''}`
+            : `New message from ${safeName}${company ? ` — ${company}` : ''}`,
+          html: buildContactHTML(templateData, 'admin'),
+        }, EMAIL_TIMEOUT_MS, req, 'admin'),
+        
+        sendWithTimeout(transporter, {
+          from: `"Javier Ibrahim" <${GMAIL_USER}>`,
+          to: [email, GMAIL_USER],
+          replyTo: GMAIL_USER,
+          subject: isES ? 'Hemos recibido tu mensaje ✅' : 'We received your message ✅',
+          html: buildContactHTML(templateData, 'client'),
+        }, EMAIL_TIMEOUT_MS, req, 'client')
+      ]);
+      
+      log.addTrace(req, 'email.admin.complete', adminOk ? 'ok' : 'timeout');
       log.addTrace(req, 'email.client.complete', clientOk ? 'ok' : 'timeout');
+      log.structured(req, { stage: 'email.admin.complete', status: adminOk ? 'ok' : 'timeout' });
       log.structured(req, { stage: 'email.client.complete', status: clientOk ? 'ok' : 'timeout' });
 
       stage(req, 'after_email_send');
@@ -380,7 +387,7 @@ module.exports = async (req, res) => {
     log.error(req, 'Unexpected error in sendContact', { error: err.message });
     return json(500, { 'Content-Type': 'application/json', ...deployHeaders(req), ...reqHeaders(req) }, resPayload(req, { success: false, status: 'error', error: 'INTERNAL_ERROR' }))(res);
   } finally {
-    await emailQueue.waitUntilEmpty().catch(() => {});
+    emailQueue.waitUntilEmpty().catch(() => {});
     await tracer.drain();
   }
 };
