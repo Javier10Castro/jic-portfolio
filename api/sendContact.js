@@ -277,7 +277,24 @@ module.exports = async (req, res) => {
   const transporter = nodemailer.createTransport({
     service: 'gmail',
     auth: { user: GMAIL_USER, pass: GMAIL_APP_PASSWORD },
+    connectionTimeout: 3000,
+    greetingTimeout: 3000,
+    socketTimeout: 5000,
   });
+
+  const verifyStart = Date.now();
+  log.structured(req, { stage: 'transporter.verify.start', status: 'ok', elapsedMs: 0 });
+  try {
+    await transporter.verify();
+    log.structured(req, { stage: 'transporter.verify.complete', status: 'ok', elapsedMs: Date.now() - verifyStart });
+  } catch (verifyErr) {
+    log.structured(req, { stage: 'transporter.verify.error', status: 'error', elapsedMs: Date.now() - verifyStart, error: verifyErr.message });
+    log.error(req, 'Transporter verify failed', verifyErr, { name: safeName, email });
+    registry.registerLifecycle(log.requestId(req), { endpoint: 'sendContact', status: 'rejected', reason: 'smtp_failure', validationStage: 'transporterVerify', validationField: 'smtp', validationReason: verifyErr.message, receivedAt: req._lifecycle.startTime });
+    tracer.trace(log.requestId(req), 'sendContact', 'transporterVerify', 'sendContact:transporterVerify');
+    await registry.persistImmediate(log.requestId(req));
+    return json(500, { 'Content-Type': 'application/json', ...deployHeaders(req), ...reqHeaders(req) }, resPayload(req, { success: false, status: 'rejected', error: 'Email service unavailable', queuePosition: 0, queueDepth: 0 }))(res);
+  }
 
   const isES = lang === 'es';
   const now = new Date();
