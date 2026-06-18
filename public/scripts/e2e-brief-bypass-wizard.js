@@ -118,6 +118,7 @@
     conv_urgencia: '',
     conv_seguimiento: 'Contactar al prospecto por WhatsApp o llamada en 24 hrs.',
     ai_persona: 'Un anfitrion elegante, atento y genuino que hace sentir especial a cada invitado.',
+    ai_sentir: 'Profesional y confiable,Lujoso y exclusivo',
     ai_5seg: 'Profesionalismo, confianza y una experiencia premium.',
     ai_diferencia: 'No solo servimos cafe; creamos experiencias memorables que elevan cualquier evento.',
     ai_prohibido: '',

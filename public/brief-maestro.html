@@ -814,6 +814,7 @@ const SECTIONS=[
     goal:"Capturar la esencia de tu negocio para que cada decisión —visual, narrativa y estratégica— esté completamente alineada.",
     questions:[
       {id:"ai_persona",label:"Si tu marca fuera una persona, ¿cómo sería?",hint:"Imagina tu marca como persona. <b>Edad, estilo, voz, intereses</b>. Esto construye una voz coherente.",type:"textarea",required:true,ai:"Construye la **voz completa de tu marca**: tono, vocabulario y estilo narrativo."},
+      {id:"ai_sentir",label:"¿Cómo quieres que las personas se sientan al ver tu marca?",hint:"Elige las emociones que <b>debe transmitir tu marca</b>. Esto guía el diseño visual y el tono de comunicación.",type:"checkboxes",options:["Profesional y confiable","Moderno y creativo","Cercano y accesible","Innovador y vanguardista","Lujoso y exclusivo","Divertido y alegre","Sereno y tranquilo","Auténtico y artesanal"],required:true,ai:"Define la **personalidad visual y emocional** que guiará cada decisión de diseño."},
       {id:"ai_5seg",label:"¿Qué debe sentir un visitante en los primeros 5 segundos?",hint:"La primera impresión es todo. Define qué debe <b>sentir o pensar alguien en los primeros 5 segundos</b> en tu sitio.",type:"text",required:true,ai:"Define el **diseño del hero**: imagen, titular, colores y la jerarquía visual de tu portada."},
       {id:"ai_diferencia",label:"¿Qué hace que tu empresa sea única de verdad?",hint:"Olvida el discurso de ventas. ¿Qué harías <b>distinto aunque nadie te lo pidiera</b>? Ahí está tu esencia.",type:"textarea",required:true,ai:"Es el **núcleo de tu propuesta de valor única** y atraviesa todo el contenido del sitio."},
       {id:"ai_prohibido",label:"Elementos visuales que JAMÁS deben aparecer",hint:"Todo lo que <b>NO representa tu marca</b>. Colores, formas, estilos, referencias que deben evitarse por completo.",type:"textarea",required:false,ai:"Los registramos como **restricciones absolutas** en el sistema de diseño."},
@@ -989,6 +990,7 @@ const EN_SECTIONS = [
     goal:"Capture the core of your business so every decision —visual, narrative, and strategic— feels fully aligned.",
     questions:[
       {id:"ai_persona",label:"If your brand were a person, what would it be like?",hint:"Imagine your brand as a person. <b>Age, style, voice, interests</b>. This builds a consistent voice.",type:"textarea",required:true,ai:"Builds your **complete brand voice**: tone, vocabulary, and narrative style."},
+      {id:"ai_sentir",label:"How do you want people to feel when they see your brand?",hint:"Choose the emotions your <b>brand should convey</b>. This guides visual design and communication tone.",type:"checkboxes",options:["Professional and trustworthy","Modern and creative","Friendly and approachable","Innovative and cutting-edge","Luxurious and exclusive","Fun and cheerful","Calm and serene","Authentic and handcrafted"],required:true,ai:"Defines the **visual and emotional personality** that will guide every design decision."},
       {id:"ai_5seg",label:"What should a visitor feel in the first 5 seconds?",hint:"First impressions are everything. Define what someone should <b>feel or think in the first 5 seconds</b> on your site.",type:"text",required:true,ai:"Defines your **hero design**: image, headline, colors, and homepage visual hierarchy."},
       {id:"ai_diferencia",label:"What truly makes your company unique?",hint:"Forget the sales pitch. What would you do <b>differently even if no one asked</b>? That's your essence.",type:"textarea",required:true,ai:"Becomes the **core of your unique value proposition**, woven into every page."},
       {id:"ai_prohibido",label:"Visual elements that should NEVER appear",hint:"Everything that <b>does NOT represent your brand</b>. Colors, shapes, styles, references to avoid completely.",type:"textarea",required:false,ai:"We encode these as **absolute restrictions** in the design system."},
@@ -1637,6 +1639,7 @@ Fecha: ${new Date().toLocaleDateString('es-MX',{year:'numeric',month:'long',day:
 ## 14. LA ESENCIA DE TU MARCA
 
 **Personalidad de marca (metáfora):** ${p('ai_persona')}
+**Emoción que debe transmitir:** ${p('ai_sentir')}
 **Primeros 5 segundos:** ${p('ai_5seg')}
 **Diferenciador real profundo:** ${p('ai_diferencia')}
 **Elementos siempre prohibidos:** ${p('ai_prohibido')}
