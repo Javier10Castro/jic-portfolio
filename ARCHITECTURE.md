@@ -333,6 +333,91 @@ Deployment Engine (Git → GitHub → Vercel)
 
 ---
 
+## Design Strategy Engine
+
+### Purpose
+
+Transform a validated Project Blueprint into a deterministic Design Strategy. The Design Strategy defines the creative direction — visual personality, layout philosophy, imagery direction, interaction patterns, and branding consistency — without generating any HTML, CSS, JS, or design tokens.
+
+### Input
+
+Validated Project Blueprint from the Planner (`lib/planner/`):
+
+```
+{
+  meta, project, pages, navigation,
+  sections: { registry[{id, required, label, components[]}], pageMap{} },
+  components: { global[], reusable[], pageSpecific{} },
+  userFlow, hierarchy, priorities, constraints
+}
+```
+
+### Output
+
+Design Strategy JSON:
+
+```
+{
+  meta:    { generatedAt, version, source, blueprintVersion },
+  project: { name, type },
+  visual:  { visualPersonality, designStyle, sophisticationLevel },
+  layout:  { spacing, layoutStyle, gridType, containerWidth },
+  imagery: { photographyStyle, iconography, illustrationStyle, imageDensity },
+  interaction: { animationStyle, transitionType, hoverStyle, scrollBehavior, pageTransition },
+  brand:   { brandTone, brandValues[], consistencyLevel, accessibilityPriority, brandVoice{} }
+}
+```
+
+### Execution Order
+
+```
+designStrategy(blueprint)
+  ├── analyzeVisualDirection()  → visual personality, design style, sophistication level
+  ├── layoutStrategy()          → spacing, layout style, grid type, container width
+  ├── imageryStrategy()         → photography style, iconography, illustration, image density
+  ├── interactionStrategy()     → animation, transition, hover, scroll, page transition
+  ├── brandingStrategy()        → brand tone, values, voice, consistency, accessibility
+  ├── generateDesignStrategy()  → assemble full strategy
+  └── validateDesignStrategy()  → schema validation (throws DesignStrategyValidationError)
+```
+
+### Module Responsibilities
+
+| Module | File | Responsibility |
+|---|---|---|
+| Entry | `lib/design-strategy/index.js` | Exposes `designStrategy(blueprint)` |
+| Visual Direction | `lib/design-strategy/analyzeVisualDirection.js` | Analyzes project type + components to determine visual personality and design style |
+| Layout Strategy | `lib/design-strategy/layoutStrategy.js` | Determines spacing, grid type, container width from project type and page count |
+| Imagery Strategy | `lib/design-strategy/imageryStrategy.js` | Defines photography, iconography, and illustration direction |
+| Interaction Strategy | `lib/design-strategy/interactionStrategy.js` | Defines animation, transition, hover, and scroll behaviors |
+| Branding Strategy | `lib/design-strategy/brandingStrategy.js` | Derives brand tone, values, voice, and accessibility priority |
+| Strategy Generator | `lib/design-strategy/generateDesignStrategy.js` | Orchestrates all strategies and assembles the full strategy object |
+| Strategy Validator | `lib/design-strategy/validateDesignStrategy.js` | Schema validation — ensures all required fields exist and are valid |
+
+### Determinism
+
+Fully deterministic. Given the same Blueprint, the Design Strategy output is always identical. All decisions are rule-based on project type, component requirements, and page structure.
+
+### Relationship with Pipeline
+
+```
+  ┌─────────────┐    ┌─────────────┐    ┌──────────────────┐
+  │ Orchestrator │ →  │   Planner   │ →  │ Design Strategy  │
+  │  (Plan IR)   │    │ (Blueprint) │    │   (Strategy)     │
+  └─────────────┘    └─────────────┘    └──────────────────┘
+                                               ↓
+                                        Design System Engine
+                                        (future — tokens/CSS)
+```
+
+The Design Strategy feeds into the future Design System Engine (currently `lib/design-system/`), which will translate these creative decisions into concrete design tokens and CSS variables.
+
+### Isolation
+
+The Design Strategy engine is completely independent. It does not access any API handler, frontend code, database, or email system. It is not yet called in any production flow.
+
+---
+
 ## Project Planner
 
 ### Purpose
