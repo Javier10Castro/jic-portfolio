@@ -286,86 +286,63 @@ module.exports = async (req, res) => {
   const pdfBuffer = await generatePDF(prompt, safeName, bizName, isES);
   stage(req, 'after_pdf_generation');
 
-  // ── 10. Queue email sending (non-blocking, returns 202) ────────
-      stage(req, 'before_email_send');
-      const queueResult = emailQueue.enqueue({
-        handler: async () => {
-          stage(req, 'before_email_send');
-          log.addTrace(req, 'email.admin.start', 'ok');
-          log.addTrace(req, 'email.client.start', 'ok');
-          log.structured(req, { stage: 'email.admin.start', status: 'ok' });
-          log.structured(req, { stage: 'email.client.start', status: 'ok' });
-          
-          const [adminOk, clientOk] = await Promise.all([
-            sendWithTimeout(transporter, {
-              from: `"Build a Brief" <${GMAIL_USER}>`,
-              to: GMAIL_USER,
-              replyTo: email,
-              subject: isES
-                ? `Nuevo brief de ${safeName}${safeCompany ? ` — ${safeCompany}` : ''}`
-                : `New brief from ${safeName}${safeCompany ? ` — ${safeCompany}` : ''}`,
-              html: buildEmailHTML({ name: safeName, email, company: safeCompany, phone, prompt, dateStr, lang: isES ? 'es' : 'en', formData }),
-              attachments: [{
-                filename: `brief-${bizName.replace(/[^a-zA-Z0-9\\u00C0-\\u024F]/g,'_').toLowerCase()}.pdf`,
-                content: pdfBuffer,
-                contentType: 'application/pdf',
-              }],
-            }, EMAIL_TIMEOUT_MS, req, 'admin'),
-            
-            sendWithTimeout(transporter, {
-              from: `"Build a Brief" <${GMAIL_USER}>`,
-              to: [email, GMAIL_USER],
-              replyTo: GMAIL_USER,
-              subject: isES
-                ? `Gracias por compartir tu proyecto conmigo 🚀`
-                : `Thank you for sharing your project with me 🚀`,
-              html: buildClientEmailHTML({ name: safeName, bizName, dateStr, lang: isES ? 'es' : 'en' }),
-            }, EMAIL_TIMEOUT_MS, req, 'client')
-          ]);
-          
-          log.addTrace(req, 'email.admin.complete', adminOk ? 'ok' : 'timeout');
-          log.addTrace(req, 'email.client.complete', clientOk ? 'ok' : 'timeout');
-          log.structured(req, { stage: 'email.admin.complete', status: adminOk ? 'ok' : 'timeout' });
-          log.structured(req, { stage: 'email.client.complete', status: clientOk ? 'ok' : 'timeout' });
-          
-          stage(req, 'before_email_client');
+  // ── 10. Send emails inline (diagnostic: bypass queue) ───────────
+  stage(req, 'before_email_send');
+  log.addTrace(req, 'email.admin.start', 'ok');
+  log.addTrace(req, 'email.client.start', 'ok');
+  log.structured(req, { stage: 'email.admin.start', status: 'ok' });
+  log.structured(req, { stage: 'email.client.start', status: 'ok' });
 
-      stage(req, 'after_email_send');
-      log.info(req, 'Brief emails sent', { name: safeName, email: maskEmail(email) });
-      registry.registerLifecycle(log.requestId(req), { endpoint: 'sendBrief', status: 'completed', executionFinishedAt: Date.now() });
-    },
-    req,
-    label: 'sendBrief',
-  });
+  let adminOk = false, clientOk = false;
+  try {
+    const results = await Promise.allSettled([
+      sendWithTimeout(transporter, {
+        from: `"Build a Brief" <${GMAIL_USER}>`,
+        to: GMAIL_USER,
+        replyTo: email,
+        subject: isES
+          ? `Nuevo brief de ${safeName}${safeCompany ? ` — ${safeCompany}` : ''}`
+          : `New brief from ${safeName}${safeCompany ? ` — ${safeCompany}` : ''}`,
+        html: buildEmailHTML({ name: safeName, email, company: safeCompany, phone, prompt, dateStr, lang: isES ? 'es' : 'en', formData }),
+        attachments: [{
+          filename: `brief-${bizName.replace(/[^a-zA-Z0-9\\u00C0-\\u024F]/g,'_').toLowerCase()}.pdf`,
+          content: pdfBuffer,
+          contentType: 'application/pdf',
+        }],
+      }, EMAIL_TIMEOUT_MS, req, 'admin'),
 
-  if (!queueResult) {
-    log.warn(req, 'Queue overflow', { ip });
-    log.event('queue.overflow', req, { ip, endpoint: 'sendBrief' });
-    registry.registerLifecycle(log.requestId(req), { endpoint: 'sendBrief', status: 'rejected', reason: 'bad_request', validationStage: 'queueCheck', validationField: 'queue', validationReason: 'overflow', receivedAt: Date.now() });
-    tracer.trace(log.requestId(req), 'sendBrief', 'queueCheck', 'sendBrief:queueCheck');
-    await registry.persistImmediate(log.requestId(req));
-    return json(503, { 'Content-Type': 'application/json', ...deployHeaders(req), ...reqHeaders(req) }, resPayload(req, { success: false, error: 'QUEUE_OVERFLOW' }))(res);
+      sendWithTimeout(transporter, {
+        from: `"Build a Brief" <${GMAIL_USER}>`,
+        to: [email, GMAIL_USER],
+        replyTo: GMAIL_USER,
+        subject: isES
+          ? `Gracias por compartir tu proyecto conmigo 🚀`
+          : `Thank you for sharing your project with me 🚀`,
+        html: buildClientEmailHTML({ name: safeName, bizName, dateStr, lang: isES ? 'es' : 'en' }),
+      }, EMAIL_TIMEOUT_MS, req, 'client'),
+    ]);
+    adminOk = results[0].status === 'fulfilled' ? results[0].value : false;
+    clientOk = results[1].status === 'fulfilled' ? results[1].value : false;
+  } catch (err) {
+    log.structured(req, { stage: 'email.inline.error', status: 'error', error: err.message });
   }
 
-  const { queueId, position, depth } = queueResult;
-  registry.registerLifecycle(log.requestId(req), { endpoint: 'sendBrief', status: 'queued',
-    receivedAt: start,
-    queuedAt: Date.now(),
-    queuePosition: position,
-    queueDepth: depth,
-  });
-  log.event('queue.queued', req, { queueId, position, depth, endpoint: 'sendBrief' });
-  log.debugLog(req, 'Brief emails queued', { queueId, position, depth });
+  log.addTrace(req, 'email.admin.complete', adminOk ? 'ok' : 'timeout');
+  log.addTrace(req, 'email.client.complete', clientOk ? 'ok' : 'timeout');
+  log.structured(req, { stage: 'email.admin.complete', status: adminOk ? 'ok' : 'timeout' });
+  log.structured(req, { stage: 'email.client.complete', status: clientOk ? 'ok' : 'timeout' });
+
+  stage(req, 'after_email_send');
+  const sendStatus = adminOk && clientOk ? 'ok' : 'partial';
+  log.info(req, 'Brief emails sent', { name: safeName, email: maskEmail(email), adminOk, clientOk });
+  registry.registerLifecycle(log.requestId(req), { endpoint: 'sendBrief', status: adminOk && clientOk ? 'completed' : 'failed', executionFinishedAt: Date.now() });
   tracer.trace(log.requestId(req), 'sendBrief', 'submitted', 'sendBrief:submitted');
-  return json(202, withSoftHeaders(req, {
+  return json(200, withSoftHeaders(req, {
     'Content-Type': 'application/json',
     ...deployHeaders(req),
     ...reqHeaders(req),
-    'X-Queue-Id': String(queueId),
-    'X-Queue-Depth': String(depth),
-    'X-Queue-Position': String(position),
-    'X-Processing-Mode': depth > 0 ? 'queued' : 'immediate',
-  }), resPayload(req, { success: true, queued: true, position, depth }))(res);
+    'X-Processing-Mode': 'inline',
+  }), resPayload(req, { success: true, mode: 'inline', adminOk, clientOk }))(res);
 } catch (err) {
     const rid = log.requestId(req);
     tracer.trace(rid, 'sendBrief', 'handlerError', 'sendBrief:handlerError');

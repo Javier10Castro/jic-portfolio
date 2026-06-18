@@ -304,100 +304,62 @@ module.exports = async (req, res) => {
 
   const templateData = { name: safeName, email, company, project, message, dateStr, lang: isES ? 'es' : 'en' };
 
+  // ── 10. Send emails inline (diagnostic: bypass queue) ───────────
   stage(req, 'before_email_send');
-  const queueResult = emailQueue.enqueue({
-    handler: async () => {
-      log.addTrace(req, 'queue.waitEnd', 'ok');
-      log.structured(req, { stage: 'queue.waitEnd', status: 'ok', queueDepthAtStart: depth });
+  log.addTrace(req, 'email.admin.start', 'ok');
+  log.addTrace(req, 'email.client.start', 'ok');
+  log.structured(req, { stage: 'email.admin.start', status: 'ok' });
+  log.structured(req, { stage: 'email.client.start', status: 'ok' });
 
-      const rid = log.requestId(req);
+  let adminOk = false, clientOk = false;
+  try {
+    const results = await Promise.allSettled([
+      sendWithTimeout(transporter, {
+        from: `"Javier Ibrahim — Portfolio" <${GMAIL_USER}>`,
+        to: GMAIL_USER,
+        replyTo: email,
+        subject: isES
+          ? `Nuevo mensaje de ${safeName}${company ? ` — ${company}` : ''}`
+          : `New message from ${safeName}${company ? ` — ${company}` : ''}`,
+        html: buildContactHTML(templateData, 'admin'),
+      }, EMAIL_TIMEOUT_MS, req, 'admin'),
 
-      stage(req, 'before_email_send');
-      log.addTrace(req, 'email.admin.start', 'ok');
-      log.addTrace(req, 'email.client.start', 'ok');
-      log.structured(req, { stage: 'email.admin.start', status: 'ok' });
-      log.structured(req, { stage: 'email.client.start', status: 'ok' });
-      
-      const [adminOk, clientOk] = await Promise.all([
-        sendWithTimeout(transporter, {
-          from: `"Javier Ibrahim — Portfolio" <${GMAIL_USER}>`,
-          to: GMAIL_USER,
-          replyTo: email,
-          subject: isES
-            ? `Nuevo mensaje de ${safeName}${company ? ` — ${company}` : ''}`
-            : `New message from ${safeName}${company ? ` — ${company}` : ''}`,
-          html: buildContactHTML(templateData, 'admin'),
-        }, EMAIL_TIMEOUT_MS, req, 'admin'),
-        
-        sendWithTimeout(transporter, {
-          from: `"Javier Ibrahim" <${GMAIL_USER}>`,
-          to: [email, GMAIL_USER],
-          replyTo: GMAIL_USER,
-          subject: isES ? 'Hemos recibido tu mensaje ✅' : 'We received your message ✅',
-          html: buildContactHTML(templateData, 'client'),
-        }, EMAIL_TIMEOUT_MS, req, 'client')
-      ]);
-      
-      log.addTrace(req, 'email.admin.complete', adminOk ? 'ok' : 'timeout');
-      log.addTrace(req, 'email.client.complete', clientOk ? 'ok' : 'timeout');
-      log.structured(req, { stage: 'email.admin.complete', status: adminOk ? 'ok' : 'timeout' });
-      log.structured(req, { stage: 'email.client.complete', status: clientOk ? 'ok' : 'timeout' });
-
-      stage(req, 'after_email_send');
-      const sendStatus = adminOk && clientOk ? 'ok' : 'partial';
-      const finalLifecycleStatus = adminOk && clientOk ? 'completed' : 'failed';
-      const executionFinishedAt = Date.now();
-
-      registry.registerLifecycle(rid, { endpoint: 'sendContact', status: finalLifecycleStatus, executionFinishedAt });
-
-      log.addTrace(req, 'email.sendEnd', sendStatus);
-      log.structured(req, { stage: 'email.sendEnd', status: sendStatus });
-      log.info(req, 'Contact emails sent', { name: safeName, email: maskEmail(email), adminOk, clientOk });
-    },
-    req,
-    label: 'sendContact',
-  });
-
-  if (!queueResult) {
-    log.warn(req, 'Queue overflow', { ip });
-    log.event('queue.overflow', req, { ip, endpoint: 'sendContact' });
-    log.addTrace(req, 'queue.assign', 'overflow');
-    log.structured(req, { stage: 'queue.assign', status: 'overflow' });
-    registry.registerLifecycle(log.requestId(req), { endpoint: 'sendContact', status: 'rejected', reason: 'bad_request', validationStage: 'queueCheck', validationField: 'queue', validationReason: 'overflow', receivedAt: req._lifecycle.startTime });
-    tracer.trace(log.requestId(req), 'sendContact', 'queueCheck', 'sendContact:queueCheck');
-    await registry.persistImmediate(log.requestId(req));
-    return json(503, { 'Content-Type': 'application/json', ...deployHeaders(req), ...reqHeaders(req) }, resPayload(req, { success: false, status: 'rejected', error: 'QUEUE_OVERFLOW', queuePosition: 0, queueDepth: 0 }))(res);
+      sendWithTimeout(transporter, {
+        from: `"Javier Ibrahim" <${GMAIL_USER}>`,
+        to: [email, GMAIL_USER],
+        replyTo: GMAIL_USER,
+        subject: isES ? 'Hemos recibido tu mensaje ✅' : 'We received your message ✅',
+        html: buildContactHTML(templateData, 'client'),
+      }, EMAIL_TIMEOUT_MS, req, 'client'),
+    ]);
+    adminOk = results[0].status === 'fulfilled' ? results[0].value : false;
+    clientOk = results[1].status === 'fulfilled' ? results[1].value : false;
+  } catch (err) {
+    log.structured(req, { stage: 'email.inline.error', status: 'error', error: err.message });
   }
 
-  const { queueId, position, depth } = queueResult;
-  const queuedAt = Date.now();
-  req._lifecycle.queuedAt = queuedAt;
-  req._lifecycle.queuePosition = position;
-  req._lifecycle.queueDepth = depth;
-  registry.registerLifecycle(log.requestId(req), { endpoint: 'sendContact', status: 'queued',
-    receivedAt: req._lifecycle.startTime,
-    queuedAt,
-    queuePosition: position,
-    queueDepth: depth,
-  });
-  log.event('queue.queued', req, { queueId, position, depth, endpoint: 'sendContact' });
-  log.debugLog(req, 'Emails queued', { queueId, position, depth });
-  log.addTrace(req, 'queue.assign', 'ok');
-  log.structured(req, { stage: 'queue.assign', status: 'ok', queueId, position, depth });
-  log.addTrace(req, 'queue.waitStart', 'ok');
-  log.structured(req, { stage: 'queue.waitStart', status: 'ok', position, depth });
+  log.addTrace(req, 'email.admin.complete', adminOk ? 'ok' : 'timeout');
+  log.addTrace(req, 'email.client.complete', clientOk ? 'ok' : 'timeout');
+  log.structured(req, { stage: 'email.admin.complete', status: adminOk ? 'ok' : 'timeout' });
+  log.structured(req, { stage: 'email.client.complete', status: clientOk ? 'ok' : 'timeout' });
+
+  stage(req, 'after_email_send');
+  const sendStatus = adminOk && clientOk ? 'ok' : 'partial';
+  const finalLifecycleStatus = adminOk && clientOk ? 'completed' : 'failed';
+  registry.registerLifecycle(log.requestId(req), { endpoint: 'sendContact', status: finalLifecycleStatus, executionFinishedAt: Date.now() });
+
+  log.addTrace(req, 'email.sendEnd', sendStatus);
+  log.structured(req, { stage: 'email.sendEnd', status: sendStatus });
+  log.info(req, 'Contact emails sent', { name: safeName, email: maskEmail(email), adminOk, clientOk });
   tracer.trace(log.requestId(req), 'sendContact', 'submitted', 'sendContact:submitted');
-  return json(202, withSoftHeaders(req, {
+  return json(200, withSoftHeaders(req, {
     'Content-Type': 'application/json',
     ...deployHeaders(req),
     ...reqHeaders(req),
-    'X-Queue-Id': String(queueId),
-    'X-Queue-Depth': String(depth),
-    'X-Queue-Position': String(position),
-    'X-Processing-Mode': depth > 0 ? 'queued' : 'immediate',
+    'X-Processing-Mode': 'inline',
     'X-RateLimit-Limit': String(edge.limit),
     'X-RateLimit-Remaining': String(Math.max(0, edge.remaining)),
-  }), resPayload(req, { success: true, status: 'queued', queued: true, position, depth, queuePosition: position, queueDepth: depth }))(res);
+  }), resPayload(req, { success: true, mode: 'inline', adminOk, clientOk }))(res);
 } catch (err) {
     const rid = log.requestId(req);
     tracer.trace(rid, 'sendContact', 'handlerError', 'sendContact:handlerError');
