@@ -183,6 +183,15 @@ fetch('/test-data.json').then(r => r.json()).then(d => {
 - Keep dependencies updated
 - 429 responses are immediate (no processing allocation before rate limit gate)
 
+## UI Naming Conventions
+
+- All client-facing labels must use human, non-technical language
+- Internal engine naming (Plan Engine, Scaffold, etc.) must NEVER appear in UI
+- Product name in UI: "Your Project Brief"
+- All UI text must have clean EN/ES translation mapping
+- Avoid technical segmentation jargon (e.g. "buyer personas" → "ideal client")
+- Avoid internal tooling references (e.g. "Prompt Maestro for Claude" → "No technical knowledge needed")
+
 ## Commit Strategy
 
 ### For AI-Generated Commits
