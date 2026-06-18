@@ -680,12 +680,12 @@ const SECTIONS=[
   },
   {
     id:3,title:"Situación Actual y Competencia",
-    desc:"Analizamos el punto de partida y el panorama competitivo para identificar oportunidades de diferenciación y áreas de mejora.",
+    desc:"Analizamos tu punto de partida y el panorama competitivo para encontrar oportunidades. Si no conoces a tus competidores, no te preocupes — puedes saltar esta sección.",
     goal:"Detectar oportunidades de posicionamiento y definir la estrategia de diferenciación visual y de contenido.",
     questions:[
       {id:"comp_sitio",label:"URL de tu sitio web actual (si existe)",hint:"Tu sitio actual, si existe. Si no, solo dinos <b>\"No tengo\"</b> y seguimos desde cero.",type:"url",required:false,ai:"Analizamos tu sitio actual para decidir **qué conservar y qué mejorar**."},
       {id:"comp_problemas",label:"Problemas del sitio actual",hint:"Señala lo que <b>no funciona</b> en tu sitio actual. Así sabemos exactamente qué evitar o mejorar.",type:"checkboxes",options:["Diseño desactualizado","No genera leads","Lento o con problemas técnicos","No adaptado a móvil","Difícil de actualizar","No posiciona en Google","No refleja la calidad de mi empresa","No tengo sitio web actualmente"],required:false,ai:"Nos ayuda a priorizar **soluciones concretas** en la arquitectura y el diseño."},
-      {id:"comp_directos",label:"Competidores directos (URLs)",hint:"Los sitios de <b>tus competidores directos</b>. Los analizamos para encontrar tu diferenciación.",type:"textarea",required:true,ai:"Estudiamos a tus competidores para encontrar **oportunidades de diferenciación real**."},
+      {id:"comp_directos",label:"Competidores directos (URLs)",hint:"Los sitios de <b>tus competidores directos</b>. Si no los conoces o prefieres saltar este paso, déjalo vacío.",type:"textarea",required:false,ai:"Estudiamos a tus competidores para encontrar **oportunidades de diferenciación real**."},
       {id:"comp_aspiracionales",label:"Empresas aspiracionales",hint:"Las marcas que <b>admiras aunque no compitan contigo</b>. Definen el nivel al que aspiramos.",type:"textarea",required:false,ai:"Definen el **nivel de aspiración visual** y el tono de comunicación al que apuntamos."},
       {id:"comp_oportunidades",label:"Oportunidades en el mercado",hint:"Tu ventaja oculta. ¿Qué puedes hacer <b>mejor que nadie</b> en tu mercado?",type:"textarea",required:false,ai:"Esto se traduce en **propuestas de valor únicas** que diferencian tu sitio."},
     ]
@@ -855,12 +855,12 @@ const EN_SECTIONS = [
   },
   {
     id:3,title:"Current Situation and Competition",
-    desc:"We analyze the starting point and the competitive landscape to identify differentiation opportunities and areas for improvement.",
+    desc:"We analyze your starting point and competitive landscape to find opportunities. If you don't know your competitors, don't worry — you can skip this section.",
     goal:"Detect positioning opportunities and define the visual and content differentiation strategy.",
     questions:[
       {id:"comp_sitio",label:"Your current website URL (if any)",hint:"Your current site, if it exists. If not, just say <b>\"I don't have one\"</b> and we'll start fresh.",type:"url",required:false,ai:"We review your current site to decide **what to keep and what to improve**."},
       {id:"comp_problemas",label:"Problems with the current site",hint:"Point out what <b>isn't working</b> on your current site. So we know exactly what to avoid or improve.",type:"checkboxes",options:["Outdated design","Doesn't generate leads","Slow or with technical issues","Not mobile-friendly","Difficult to update","Doesn't rank on Google","Doesn't reflect my company's quality","I don't currently have a website"],required:false,ai:"Helps us prioritize **real solutions** in your new architecture and design."},
-      {id:"comp_directos",label:"Direct competitors (URLs)",hint:"Your <b>direct competitors' sites</b>. We analyze them to find your differentiation.",type:"textarea",required:true,ai:"We analyze your competitors to find **real differentiation opportunities**."},
+      {id:"comp_directos",label:"Direct competitors (URLs)",hint:"Your <b>direct competitors' sites</b>. If you don't know them or prefer to skip, just leave this empty.",type:"textarea",required:false,ai:"We analyze your competitors to find **real differentiation opportunities**."},
       {id:"comp_aspiracionales",label:"Aspirational companies",hint:"Brands you <b>admire even if they don't compete with you</b>. They set the bar we aim for.",type:"textarea",required:false,ai:"Sets the **visual aspiration level** and the communication tone we're aiming for."},
       {id:"comp_oportunidades",label:"Market opportunities",hint:"Your hidden advantage. What can you do <b>better than anyone</b> in your market?",type:"textarea",required:false,ai:"This becomes **unique value propositions** that set your site apart."},
     ]
