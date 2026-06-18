@@ -2,637 +2,481 @@
 
 ## System Overview
 
-Dual-purpose Vercel-deployed site combining a personal portfolio (Javier Ibrahim, Full Stack Developer) with an interactive web discovery tool (Brief Maestro). Both frontends are vanilla HTML/CSS/JS with no build step. Backend consists of two Vercel Serverless Functions that handle form submissions, email delivery via Gmail SMTP, and server-side PDF generation.
+Dual-purpose Vercel-deployed site combining a personal portfolio (Javier Ibrahim, Full Stack Developer) with an interactive web discovery tool (Brief Maestro). Both frontends are vanilla HTML/CSS/JS with no build step. Backend consists of three Vercel Serverless Functions handling form submissions, email delivery via Gmail SMTP, server-side PDF generation, and consolidated observability.
 
-## Project Objective
-
-Lead generation and client onboarding through contact forms, AI-powered brief collection, automated email delivery, and PDF brief generation.
-
-## General Architecture
-
-```
-User Browser
-    │
-    ├── index.html ────── POST /api/sendContact ──► Vercel Function ──► Gmail SMTP
-    │                                                                    │
-    └── brief-maestro.html ── POST /api/sendBrief ──► Vercel Function ──┤
-                                                                        ├── Admin: GMAIL_USER (with PDF)
-                                                                        └── Client: [email, GMAIL_USER]
-```
-
-### Frontend
-
-- **Zero frameworks**: Vanilla HTML, CSS, JavaScript — no build step, no bundler, no TypeScript.
-- **Typography**: Google Fonts (Inter + Space Grotesk).
-- **Icons**: Inline SVG — no icon library.
-- **Styling**: CSS Custom Properties with native dark theme (no toggle). Mobile-first with breakpoints at 900px and 600px.
-- **Scroll animations**: `.reveal` class + `IntersectionObserver`, with staggered `.anim-0` through `.anim-4` utilities.
-- **Custom cursor**: `#cursor` and `#cursor-ring` elements.
-- **Background**: Canvas-based particle network animation.
-- **localStorage**: Brief auto-save under key `briefMaestro`, language under `briefMaestroLang`. `currentStep` is not persisted.
-
-### Backend (Vercel Functions)
-
-Two endpoints in `api/`, both deployed as Vercel Serverless Functions (Node.js runtime):
-
-| Endpoint | File | Purpose |
-|---|---|---|
-| `POST /api/sendContact` | `api/sendContact.js` | Portfolio contact form submission |
-| `POST /api/sendBrief` | `api/sendBrief.js` | Brief Maestro submission with PDF attachment |
-
-Both functions use:
-- `nodemailer@^8.0.10` with Gmail SMTP (`service: 'gmail'`)
-- `transporter.verify()` for SMTP connection validation before sending
-- `escapeHTML()` on all user-provided values
-- Timezone: `America/Tijuana`
-
-## Agent Pack Pipeline (v1.1.0)
-
-Conceptual prompt processing pipeline for the Agent Pack intelligence layer:
-
-```
-INPUT (Prompt Maestro)
-    ↓
-🧠 VALIDATION — detects missing or weak fields before generation
-    ↓
-🧭 UX FLOW — builds optimal user journey and page hierarchy dynamically
-    ↓
-🔍 SEO LAYER — enriches structure with headings, metadata, keywords
-    ↓
-✍️ COPY BOOST — improves clarity, conversion strength, tone consistency
-    ↓
-🎨 DESIGN SYSTEM — applies visual identity, components, spacing
-    ↓
-OUTPUT (Prompt Maestro Final Optimizado)
-```
-
-This pipeline is simulated internally during prompt refinement and does not execute as independent services. It transforms the raw Prompt Maestro into an optimized, production-ready brief for the site generator.
+### Primary Objective
+Lead generation and client onboarding through contact forms, AI-powered brief collection, automated email delivery, PDF brief generation, and telemetry.
 
 ---
 
-## Contact Form Flow (index.html → /api/sendContact)
+## Technology Stack
 
-1. User fills form on `index.html` (name, email, company, project, message)
-2. Form includes hidden honeypot field (`<input name="bot" style="display:none">`) — frontend checks and skips fetch if filled
-3. `fetch()` POST to `/api/sendContact` with JSON body `{ name, email, company?, project?, message, lang }`
-4. Vercel Function validates required fields (`name`, `email`, `message`)
-5. Creates nodemailer transporter with `GMAIL_USER` / `GMAIL_APP_PASSWORD`
-6. Sends **2 emails**:
-   - **Admin notification**: `to: GMAIL_USER`, `replyTo: email` — contains message detail as `type: 'admin'`
-   - **Client confirmation**: `to: [email, GMAIL_USER]`, `replyTo: GMAIL_USER` — contains same data as `type: 'client'`
-7. Returns `{ success: true }` on success, `{ error: string }` on failure
+| Layer | Technology | Version | Purpose |
+|---|---|---|---|
+| Frontend | Vanilla HTML/CSS/JS | — | Zero frameworks, no build step |
+| Typography | Google Fonts | Inter + Space Grotesk | Design system |
+| Icons | Inline SVG | — | No icon library |
+| Runtime | Node.js | 22.11.0 | Serverless functions |
+| Hosting | Vercel | Hobby | Platform & auto-deploy |
+| Email | nodemailer | ^8.0.10 | Gmail SMTP transport |
+| PDF | pdfkit | ^0.18.0 | Server-side prompt PDF |
+| Database | Neon PostgreSQL | — | Persistent lifecycle, traces, form responses |
+| Storage | localStorage | — | Brief auto-save |
+| Styling | CSS Custom Properties | — | Dark theme, design system |
 
-## Brief Maestro Flow (brief-maestro.html → /api/sendBrief)
+---
 
-1. User completes 14-section strategic questionnaire on `brief-maestro.html`
-2. Form data auto-saved to `localStorage` key `briefMaestro` on each input
-3. On submission, `fetch()` POST to `/api/sendBrief` with JSON body `{ name, email, company?, phone?, prompt, lang, formData }`
-4. Vercel Function validates required fields (`name`, `email`)
-5. Generates PDF via PDFKit from the `prompt` string
-6. Creates nodemailer transporter with `GMAIL_USER` / `GMAIL_APP_PASSWORD`
-7. Sends **2 emails**:
-   - **Admin notification**: `to: GMAIL_USER`, `replyTo: email` — includes visual summary of form data + PDF attachment (`brief-{biz_name}.pdf`)
-   - **Client confirmation**: `to: [email, GMAIL_USER]`, `replyTo: GMAIL_USER` — warm conversational tone with next steps timeline
-8. Returns `{ success: true }` on success, `{ error: string }` on failure
+## Project Structure
+
+```
+/
+├── api/                       # Vercel Serverless Functions
+│   ├── sendBrief.js           # Brief: validation → PDF → 2 emails
+│   ├── sendContact.js         # Contact: validation → 2 emails
+│   └── telemetry.js           # Observability (logs, traces, health, coverage)
+├── lib/                       # Internal system modules
+│   ├── rate-limit.js          # IP sliding window, email dedup, honeypot
+│   ├── request-registry.js    # Lifecycle tracking (Neon + memory, 5min TTL)
+│   ├── logger.js              # Structured logger (stages, traces, events)
+│   ├── tracer.js              # Path tracing (Neon + memory, fire-and-forget)
+│   ├── safeBodyParser.js      # Payload parsing + deploy info
+│   ├── db/                    # Neon PostgreSQL CRUD
+│   │   ├── index.js           # Pool manager
+│   │   ├── requestLogs.js     # Lifecycle CRUD
+│   │   ├── requestTraces.js   # Trace events CRUD
+│   │   └── formResponses.js   # Form response persistence
+│   ├── plan/                  # Plan Engine (semantic IR)
+│   ├── scaffold/              # Scaffold Engine (file generator)
+│   ├── decision/              # Decision Layer (architectural logging)
+│   ├── deployment/            # Deployment Engine (Git/GitHub)
+│   ├── design-system/         # Design System Engine (CSS tokens)
+│   ├── preview/               # Preview Engine (simulation)
+│   └── runtime/               # SaaS pipeline orchestrator
+├── public/                    # Static assets
+│   ├── index.html             # Portfolio landing page
+│   ├── brief-maestro.html     # Brief Maestro tool (14 sections)
+│   ├── dashboard*.html        # Observability dashboards
+│   ├── dashboard-api.js       # Shared API client
+│   ├── icon.ico               # Favicon
+│   └── scripts/               # JS helpers (payload builder, E2E tools)
+├── data/                      # Runtime storage (not committed)
+│   ├── decisions.json         # Architectural decision records
+│   ├── deployments.json       # Deployment records
+│   └── migrations/            # SQL migration scripts
+├── docs/                      # (reserved — no active files)
+├── scripts/                   # CLI tools and test scripts
+├── package.json
+├── ARCHITECTURE.md            # This file — single source of truth
+├── ENGINE_RULES.md            # AI pipeline behavior rules
+├── DEVELOPMENT_RULES.md       # Coding standards & workflow
+├── DEPLOYMENT.md              # Deployment & infrastructure
+├── .gitignore
+└── .gitattributes
+```
+
+---
+
+## Architecture Diagram
+
+```
+BROWSER
+  │
+  ├─ index.html (portfolio)
+  ├─ brief-maestro.html (14-section wizard)
+  ├─ dashboard*.html (observability)
+  └─ Console (E2E test helpers)
+       │
+       │ POST /api/sendBrief
+       │ POST /api/sendContact
+       │ GET  /api/telemetry
+       │ GET  /api/traces
+       ▼
+┌──────────────────────────────────────────────────────────┐
+│                 VERCEL SERVERLESS FUNCTIONS                │
+│                                                          │
+│  ┌──────────┐   ┌──────────┐   ┌──────────┐             │
+│  │ sendBrief│   │sendContact│   │telemetry │             │
+│  └─────┬────┘   └────┬─────┘   └──────────┘             │
+│        │              │                                   │
+│  ┌─────▼──────────────▼────────────────────────────────┐ │
+│  │              RATE LIMIT GATE                         │ │
+│  │  IP sliding window · Email dedup                     │ │
+│  │  Honeypot · Timing check · Field validation          │ │
+│  └─────────────────────┬────────────────────────────────┘ │
+│                        │ passed                           │
+│  ┌─────────────────────▼────────────────────────────────┐ │
+│  │              INLINE SMTP EXECUTION                    │ │
+│  │  Promise.allSettled([ admin email, client email ])    │ │
+│  │  5s timeout per email · No retry                     │ │
+│  └─────────────────────┬────────────────────────────────┘ │
+│                        │                                   │
+│  ┌─────────────────────▼────────────────────────────────┐ │
+│  │              OBSERVABILITY                            │ │
+│  │  request-registry.js (lifecycle tracking)             │ │
+│  │  tracer.js (path tracing, memory + Neon)              │ │
+│  │  logger.js (structured logging)                       │ │
+│  └──────────────────────────────────────────────────────┘ │
+└──────────────────────────────────────────────────────────┘
+```
+
+---
+
+---
+
+> **Legend**: Sections marked with `⚡` describe the **current production system**. Sections marked with `🔮` describe **future/SaaS design (not implemented)**.
+
+---
+
+## ⚡ Execution Model (Two-Layer Architecture)
+
+The system implements a strict two-layer pipeline with an ingestion boundary. The boundary between "outside" and "inside" the system is the rate limit check.
+
+### Layer 1: Network Gate (Rate Limit / Edge Protection)
+
+Pre-boundary — operates BEFORE any processing state is allocated:
+
+```
+├── IP sliding window (soft 30, hard 60 req/60s)
+├── Email dedup (1 req/300s per address)
+├── Honeypot detection (silent 200 for bots)
+├── Timing check (submittedAt validation)
+└── Field validation (name, email, message/prompt)
+```
+
+- **Failure mode**: 429 RATE_LIMITED or 400 INVALID_REQUEST — immediate response
+- **State**: Per-instance in-memory Map (sliding window)
+- **Observability**: `X-RateLimit-*` headers, `/api/telemetry?type=health&section=rate-limit`
+
+### Layer 2: Execution Layer (Inline SMTP)
+
+Post-boundary — only receives requests that passed Layer 1:
+
+```
+├── Inline SMTP via Promise.allSettled (admin + client in parallel)
+├── 5s timeout per email (sendWithTimeout)
+├── Transport verify before sending (transporter.verify())
+├── Lifecycle tracing (request-registry + tracer)
+└── Trace drain before response (tracer.drain())
+```
+
+- **Failure mode**: 500 INTERNAL_ERROR (SMTP failure)
+- **Response header**: `X-Processing-Mode: inline`
+- **Observability**: `X-Request-Id` header, lifecycle traces via `/api/telemetry`
+
+### Ingestion Boundary Core Rules
+
+1. **Rate limit decisions are independent of queue state** — queue depth does not influence rate limit thresholds
+2. **429 responses are immediate** — no allocation before the boundary
+3. **The gate absorbs traffic spikes**; the execution layer only sees steady-state flow
+4. **Validation failures persist pre-boundary** — `persistImmediate()` awaits Neon INSERT before returning (Vercel may freeze after response)
+
+### Serverless Memory Isolation (Critical)
+
+Each `api/` file is an independent Vercel Function. They DO NOT share memory, singleton instances, or module state. Cross-instance observability requires Neon PostgreSQL.
+
+```
+sendBrief.js ──┐
+sendContact.js ─┤  (isolated memory — no shared state)
+telemetry.js ──┘
+```
+
+---
+
+## ⚡ API Endpoints
+
+### `POST /api/sendBrief`
+- **Payload**: `{ name, email, company?, phone?, prompt, lang, formData }`
+- **Response**: `{ success: true }` or `{ error: string }`
+- **Flow**: Validate → persist form responses to Neon → generate PDF (PDFKit) → send 2 emails inline:
+  1. Admin notification with PDF attachment (`brief-{biz_name}.pdf`) + visual summary
+  2. Client confirmation to `[email, GMAIL_USER]` with premium template
+
+### `POST /api/sendContact`
+- **Payload**: `{ name, email, company?, project?, message, lang }`
+- **Response**: `{ success: true, mode: 'inline', adminOk, clientOk }` or `{ error: string }`
+- **Flow**: Validate → send 2 emails inline via Promise.allSettled:
+  1. Admin notification to `GMAIL_USER`
+  2. Client confirmation to `[email, GMAIL_USER]`
+
+### `GET /api/telemetry` — Consolidated observability
+| Parameter | Returns |
+|---|---|
+| `?type=logs&limit=N` | Recent lifecycle entries + aggregate metrics (max 200) |
+| `?type=logs&id=X` | Single lifecycle entry by requestId |
+| `?type=traces&id=X` | Merged trace events (memory + Neon) |
+| `?type=coverage` | System path coverage (memory + Neon merged, 27+ paths) |
+| `?type=range&hours=N` | Time-bucket trace analytics |
+| `?type=health` | System health (queue depth, lifecycle, rate-limit, memory) |
+| `?type=health&section=queue` | Queue-specific metrics |
+| `?type=health&section=rate-limit` | Rate limit state |
+
+### `GET /api/traces` — Backward-compatible trace events
+| Parameter | Returns |
+|---|---|
+| `?id=X` | Merged trace events, deduplicated |
+| `?coverage=true` | Merged coverage (memory + Neon, 24h) |
+| `?range=24h` | Per-path hit counts, first/last seen, hourly buckets |
+| `?heatmap=true&hours=24` | Failure aggregation by (path_id, endpoint, stage) |
+| `?timeline=true&hours=24&limit=200` | Chronological request lifecycle ordering |
+
+---
+
+## Request Lifecycle Observability
+
+### States
+
+| State | When | Transition |
+|---|---|---|
+| `queued` | After validation passes | → `processing` |
+| `processing` | SMTP send starts | → `completed` or `failed` |
+| `completed` | Both emails sent successfully | Terminal |
+| `failed` | Email failure (one or both timed out) | Terminal |
+| `rejected` | Pre-execution failure (validation/rate-limit) | Terminal |
+
+**Timestamps**: `receivedAt`, `queuedAt`, `executionStartedAt`, `executionFinishedAt`
+**Derived metrics**: `queueWaitTimeMs`, `executionDurationMs`, `totalLifecycleTimeMs`
+**TTL**: 5-minute TTL, periodic cleanup every 60s, on-lookup and on-aggregate expiry
+
+### Validation Persistence
+Validation failures persist to Neon `request_logs` BEFORE the HTTP response via `persistImmediate()` — necessary because Vercel may freeze the function immediately after the response. All early-return paths (12 in sendBrief, 13 in sendContact) call `await registry.persistImmediate()` before returning.
+
+### Path Coverage
+33 total trace paths across both endpoints covering validation failures, rate limit, configuration errors, handler errors, and success submissions.
+
+---
 
 ## Email Architecture
 
-### Shared Characteristics
-
-- Built with inline styles and table-based layout for email client compatibility
-- `bgcolor` fallback for Outlook (which ignores `background: linear-gradient`)
-- Dark mode support via `@media (prefers-color-scheme: dark)` with class-based selectors and `!important`
+### Shared Standards
+- Table-based HTML layout with inline styles for email client compatibility
+- `bgcolor` fallback for Outlook
+- Dark mode via `@media (prefers-color-scheme: dark)` with `!important`
 - Gradient header (`#00D4FF → #00FFC8`) with "JIC" logo mark
 - Responsive max-width 600px
-- `escapeHTML()` on all user-supplied values
-- Timestamp formatted with `America/Tijuana` timezone
+- `escapeHTML()` on all user-provided values
+- Timestamps in `America/Tijuana` timezone
+- Human, conversational tone — no AI-style or corporate jargon
 
-### Email 1 — Admin Notification
+### Admin Notification
 
 | Property | Contact | Brief |
 |---|---|---|
 | `from` | `"Javier Ibrahim — Portfolio"` | `"Build a Brief"` |
 | `to` | `GMAIL_USER` | `GMAIL_USER` |
 | `replyTo` | `email` (client) | `email` (client) |
-| Template | `buildContactHTML(data, 'admin')` | `buildEmailHTML(data)` |
 | Attachment | None | PDF (`brief-{biz_name}.pdf`) |
 
-### Email 2 — Client Confirmation
+### Client Confirmation
 
 | Property | Contact | Brief |
 |---|---|---|
 | `from` | `"Javier Ibrahim"` | `"Build a Brief"` |
 | `to` | `[email, GMAIL_USER]` | `[email, GMAIL_USER]` |
 | `replyTo` | `GMAIL_USER` | `GMAIL_USER` |
-| Template | `buildContactHTML(data, 'client')` | `buildClientEmailHTML(data)` |
-| Attachment | None | None |
 
-**Why `to: [email, GMAIL_USER]` instead of CC**: Gmail SMTP suppresses CC when sender and CC are the same address. Using both recipients in `to:` ensures reliable delivery to both.
+**Why `to: [email, GMAIL_USER]` instead of CC**: Gmail SMTP suppresses CC when sender and CC are the same address. Using both recipients in `to:` ensures reliable delivery.
 
-## PDF Generation
-
-- Library: `pdfkit@^0.18.0`
-- Size: A4, 50px margins
-- Content: Full master prompt in monospace (Courier), title "Prompt Maestro", client name/company
-- Filename: `brief-{business_name}.pdf` — business name sanitized with `[^a-zA-Z0-9\u00C0-\u024F]`
-- Generated server-side in `sendBrief.js` via `generatePDF()` Promise-based function
-- Attached to admin notification email only — not sent to client
-- Never generated on the client
-
-## Environment Variables
-
-| Variable | Purpose | Used in |
-|---|---|---|
-| `GMAIL_USER` | Gmail address for SMTP authentication | `sendContact.js:14`, `sendBrief.js:15` |
-| `GMAIL_APP_PASSWORD` | Gmail app password | `sendContact.js:15`, `sendBrief.js:16` |
-
-Both must be set in Vercel Dashboard. Never exposed to frontend code. Never hardcoded.
-
-## Project Structure
-
-```
-/
-├── api/
-│   ├── sendBrief.js          # Vercel Function: brief submission (2 emails + PDF)
-│   └── sendContact.js        # Vercel Function: contact form (2 emails)
-├── .vercel/                   # Vercel cache (auto-generated, ignored by git)
-├── node_modules/              # Dependencies (ignored by git)
-├── index.html                 # Portfolio landing page
-├── brief-maestro.html         # Brief Maestro tool (14 sections)
-├── test-data.json             # Test fixture (Salmos Café)
-├── icon.ico                   # Favicon
-├── package.json               # Project metadata + dependencies
-├── package-lock.json          # npm lockfile
-├── AGENTS.md                  # Project documentation for AI agents
-├── ARCHITECTURE.md            # This file
-├── .gitignore                 # Git ignore rules
-├── .gitattributes             # Git line ending normalization
-└── .git                       # Git repository (initialized)
-```
-
-## Deployment Flow (Vercel)
-
-1. Code pushed to GitHub repository
-2. Vercel imports from GitHub (or deploys via `vercel --prod`)
-3. Vercel detects `api/` directory and deploys each file as a Serverless Function
-4. Environment variables (`GMAIL_USER`, `GMAIL_APP_PASSWORD`) set in Vercel Dashboard
-5. Static files (`index.html`, `brief-maestro.html`, `test-data.json`, `icon.ico`) served from root
-6. No `vercel.json` configuration file — uses Vercel defaults
-7. No build step required (pure static + serverless)
-
-## Error Handling
-
-### API Routes
-
-| Scenario | HTTP Status | Response |
-|---|---|---|
-| Method not POST | 405 | `{ error: "Method Not Allowed" }` |
-| Missing required fields | 400 | `{ error: "..." }` |
-| Missing env vars | 500 | `{ error: "Email service misconfigured" }` |
-| SMTP failure | 502 | `{ error: "Failed to send email" }` |
-
-Both functions log errors to `console.error` (visible in Vercel Dashboard → Deployment → Functions). No retry logic, no queue, no fallback transport.
-
-### Frontend
-
-- Contact form has honeypot (bot check) that prevents fetch if filled
-- Brief Maestro has no honeypot
-- Both forms display success overlay on `{ success: true }` response
-- Both forms show alert on `{ error }` response
-- No rate limiting or captcha on either endpoint
-
-## Key Architectural Decisions
-
-| Decision | Rationale |
-|---|---|
-| Vanilla HTML/CSS/JS | No build step, zero dependencies, direct deployment |
-| Vercel Functions (not Express server) | Serverless, auto-scaling, native Node.js runtime |
-| Gmail SMTP via nodemailer | No third-party email service needed; Gmail is free |
-| PDFKit server-side | Client-side PDF generation cannot attach to email |
-| `to: [email, GMAIL_USER]` | Reliable delivery; Gmail suppresses CC when sender == CC |
-| Two separate API functions | Cleaner validation, different payload structures |
-| `America/Tijuana` timezone | Consistent timestamps regardless of server location |
-| `escapeHTML()` on all output | XSS prevention for email content |
-| `transporter.verify()` before send | Fail fast if SMTP credentials are invalid |
-
-## Current System Risks
-
-1. **No rate limiting**: Both endpoints are publicly accessible without throttling — susceptible to abuse
-2. **No captcha**: Brief Maestro form lacks honeypot (index.html has one)
-3. **Gmail App Password expiration**: Credentials can expire silently, causing 502 errors
-4. **No retry logic**: Failed email sends are not retried
-5. **No logging infrastructure**: Only `console.error` — no structured logging or monitoring
-6. **No input size limits**: Prompt/message fields have no server-side size validation
-7. **No CORS configuration**: Vercel Functions accept requests from any origin by default
-8. **No CI/CD**: No automated testing or deployment pipeline
-9. **Hardcoded SMTP service**: `service: 'gmail'` — switching providers would require code changes
+### SMTP Configuration
+- `nodemailer@^8.0.10`, transport: `service: 'gmail'`
+- Pre-send: `transporter.verify()` with 5s timeout; send: `sendWithTimeout()` with 5s timeout, parallel via `Promise.allSettled()`
+- No retry at handler level (timeout → returns false, logged as partial failure)
 
 ---
 
-## Project Factory Layer
+## PDF Generation
 
-The system has evolved from a **Website Generator** (output: a single HTML site) to a **Production Project Factory** (output: a complete deployable project).
+- Library: `pdfkit@^0.18.0`, A4 size, 50px margins
+- Content: Full master prompt in Courier, title "Prompt Maestro", client name/company
+- Filename: `brief-{business_name}.pdf` — sanitized with `[^a-zA-Z0-9\u00C0-\u024F]`
+- Generated server-side in `sendBrief.js` via Promise-based `generatePDF()`
+- Attached to admin notification email only — never on the client
 
-### Evolution
+---
 
-| Phase | Output | Description |
-|---|---|---|
-| v1.0.0 | Website | Static HTML/CSS/JS site |
-| v1.1.0 | Website + Docs | Site + AGENTS.md + ARCHITECTURE.md |
-| v1.2.0 | Full Project | Site + docs + project structure + Git readiness |
+## Engine Overview
 
-### Integration
+These modules form the Agent Pack v1 pipeline — converting client briefs into deployable projects. All engines are native Node.js (zero external dependencies except `pg`). See `ENGINE_RULES.md` for detailed behavior rules.
 
-The Project Bootstrap System is the final layer of the Prompt Maestro pipeline:
+| Engine | Directory | Status | Purpose |
+|---|---|---|---|
+| **Plan** | `lib/plan/` | Implemented | Prompt Maestro → Semantic IR JSON (14 sections → 8 categories) |
+| **Scaffold** | `lib/scaffold/` | Implemented | Generates project files on disk from Plan IR |
+| **Design System** | `lib/design-system/` | Implemented | CSS variable generation, design tokens |
+| **Preview** | `lib/preview/` | Implemented | Visual preview simulation |
+| **Decision** | `lib/decision/` | Implemented | Architectural decision records |
+| **Deployment** | `lib/deployment/` | Implemented | Git init, commit, GitHub repo creation, push |
+| **Runtime** | `lib/runtime/` | Implemented | SaaS pipeline orchestrator with Neon persistence |
+| **Form Persistence** | `lib/db/formResponses.js` | Implemented | Brief Maestro responses to Neon |
+| **Orchestrator** | `lib/orchestrator/` | Planned | Central pipeline controller |
+| **Project Loader** | `lib/loader/` | Planned | Read-only project reconstruction from DB |
 
+### Pipeline Flow
 ```
 Brief (client input)
     ↓
 Prompt Maestro (14-section structured brief)
     ↓
-Agent Pack v1 (validation, UX, SEO, copy refinement)
+Agent Pack (validation, UX, SEO, copy refinement)
     ↓
-Website Generator (HTML/CSS/JS output)
+Plan Engine (semantic IR JSON)
     ↓
-Project Bootstrap System (project structure + docs + Git)
+Design System Engine (CSS variables + design tokens)
     ↓
-GitHub-ready deployable product
+Preview Engine (visual simulation)
+    ↓
+Scaffold Engine (physical files on disk)
+    ↓
+Deployment Engine (Git → GitHub → Vercel)
 ```
-
-### Output Guarantees
-
-Every generated project includes:
-
-- **Deployable website**: functional HTML/CSS/JS, mobile-first, dark theme
-- **Project documentation**: README.md (how to run), AGENTS.md (rules), ARCHITECTURE.md (design), CHANGELOG.md (version)
-- **Git readiness**: pre-configured `.gitignore`, `.gitattributes`, and first commit instructions
-- **Deployment compatibility**: Vercel-ready by default
+**Note**: This pipeline is for the Agent Pack project generation system. The contact/brief email system (`api/sendBrief`, `api/sendContact`) operates independently and does not use this pipeline.
 
 ---
 
-## Project Scaffold Engine
+## Telemetry & Observability
 
-The `lib/scaffold/` module implements the Project Bootstrap System as real files on disk.
+### Two-Tier Storage
 
-### Module structure
-
-```
-/lib/scaffold/
-  index.js            → entry point, input normalization
-  core/engine.js       → orchestration, file coordination
-  generators/          → filesystem functions (fs + path)
-  templates/registry.js → single source of truth for templates
-```
-
-### Pipeline
-
-```
-Project Definition
-  { project_name, project_type, prompt_maestro_final }
-    ↓ (index.js)
-  sanitize + normalize
-    ↓ (engine.js)
-  decide files to create
-    ↓ (generators)
-  create directories + write files
-    ↓ (templates/registry)
-  inject content from templates
-    ↓
-  Physical project on disk
-```
-
-### Constraints
-
-- Node.js native only (`fs`, `path`) — zero external dependencies
-- Deterministic: same input always produces same output
-- No deployment, no Git, no API calls
-- Always validates before overwriting existing directories
-
----
-
-## Project Plan Engine
-
-The `lib/plan/` module converts a Prompt Maestro string into a **Semantic Intermediate Representation (IR)** — a structured JSON blueprint consumed by the Scaffold Engine.
-
-### Module structure
-
-```
-/lib/plan/
-  index.js            → semantic compiler (section parser + mapper)
-```
-
-### Pipeline
-
-```
-prompt_maestro_final (string)
-    ↓
-  Parse 14 sections (## N. NAME headers)
-    ↓
-  Extract key-value pairs (**key:** value)
-    ↓
-  Map to 8 semantic categories
-    ↓
-  JSON output
-```
-
-### Semantic mapping
-
-| IR Category | Source sections | Description |
-|---|---|---|
-| `identity` | Business, Branding, Essence, Objectives | Business name, mission, vision, values, personality |
-| `structure` | Architecture, Objectives | Sitemap, user flow, conversion goal |
-| `ui` | Branding, Visual References | Colors, typography, visual style, emotions |
-| `content` | Content, Products/Services, Audience | Existing materials, service list, buyer persona |
-| `seo` | SEO Strategy, Objectives | Keywords, locations, KPIs |
-| `conversion` | Conversion Strategy, Objectives | CTAs, funnel, lead magnet, timeline |
-| `assets` | Functionalities, Competition, Social Proof | Features, tools, testimonials, stats |
-| `rules` | Essence, Branding | Forbidden elements, constraints |
-
-### Constraints
-
-- No hallucinations: only extracts what exists in the prompt
-- No external knowledge: purely structural transformation
-- Deterministic: same Prompt Maestro = same JSON
-- Zero external dependencies
-
----
-
-## Decision Layer
-
-The `lib/decision/` module records architectural decisions made during Agent Pack development.
-
-It is NOT for user or generated project logs — only for internal system architecture decisions.
-
-### Module structure
-
-```
-/lib/decision/
-  index.js            → entry point (fs persistence layer)
-```
-
-### API
-
-| Method | Signature | Returns | Description |
+| Tier | Storage | Lifetime | Purpose |
 |---|---|---|---|
-| `registerDecision` | `({ id, title, reason, impact, modules_affected, version })` | `Object` (saved entry) | Persists a new decision. Requires `id` and `title`. |
-| `listDecisions` | `()` | `Array` | Returns all decisions in chronological order. |
-| `getDecision` | `(id)` | `Object \| null` | Returns a specific decision or `null`. |
+| L1 (Memory) | In-memory Map | 5min TTL | Fast reads, per-instance |
+| L2 (Neon) | `request_traces` table | Persistent | Cross-instance, historical |
 
-### Schema
+- All trace writes are fire-and-forget (non-blocking)
+- `tracer.drain()` in `finally` block flushes pending writes — silent (no console.log per request)
 
-```json
-{
-  "id": "arch-003",
-  "title": "Decision Layer v1",
-  "reason": "Centralized logging for architectural changes",
-  "impact": "low",
-  "modules_affected": ["lib/decision/index.js"],
-  "version": "v1.3.0",
-  "timestamp": "2026-06-08T12:00:00.000Z"
-}
-```
+### Diagnostics
+- `GET /api/sendContact?id=<requestId>` — single request lifecycle record
+- `GET /api/telemetry?type=health&section=queue` — lifecycle aggregates
+- Neon `request_logs` table — persistent lifecycle records with validation diagnostics
 
-### Storage
-
-- **File**: `data/decisions.json` (auto-created if missing)
-- **Persistence**: `fs` native — no database, no external dependencies
-- **Guarantee**: Duplicate `id` values are rejected with an error
-
-### Integration points
-
-| Consumer | When | Purpose |
-|---|---|---|
-| Agent Pack v1 workflow | On architectural changes | Record decision during `git status` → analysis → commit cycle |
-| Plan Engine | Optional future | Log when semantic mapping changes |
-| Scaffold Engine | Optional future | Log when template structure changes |
+### Client Retry (Contact Form)
+- Automatic retry with exponential backoff on HTTP 429
+- Max 4 total attempts, backoff: 0ms → 1s → 2s → 4s
+- UI shows language-aware status: `"Reintentando... (Intento X de 4)"`
+- Non-429 errors surface immediately — no retries
 
 ---
 
-## Deployment Engine
+## Dashboard
 
-The `lib/deployment/` module automates the deployment of generated projects to GitHub.
+Four HTML files under `public/` provide observability:
 
-It connects with the **Scaffold Engine** (receives a physical project on disk), the **Decision Layer** (records deployment results), and **GitHub CLI** (optional, for automatic repo creation).
-
-### Module structure
-
-```
-/lib/deployment/
-  index.js            → entry point (child_process + fs persistence)
-```
-
-### API
-
-| Method | Signature | Returns | Description |
-|---|---|---|---|
-| `initRepository` | `(projectPath)` | `{ success, output }` | `git init` + `git branch -M main` + status check |
-| `createGitHubRepo` | `(name, projectPath)` | `{ success, instruction }` | `gh repo create` or manual instructions |
-| `commitProject` | `(projectPath)` | `{ success, output }` | `git add .` + `git commit -m "feat: initial deployment"` |
-| `pushToRemote` | `(projectPath)` | `{ success, output }` | `git push -u origin main` |
-| `registerDeployment` | `({ project_name, repo_url, status, engine_version })` | `Object` (saved entry) | Persists a new deployment record |
-| `listDeployments` | `()` | `Array` | All deployment records |
-| `deployFullPipeline` | `(projectPath, opts)` | `{ success, status, steps }` | Full pipeline: init → commit → repo → push → register |
-
-### Schema
-
-```json
-{
-  "id": "deploy-001",
-  "project_name": "salmos-cafe",
-  "repo_url": "https://github.com/user/salmos-cafe",
-  "status": "deployed",
-  "engine_version": "v1.0.0",
-  "timestamp": "2026-06-08T12:00:00.000Z"
-}
-```
-
-### Storage
-
-- **File**: `data/deployments.json` (auto-created if missing)
-- **Persistence**: `fs` native — no database, no external dependencies
-
-### Pipeline
-
-```
-Project path on disk (from Scaffold Engine)
-    ↓
-1. initRepository — git init + branch main
-    ↓
-2. commitProject — git add . + git commit
-    ↓
-3. createGitHubRepo — gh repo create (or instructions)
-    ↓
-4. pushToRemote — git push origin main
-    ↓
-5. registerDeployment — persist to deployments.json
-    ↓
-{ success, status, steps }
-```
-
-### Graceful degradation
-
-| Scenario | Behavior |
+| File | Purpose |
 |---|---|
-| Git not installed | Returns `{ success: false, error, instruction }` |
-| gh not installed | Returns manual instructions for GitHub creation |
-| No remote configured | Returns `{ success: false, error, instruction }` |
-| Nothing to commit | Treated as recoverable — pipeline continues |
-| Full pipeline with failures | Pipeline stops, registers as `failed` status, returns step-by-step results |
+| `dashboard.html` | Project list, telemetry overview |
+| `dashboard-logs.html` | Request lifecycle log viewer |
+| `dashboard-project.html` | Project control center |
+| `dashboard-preview.html` | Preview renderer |
+
+All dashboards read from `GET /api/telemetry`. The shared `dashboard-api.js` module provides the API client layer.
 
 ---
 
-## Orchestrator Engine (Design)
+## Environment Variables
 
-The `lib/orchestrator/` module is designed as the **central controller** of the Agent Pack v1 system, but has not been implemented. Current orchestration is handled by `lib/runtime/index.js`.
-
-It would dynamically coordinate all modules (Compiler, Plan, Scaffold, Decision Layer, Deployment) based on the detected input type.
-
-### Module structure
-
-```
-/lib/orchestrator/          (planned)
-```
-
-### Input type detection (design)
-
-| Type | Detection | Pipeline |
+| Variable | Purpose | Required |
 |---|---|---|
-| `raw_email` | Contains `Subject:`/`From:`/`To:` headers or long text (>5000 chars) | `compiler → plan → scaffold` |
-| `structured_prompt` | Contains `## N. NAME` headers (Prompt Maestro format) | `plan → scaffold` |
-| `json_brief` | Input is an object or string starting with `{`/`[` | `scaffold` |
-| `existing_project` | No build pipeline | deployment (if requested) |
+| `GMAIL_USER` | Gmail address for SMTP authentication | Yes |
+| `GMAIL_APP_PASSWORD` | Gmail app password | Yes |
+| `DATABASE_URL` | Neon PostgreSQL connection string | Yes |
 
-### Fallback intelligence (design)
-
-- On module failure: auto-register in **Decision Layer** with error details
-- Pipeline continues with remaining steps (non-blocking)
-- Final status reflects overall result: `completed` / `partial` / `failed`
-- Deployment is controlled by the `deploy` option (default: true)
-
-### Constraints (design)
-
-- Zero external dependencies
-- Deterministic: same input + same options = same output
+**Rules**: Never expose to frontend code, never hardcode, always access through `process.env`.
 
 ---
 
-## Form Persistence Layer
+## Version History
 
-The `lib/db/formResponses.js` module persists all Brief Maestro form responses to PostgreSQL **before** the pipeline executes.
-
-```
-INPUT (Brief Maestro)
-    ↓
-FORM SAVER (guarda secciones → form_responses)
-    ↓
-RUNTIME (lib/runtime/index.js) (plan → scaffold → deploy)
-```
-
-### Module structure
-
-```
-/lib/db/
-  index.js           → Pool, query helper, connection management
-  formResponses.js   → Form persistence CRUD
-```
-
-### Schema
-
-```sql
-CREATE TABLE form_responses (
-  id SERIAL PRIMARY KEY,
-  project_id VARCHAR(64) NOT NULL,
-  section VARCHAR(64) NOT NULL,
-  field_key VARCHAR(128) NOT NULL,
-  value TEXT,
-  created_at TIMESTAMPTZ DEFAULT NOW()
-);
-```
-
-### Field → Section mapping
-
-| Prefix | Section | Sample fields |
+| Version | Date | Summary |
 |---|---|---|
-| `biz_*` | business | biz_name, biz_valores |
-| `obj_*` | goals | obj_principal, obj_kpis |
-| `comp_*` | competition | comp_directos, comp_problemas |
-| `pub_*` | audience | pub_ideal, pub_motivaciones |
-| `brand_*` | branding | brand_colores, brand_estilo |
-| `arq_*` | site | arq_paginas, arq_flujo |
-| `cont_*` | content | cont_fotos, cont_textos |
-| `serv_*` | services | serv_estrella, serv_precio |
-| `social_*` | social_proof | social_testimonios |
-| `func_*` | functionality | func_basicas, func_avanzadas |
-| `seo_*` | seo | seo_keywords, seo_geo |
-| `ref_*` | references | ref_marcas, ref_favoritos |
-| `conv_*` | conversion | conv_cta, conv_lead |
-| `ai_*` | essence | ai_diferencia, ai_metafora |
-
-### API
-
-| Method | Input | Returns | Description |
-|---|---|---|---|
-| `createTable()` | — | — | Creates form_responses table if not exists |
-| `saveFormResponse` | `(project_id, section, field_key, value)` | — | Single response insert |
-| `saveBulkFormResponses` | `(project_id, formData)` | `Number` | Batch save from formData object |
-| `getProjectFormResponses` | `(project_id)` | `Row[]` | All responses for a project |
-| `getResponsesGrouped` | `(project_id)` | `Object` | Responses grouped by section |
-| `generateProjectId` | `(name, email)` | `String` | Generates unique `proj_<hash>` |
-
-### Integration with Brief Maestro endpoint
-
-In `api/sendBrief.js`, form persistence runs after validation but before any pipeline execution:
-
-```js
-// 1. Validate input
-// 2. Save form responses to PostgreSQL (non-blocking — failures are logged, not thrown)
-// 3. Generate PDF
-// 4. Send admin email with PDF attachment
-// 5. Send client confirmation
-```
-
-### Rules
-
-- Runs **before** the Orchestrator pipeline
-- DB failure **does not block** email delivery — errors are logged to `console.error`
-- Arrays (checkboxes, tags) are converted to comma-separated strings for storage
-- No ORM — raw SQL with `pg`
+| v1.0.0 | 2026-06-08 | Initial Agent Pack system + Prompt Maestro |
+| v1.1.0 | 2026-06-08 | Intelligent Brief Validation, UX Flow, SEO, Copy engines |
+| v1.2.0 | 2026-06-08 | Project Scaffold + Plan engines (semantic IR) |
+| v1.3.0 | 2026-06-08 | Decision Layer + Deployment Engine |
+| v1.4.0 | 2026-06-08 | Form Persistence Layer (Neon PostgreSQL) |
+| v1.5.0 | 2026-06-08 | Project Loader Engine design |
+| v1.6.0 | 2026-06-08 | SaaS multi-tenant architecture design |
+| v1.7.0 | 2026-06-08 | SaaS Runtime Layer v1 (pipeline orchestrator) |
+| v1.0.10 | 2026-06-10 | CLI testing fixes, queue stability |
+| v1.0.11 | 2026-06-10 | Observability clarification, Vercel runtime notes |
+| v1.0.15 | 2026-06-10 | Client-side retry with exponential backoff for 429 |
+| v1.1.0 | 2026-06-10 | Request lifecycle observability (queue tracking, derived metrics) |
+| v1.2.0 | 2026-06-10 | Observability hardening (TTL, lifecycle.complete, single executionStartedAt) |
+| v1.2.1 | 2026-06-10 | Derived metric persistence + aggregate TTL purge |
+| v1.2.2 | 2026-06-10 | E2E helper loader, Inkognita Agency dataset |
+| v1.3.0 | 2026-06-11 | Neon PostgreSQL persistent lifecycle (request_logs) |
+| v1.3.1–2 | 2026-06-11 | Unified payload builder, favicon consistency |
+| v1.4.0 | 2026-06-11 | Shared payload builder decoupled from E2E testing |
+| v1.4.1–4 | 2026-06-11 | Validation diagnostics, persistence audit (9/9 100%) |
+| v1.5.0 | 2026-06-12 | Persistent trace observability (Neon request_traces) |
+| v1.6.0 | 2026-06-12 | Consolidated telemetry endpoint (3 functions saved) |
+| v1.7.0 | 2026-06-12 | Request tracing audit, auto-table-creation, silent drain |
+| v1.7.1 | 2026-06-12 | Observability stabilization (handlerError traces, 27 paths) |
+| v1.8.0 | 2026-06-12 | Heatmap, timeline, coverage matrix script, leakage audit |
+| v1.8.1 | 2026-06-12 | Queue worker fix (Vercel freeze root cause, waitUntilEmpty) |
+| v1.8.2 | 2026-06-12 | Production acceptance validation (58% coverage, closeout) |
+| v1.9.0 | 2026-06-10 | x-test-mode header, health sections, detailed stats |
+| v1.9.1 | 2026-06-10 | Per-email progress stages, retry traces, rate-limit headers |
+| v2.0.0 | 2026-06-18 | Documentation consolidation (4 canonical docs) |
 
 ---
 
-## Project Loader Engine (Design)
+## Historical Architecture Decisions
 
-The `lib/loader/` module is designed to reconstruct projects from PostgreSQL and local filesystem data, but has not been implemented.
+### 2026-06 — Netlify → Vercel
+Native Node.js runtime compatibility with Nodemailer and PDFKit. Vercel supports `api/` directory auto-detection without configuration.
 
-It would be a **read-only** module — it queries and reconstructs without modifying any data.
+### 2026-06 — Nodemailer upgraded to 8.0.10
+Security updates and compatibility improvements.
 
-### Module structure
+### 2026-06 — Email Delivery Strategy
+Client confirmation emails use `to: [clientEmail, GMAIL_USER]` (not CC) for reliable Gmail SMTP delivery.
 
-```
-/lib/loader/          (planned)
-```
+### 2026-06 — Queue → Inline SMTP
+The in-memory BackgroundQueue was removed (commit `1e93884`). Emails now send inline via `Promise.allSettled()` with 5s timeout per email. This eliminates Vercel function freeze issues where `setImmediate` callbacks never fired after response completion.
 
-### API
+### 2026-06 — Workspace Resolution Architecture
+`workspace_id` MUST be a valid UUID v4 — non-UUID throws `INVALID_ID_FORMAT` (no hashing, no conversion). `workspace_slug` resolves via `WHERE slug = $1` directly. `project_id` and `execution_id` are flexible (UUID or string).
 
-| Method | Input | Returns | Description |
-|---|---|---|---|
-| `loadProject(project_id)` | `string` | `{ meta, responses, grouped }` | Full project data from DB |
-| `rebuildPromptMaestro(project_id, lang?)` | `string, string` | `string` | Rebuild Prompt Maestro text from stored responses |
-| `getProjectState(project_id)` | `string` | `{ project, form_responses, execution_history, decisions }` | Complete pipeline state |
-| `listProjects()` | — | `Array` | All projects with metadata |
+---
 
-### Data sources
+## 🔮 SaaS Architecture (Future — Not Implemented)
 
-| Source | Type | Purpose |
+Design for a multi-tenant website generation platform. This section summarizes the key design elements — full details were in the (now consolidated) design document.
+
+### Key Design Elements
+- **Multi-tenant isolation**: Row-Level Security (RLS) on PostgreSQL, workspace-scoped data
+- **14-table schema**: workspaces, users, workspace_members, projects, project_inputs, project_states, previews, deployments, executions, decisions, artifacts, webhook_events, api_keys, form_responses
+- **Billing tiers**: Free (3 projects), Starter (15), Pro (50), Enterprise (unlimited)
+- **Preview system**: Live preview with Redis TTL caching, design token injection, approval gating
+- **Async job queue**: Bull/Redis for non-blocking AI pipeline
+- **User roles**: owner, admin, member, viewer per workspace
+- **State machine**: DRAFT → PROCESSING → PREVIEW → APPROVED → DEPLOYING → DEPLOYED (with FAILED and REJECTED branches)
+- **Decision Engine**: 5-dimension evaluation (contrast 25%, UX 25%, conversion 20%, clarity 15%, SEO 15%) — archived in ENGINE_RULES.md
+- **Auto-improvement**: Up to 2 regeneration attempts on score < 50
+
+---
+
+## Documentation Map
+
+| File | Role | Status |
 |---|---|---|
-| `form_responses` (PostgreSQL) | Existing table | Form responses grouped by section |
-| `projects` (PostgreSQL) | Optional table | Project metadata |
-| `executions` (PostgreSQL) | Optional table | Pipeline execution history |
-| `data/decisions.json` | Local file | Architectural decisions |
+| **`ARCHITECTURE.md`** | Single source of truth for system architecture, structure, endpoints, lifecycle, email/PDF, telemetry, version history, design decisions, and risks | ✅ Active — this file |
+| **`ENGINE_RULES.md`** | AI pipeline behavior rules: engine specifications, scoring system, state machine, validation rules, approval logic | ✅ Active |
+| **`DEVELOPMENT_RULES.md`** | Developer workflow: naming conventions, CSS/JS style, Git commits, module boundaries, API design, testing strategy, security | ✅ Active |
+| **`DEPLOYMENT.md`** | Infrastructure: Vercel deployment, CI/CD, environment setup, rollback, rate limits, CLI reference | ✅ Active |
+| `AGENTS.md` | Former agent operations manual — content distributed across all 4 canonical files | ❌ Deprecated (deleted) |
+| `CHANGELOG.md` | Former detailed version history — compressed to Version History table in this file | ❌ Deprecated (deleted) |
+| `ARCHITECTURE-SAAS.md` | Former SaaS design document — compressed to SaaS Architecture section in this file | ❌ Deprecated (deleted) |
+| `docs/CONTEXT.md` | Former Ingestion Boundary description — merged into Execution Model section in this file | ❌ Deprecated (deleted) |
+| `docs/archive/` | Historical audit reports — all content superseded by canonical docs | ❌ Deprecated (deleted) |
 
-### Constraints
+---
 
-- Read-only — never writes to any data source
-- Optional tables (`projects`, `executions`) don't block if absent
-- Deterministic reconstruction: same DB state = same output
-- Zero external dependencies
+## System Risks
+
+1. **Gmail App Password expiration** — credentials expire silently, causing 502 errors
+2. **No SMTP retry at handler level** — timeout = partial failure (one email may fail independently)
+3. **Vercel cold starts** — after ~60s idle, all in-memory state is lost
+4. **No captcha** on any endpoint (honeypot on contact form only)
+5. **Gmail daily sending limits** (~500/day) — not suitable for high volume
+6. **Serverless memory isolation** — cross-instance state requires Neon PostgreSQL

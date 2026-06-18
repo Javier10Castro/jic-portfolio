@@ -3,8 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="description" id="page-desc" content="Build a Brief — Herramienta de Descubrimiento Web para desarrollo profesional de sitios web por Javier Ibrahim">
-<title id="page-title">Build a Brief — Javier Ibrahim</title>
+<meta name="description" id="page-desc" content="Your Project Brief — Cuestionario interactivo para definir la visión de tu sitio web, creado por Javier Ibrahim">
+<title id="page-title">Your Project Brief — Javier Ibrahim</title>
 <link rel="icon" href="icon.ico" type="image/x-icon">
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -452,7 +452,7 @@ footer{
 <nav id="navbar">
   <a class="nav-logo" href="#">
     <div class="logo-mark">JIC</div>
-    <span id="nav-logo-text">Build a Brief</span>
+    <span id="nav-logo-text">Your Project Brief</span>
   </a>
   <div style="display:flex;align-items:center;gap:1rem">
     <div class="lang-selector">
@@ -1008,7 +1008,7 @@ const _tr = {
   optional:{es:"Opcional",en:"Optional"},
   prev_btn:{es:"Anterior",en:"Previous"},
   next_btn:{es:"Siguiente sección",en:"Next section"},
-  final_btn:{es:"Generar Build a Brief ?",en:"Generate Build a Brief ?"},
+  final_btn:{es:"Generar mi proyecto ?",en:"Generate my project ?"},
   tag_placeholder:{es:"Escribe y presiona Agregar...",en:"Type and press Add..."},
   tag_add:{es:"+ Agregar",en:"+ Add"},
   scale_simple:{es:"Simple (1)",en:"Simple (1)"},
@@ -1020,8 +1020,8 @@ const _tr = {
   hero_cta:{es:"Empezar mi brief",en:"Start my brief"},
   feat_14:{es:"14 secciones estratégicas",en:"14 strategic sections"},
   feat_save:{es:"Guardado automático",en:"Auto-save"},
-  feat_pro:{es:"Prompt maestro para Claude",en:"Master prompt for Claude"},
-  feat_custom:{es:"Exportar PDF y Markdown",en:"Export PDF and Markdown"},
+  feat_pro:{es:"Sin conocimientos técnicos",en:"No technical knowledge needed"},
+  feat_custom:{es:"Listo para diseño y desarrollo",en:"Ready for design and development"},
   nav_badge:{es:"Herramienta Premium",en:"Premium Tool"},
   contact_title:{es:"Gracias por completar tu Discovery Web",en:"Thank you for completing your Web Discovery"},
   contact_desc:{es:"Hemos recibido toda la información necesaria para analizar tu proyecto. Nuestro equipo revisará tus respuestas y se pondrá en contacto contigo para los siguientes pasos.",en:"We have received all the necessary information to analyze your project. Our team will review your answers and contact you for the next steps."},
@@ -1496,7 +1496,7 @@ function generatePrompt(){
   };
 
   return `# PROMPT MAESTRO — GENERACIÓN DE SITIO WEB PROFESIONAL
-Generado por Build a Brief | javieribrahim.dev
+Generado por Your Project Brief | javieribrahim.dev
 Fecha: ${new Date().toLocaleDateString('es-MX',{year:'numeric',month:'long',day:'numeric'})}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
