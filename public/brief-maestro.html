@@ -538,8 +538,8 @@ footer{
   <div class="progress-wrapper" style="position:relative;top:0">
     <div class="progress-header">
       <div>
-        <div class="progress-info" id="cp-info">Proceso completado</div>
-        <div class="progress-step" id="cp-step">Discovery Web finalizado</div>
+        <div class="progress-info" id="cp-info">Cuestionario completado</div>
+        <div class="progress-step" id="cp-step">Proyecto completado</div>
       </div>
       <div class="progress-pct">100%</div>
     </div>
@@ -650,8 +650,8 @@ window.addEventListener('scroll',()=>document.getElementById('navbar').classList
 // DATA
 const SECTIONS=[
   {
-    id:1,title:"Información General del Negocio",
-    desc:"Recopilamos la esencia de tu empresa: quién eres, qué haces y por qué existes. Esta información es la base de toda la arquitectura de contenido y el tono de voz del sitio.",
+    id:1,title:"Cuéntanos sobre tu proyecto",
+    desc:"Cuéntanos quién eres, qué haces y por qué existes. Esta información construye la base de tu sitio web y define cómo te comunicarás con tus visitantes.",
     goal:"Construir la identidad narrativa del sitio web, definir el tono de voz y el copywriting de las secciones principales.",
     questions:[
       {id:"biz_name",label:"Nombre del negocio",hint:"El nombre con el que tus clientes te buscan. Sé exacto: de aquí saldrá <b>tu dominio y el título principal del sitio</b>.",type:"text",required:true,ai:"Definimos el <b>dominio, el título principal y la base estructural</b> de tu sitio."},
@@ -660,7 +660,7 @@ const SECTIONS=[
       {id:"biz_mision",label:"Misión",hint:"¿Por qué existe tu empresa más allá de ganar dinero? El <b>propósito real</b> conecta con tu audiencia.",type:"textarea",required:true,ai:"Define el <b>propósito de tu marca</b> y guía cómo te comunicas con tus clientes."},
       {id:"biz_vision",label:"Visión",hint:"Visualiza el futuro. ¿Dónde quieres estar en 5-10 años? Eso <b>inspira el rumbo del proyecto</b>.",type:"textarea",required:false,ai:"Refuerza tu <b>credibilidad</b> y proyecta una visión clara a largo plazo."},
       {id:"biz_valores",label:"Valores corporativos",hint:"Los principios que <b>guían tus decisiones</b>. Entre 3 y 6 valores que definen cómo haces negocio.",type:"tags",required:true,ai:"Definen el **tono de tu contenido** y pueden destacarse visualmente en el diseño."},
-      {id:"biz_diferenciadores",label:"¿Qué te hace diferente?",hint:"Tu ventaja real. Sé <b>específico y honesto</b>: eso construirás en tu propuesta de valor.",type:"textarea",required:true,ai:"Detecta tu <b>ventaja real</b>: lo que te hace diferente y se convertirá en tu propuesta de valor."},
+      {id:"biz_diferenciadores",label:"¿Qué te hace diferente?",hint:"Tu ventaja real. Sé <b>específico</b>: eso construirás en tu propuesta de valor.",type:"textarea",required:true,ai:"Detecta tu <b>ventaja real</b>: lo que te hace diferente y se convertirá en tu propuesta de valor."},
       {id:"biz_personalidad",label:"Personalidad de marca",hint:"Elige las opciones que mejor <b>reflejen la personalidad</b> de tu marca. Define cómo te comunicarás.",type:"checkboxes",options:["Profesional y seria","Cercana y amigable","Innovadora y disruptiva","Tradicional y confiable","Lujosa y exclusiva","Divertida y energética","Minimalista y elegante","Técnica y especializada"],required:true,ai:"Define el <b>tono, estilo visual y nivel de formalidad</b> de todo tu sitio."},
       {id:"biz_contacto",label:"Información de contacto principal",hint:"Los datos clave para que <b>tus clientes te encuentren</b>. Teléfono, email, dirección y horarios.",type:"textarea",required:true,ai:"Completa tu <b>información de contacto</b> en todo el sitio y mejora tu presencia local."},
       {id:"biz_redes",label:"Redes sociales activas",hint:"Los enlaces directos a <b>tus perfiles activos</b>. Cada URL completa, sin atajos.",type:"textarea",required:false,ai:"Se integran en <b>header, footer y secciones sociales</b> para mantener tu presencia conectada."},
@@ -825,8 +825,8 @@ const SECTIONS=[
 
 const EN_SECTIONS = [
   {
-    id:1,title:"General Business Information",
-    desc:"We collect the essence of your company: who you are, what you do, and why you exist. This information forms the foundation for all content architecture and the site's tone of voice.",
+    id:1,title:"Tell us about your project",
+    desc:"Tell us who you are, what you do, and why you exist. This information builds the foundation for your website and defines how you'll communicate with your visitors.",
     goal:"Build the narrative identity of the website, define the tone of voice and copywriting for all main sections.",
     questions:[
       {id:"biz_name",label:"Business name",hint:"The name your customers search for. Be precise — this determines <b>your domain and the main title of your site</b>.",type:"text",required:true,ai:"This defines your **domain, main title, and core site structure**."},
@@ -835,7 +835,7 @@ const EN_SECTIONS = [
       {id:"biz_mision",label:"Mission",hint:"Why does your company exist beyond making money? A <b>real purpose</b> connects with your audience.",type:"textarea",required:true,ai:"Becomes the heart of your **\"About us\"** page and sets the purpose of your message."},
       {id:"biz_vision",label:"Vision",hint:"Picture the future. Where do you want to be in 5-10 years? That <b>shapes the direction of the project</b>.",type:"textarea",required:false,ai:"Strengthens your institutional pages and builds **long-term credibility**."},
       {id:"biz_valores",label:"Corporate values",hint:"The principles that <b>guide your decisions</b>. Between 3 and 6 values that define how you do business.",type:"tags",required:true,ai:"Shape your **content tone** and can be highlighted visually across the site."},
-      {id:"biz_diferenciadores",label:"What makes you different?",hint:"Your real advantage. Be <b>specific and honest</b> — this will become your value proposition.",type:"textarea",required:true,ai:"Become your **core value proposition** -- clear benefits and authentic sales arguments."},
+      {id:"biz_diferenciadores",label:"What makes you different?",hint:"Your real advantage. Be <b>specific</b> — this will become your value proposition.",type:"textarea",required:true,ai:"Become your **core value proposition** -- clear benefits and authentic sales arguments."},
       {id:"biz_personalidad",label:"Brand personality",hint:"Pick the options that best <b>reflect your brand's personality</b>. This defines how you'll communicate.",type:"checkboxes",options:["Professional and serious","Warm and friendly","Innovative and disruptive","Traditional and reliable","Luxurious and exclusive","Fun and energetic","Minimalist and elegant","Technical and specialized"],required:true,ai:"Defines the **tone, visual style, and formality level** of your entire site."},
       {id:"biz_contacto",label:"Main contact information",hint:"The key info so <b>your customers can find you</b>. Phone, email, address, and hours.",type:"textarea",required:true,ai:"Feeds your **contact section, footer, and local SEO data**."},
       {id:"biz_redes",label:"Active social media",hint:"Direct links to <b>your active profiles</b>. Full URLs, no shortcuts.",type:"textarea",required:false,ai:"These appear in your **footer, header, and social sections**."},
@@ -1023,8 +1023,8 @@ const _tr = {
   feat_pro:{es:"Sin conocimientos técnicos",en:"No technical knowledge needed"},
   feat_custom:{es:"Listo para diseño y desarrollo",en:"Ready for design and development"},
   nav_badge:{es:"Herramienta Premium",en:"Premium Tool"},
-  contact_title:{es:"Gracias por completar tu Discovery Web",en:"Thank you for completing your Web Discovery"},
-  contact_desc:{es:"Hemos recibido toda la información necesaria para analizar tu proyecto. Nuestro equipo revisará tus respuestas y se pondrá en contacto contigo para los siguientes pasos.",en:"We have received all the necessary information to analyze your project. Our team will review your answers and contact you for the next steps."},
+  contact_title:{es:"Gracias por completar tu proyecto",en:"Thank you for completing your project"},
+  contact_desc:{es:"Hemos recibido toda la información de tu proyecto. Nuestro equipo revisará tus respuestas y te contactará para los siguientes pasos.",en:"We have received all your project information. Our team will review your answers and contact you for the next steps."},
   label_name:{es:"Nombre completo ",en:"Full name "},
   label_email:{es:"Correo electrónico ",en:"Email "},
   label_company:{es:"Nombre de la empresa",en:"Company name"},
@@ -1039,7 +1039,7 @@ const _tr = {
   success_text:{es:"Gracias. Hemos recibido tu proyecto y comenzaremos a revisarlo. Pronto recibirás una confirmación por correo electrónico.",en:"Thank you. We have received your project and will begin reviewing it. You will soon receive a confirmation by email."},
   success_btn:{es:"Comenzar nuevo cuestionario",en:"Start new questionnaire"},
   cp_info:{es:"Proceso completado",en:"Process completed"},
-  cp_step:{es:"Discovery Web finalizado",en:"Web Discovery finished"},
+  cp_step:{es:"Proyecto completado",en:"Project completed"},
   foot_copy:{es:"\u00a9 2026 Javier Ibrahim \u2014 Construye la base de tu sitio web",en:"\u00a9 2026 Javier Ibrahim \u2014 Build the foundation of your website"},
   toast_send_success:{es:"Tu brief fue enviado correctamente.",en:"Your brief was sent successfully."},
   toast_send_error:{es:"Ocurri\u00f3 un problema al enviar el brief.",en:"There was a problem sending your brief."},
