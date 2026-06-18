@@ -261,7 +261,7 @@ Validation failures persist to Neon `request_logs` BEFORE the HTTP response via 
 
 | Property | Contact | Brief |
 |---|---|---|
-| `from` | `"Javier Ibrahim — Portfolio"` | `"Your Project Brief"` |
+| `from` | `"Javier Ibrahim — Portfolio"` | `"Build a Brief"` |
 | `to` | `GMAIL_USER` | `GMAIL_USER` |
 | `replyTo` | `email` (client) | `email` (client) |
 | Attachment | None | PDF (`brief-{biz_name}.pdf`) |
@@ -270,7 +270,7 @@ Validation failures persist to Neon `request_logs` BEFORE the HTTP response via 
 
 | Property | Contact | Brief |
 |---|---|---|
-| `from` | `"Javier Ibrahim"` | `"Your Project Brief"` |
+| `from` | `"Javier Ibrahim"` | `"Build a Brief"` |
 | `to` | `[email, GMAIL_USER]` | `[email, GMAIL_USER]` |
 | `replyTo` | `GMAIL_USER` | `GMAIL_USER` |
 
