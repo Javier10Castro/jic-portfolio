@@ -307,7 +307,8 @@ These modules form the Agent Pack v1 pipeline — converting client briefs into 
 | **Deployment** | `lib/deployment/` | Implemented | Git init, commit, GitHub repo creation, push |
 | **Runtime** | `lib/runtime/` | Implemented | SaaS pipeline orchestrator with Neon persistence |
 | **Form Persistence** | `lib/db/formResponses.js` | Implemented | Brief Maestro responses to Neon |
-| **Orchestrator** | `lib/orchestrator/` | Planned | Central pipeline controller |
+| **Orchestrator** | `lib/orchestrator/` | Implemented | Brief → Plan IR (intent, tone, features, structure) |
+| **Planner** | `lib/planner/` | Implemented | Plan IR → Project Blueprint (pages, nav, sections, components) |
 | **Project Loader** | `lib/loader/` | Planned | Read-only project reconstruction from DB |
 
 ### Pipeline Flow
@@ -329,6 +330,82 @@ Scaffold Engine (physical files on disk)
 Deployment Engine (Git → GitHub → Vercel)
 ```
 **Note**: This pipeline is for the Agent Pack project generation system. The contact/brief email system (`api/sendBrief`, `api/sendContact`) operates independently and does not use this pipeline.
+
+---
+
+## Project Planner
+
+### Purpose
+
+Transform a validated Plan IR into a complete Project Blueprint. The Planner defines the full structure of a future website — pages, navigation, sections, components, user flow, and priorities — without generating any HTML, CSS, or JavaScript.
+
+### Input
+
+Validated Plan IR from the Orchestrator (`lib/orchestrator/`):
+
+```
+{
+  meta:      { generatedAt, version, source },
+  project:   { name, tagline, type, existingSite, ... },
+  audience:  { description, problems, motivations, ... },
+  tone:      { style, brandPersonality[], brandFeeling[] },
+  structure: { sections[{id, required}], priorityPages[], userFlow },
+  features:  { contact_form, analytics, booking_system, ... },
+  design:    { logoStatus, visualStyle[], colors, ... },
+  constraints: { forbiddenVisuals, extraContext }
+}
+```
+
+### Output
+
+Project Blueprint:
+
+```
+{
+  meta:        { generatedAt, version, source, planIRVersion },
+  project:     { name, tagline, type },
+  pages:       [{ id, title, path, type, priority, sections[], children[] }],
+  navigation:  { primary[], footer[], utility[] },
+  sections:    { registry[{id, label, description, components[]}], pageMap{} },
+  components:  { global[], reusable[], pageSpecific{} },
+  userFlow:    { entryPoints[], primaryPath[], secondaryPaths[], conversionPoints[] },
+  hierarchy:   { root, tree{} },
+  priorities:  { critical[], high[], medium[], low[] },
+  constraints: {}
+}
+```
+
+### Execution Order
+
+```
+planProject(planIR)
+  ├── pagePlanner.planPages()        → Build page list from project type + features
+  ├── sectionPlanner.planSections()  → Map sections to pages + build registry
+  ├── navigationPlanner.planNavigation() → Generate primary/footer/utility nav
+  ├── componentPlanner.planComponents()  → Identify global/reusable/page-specific components
+  ├── generateBlueprint()            → Assemble + build userFlow + hierarchy + priorities
+  └── validateBlueprint()            → Schema validation (throws BlueprintValidationError)
+```
+
+### Module Responsibilities
+
+| Module | File | Responsibility |
+|---|---|---|
+| Entry | `lib/planner/index.js` | Exposes `planProject(planIR)` |
+| Page Planner | `lib/planner/pagePlanner.js` | Determines page list based on project type (ecommerce, portfolio, service_business, landing_page) and enabled features |
+| Section Planner | `lib/planner/sectionPlanner.js` | Builds section registry with labels/descriptions/components and maps sections to pages |
+| Navigation Planner | `lib/planner/navigationPlanner.js` | Generates primary, footer, and utility navigation from page list |
+| Component Planner | `lib/planner/componentPlanner.js` | Identifies global, reusable, and page-specific components needed |
+| Blueprint Generator | `lib/planner/generateBlueprint.js` | Orchestrates all planners and builds userFlow, hierarchy, and priorities |
+| Blueprint Validator | `lib/planner/validateBlueprint.js` | Schema validation — ensures all required fields exist |
+
+### Determinism
+
+The Planner is fully deterministic. Given the same Plan IR, the Blueprint output is always identical. No AI calls, no external dependencies, no random state.
+
+### Isolation
+
+The Planner runs independently from `api/sendBrief`. It is not yet called during the brief submission flow. Integration will occur in a later phase after full validation.
 
 ---
 
