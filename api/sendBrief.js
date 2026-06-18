@@ -1,6 +1,7 @@
 const nodemailer = require('nodemailer');
 const PDFDocument = require('pdfkit');
 const { parseBody, deployInfo } = require('../lib/safeBodyParser');
+const { orchestrateBrief } = require('../lib/orchestrator');
 
 const formResponses = require('../lib/db/formResponses');
 const {
@@ -253,7 +254,16 @@ module.exports = async (req, res) => {
     log.error(req, 'Failed to persist form responses', dbErr, { name: safeName, email });
   }
 
-  // ── 8. Send emails ────────────────────────────────────────────
+  // ── 8. Generate Plan IR (isolated, non-blocking) ──────────────
+  let planIR = null;
+  try {
+    planIR = orchestrateBrief(formData || {});
+    log.structured(req, { stage: 'orchestrator.planIR', status: 'ok', intent: planIR.project.type, tone: planIR.tone.style, sections: planIR.structure.sections.length });
+  } catch (orchErr) {
+    log.structured(req, { stage: 'orchestrator.planIR', status: 'error', error: orchErr.message });
+  }
+
+  // ── 9. Send emails ────────────────────────────────────────────
   const GMAIL_USER = process.env.GMAIL_USER;
   const GMAIL_APP_PASSWORD = process.env.GMAIL_APP_PASSWORD;
 
