@@ -19,7 +19,6 @@
 const { listEntries, getAggregateMetrics, lookupRequest } = require('../lib/request-registry');
 const tracer = require('../lib/tracer');
 const requestTraces = require('../lib/db/requestTraces');
-const emailQueue = require('../lib/queue');
 const { getDetailedSnapshot, getSnapshot } = require('../lib/rate-limit');
 const { deployInfo } = require('../lib/safeBodyParser');
 
@@ -149,27 +148,11 @@ async function handleHealth(req, res, q) {
   const section = q.get('section') || 'summary';
 
   if (section === 'queue') {
-    const detailed = await emailQueue.getDetailedStats();
-    const stats = emailQueue.stats();
+    const lifecycle = await getAggregateMetrics();
     return ok(res, {
-      status: 'ok', timestamp: detailed.timestamp,
-      queue: {
-        depth: stats.depth, currentDepth: detailed.queue.depth,
-        active: stats.active, activeWorkers: detailed.queue.active,
-        maxDepth: detailed.queue.maxDepth,
-        utilizationPercent: Math.round((detailed.queue.depth / detailed.queue.maxDepth) * 100),
-      },
-      throughput: {
-        totalEnqueued: detailed.throughput.totalEnqueued,
-        completed: stats.completed, failed: stats.failed,
-        successRate: stats.completed + stats.failed > 0
-          ? Math.round((stats.completed / (stats.completed + stats.failed)) * 100) + '%' : '100%',
-      },
-      oldestRequest: {
-        ageMs: detailed.oldestRequestAgeMs, ageSec: detailed.oldestRequestAgeSec,
-        ageMin: Math.round(detailed.oldestRequestAgeMs / 60000),
-      },
-      lifecycle: detailed.lifecycle,
+      status: 'ok', timestamp: new Date().toISOString(),
+      queue: { enabled: false, reason: 'removed — unreliable in Vercel serverless; all email sent inline' },
+      lifecycle,
     });
   }
 
@@ -198,20 +181,15 @@ async function handleHealth(req, res, q) {
     });
   }
 
-  const queueStats = emailQueue.stats();
-  const detailed = await emailQueue.getDetailedStats();
+  const lifecycle = await getAggregateMetrics();
   const rlSnapshot = getSnapshot();
   const di = deployInfo();
 
   ok(res, {
     status: 'ok', timestamp: new Date().toISOString(), uptime: process.uptime(),
     instance: { id: rlSnapshot.instanceId, sha: di.sha, env: di.env, region: di.region },
-    queue: {
-      size: queueStats.depth, active: queueStats.active,
-      pending: Math.max(0, queueStats.depth - queueStats.active),
-      completed: queueStats.completed, failed: queueStats.failed, maxDepth: 100,
-    },
-    lifecycle: detailed.lifecycle,
+    queue: { enabled: false, reason: 'removed — unreliable in Vercel serverless; all email sent inline' },
+    lifecycle,
     rateLimit: {
       ipEntries: rlSnapshot.ipEntries, emailEntries: rlSnapshot.emailEntries,
       edgeSoftLimit: rlSnapshot.edgeSoftLimit, edgeHardLimit: rlSnapshot.edgeHardLimit,
