@@ -1,6 +1,5 @@
 const nodemailer = require('nodemailer');
 const PDFDocument = require('pdfkit');
-const emailQueue = require('../lib/queue');
 const { parseBody, deployInfo } = require('../lib/safeBodyParser');
 
 const formResponses = require('../lib/db/formResponses');
@@ -310,7 +309,7 @@ module.exports = async (req, res) => {
   const pdfBuffer = await generatePDF(prompt, safeName, bizName, isES);
   stage(req, 'after_pdf_generation');
 
-  // ── 10. Send emails inline (diagnostic: bypass queue) ───────────
+  // ── 10. Send emails inline ───────────────────────────────────────
   stage(req, 'before_email_send');
   log.addTrace(req, 'email.admin.start', 'ok');
   log.addTrace(req, 'email.client.start', 'ok');
@@ -373,7 +372,6 @@ module.exports = async (req, res) => {
     log.error(req, 'Unexpected error in sendBrief', { error: err.message });
     return json(500, { 'Content-Type': 'application/json', ...deployHeaders(req), ...reqHeaders(req) }, resPayload(req, { success: false, error: 'INTERNAL_ERROR' }))(res);
   } finally {
-    emailQueue.waitUntilEmpty().catch(() => {});
     const drainStart = Date.now();
     try {
       await Promise.race([

@@ -1,5 +1,4 @@
 const nodemailer = require('nodemailer');
-const emailQueue = require('../lib/queue');
 const { parseBody, deployInfo } = require('../lib/safeBodyParser');
 const {
   RATE_LIMIT_REASON,
@@ -151,7 +150,7 @@ module.exports = async (req, res) => {
     registry.registerLifecycle(log.requestId(req), { endpoint: 'sendContact', status: 'rejected', reason: 'validation', validationStage: 'methodCheck', validationField: 'method', validationReason: 'not_allowed', receivedAt: req._lifecycle.startTime });
     tracer.trace(log.requestId(req), 'sendContact', 'methodCheck', 'sendContact:methodCheck');
     await persistWithTimeout(req);
-    return json(405, { 'Content-Type': 'application/json', ...deployHeaders(req), ...reqHeaders(req) }, resPayload(req, { success: false, status: 'rejected', error: 'Method Not Allowed', queuePosition: 0, queueDepth: 0 }))(res);
+    return json(405, { 'Content-Type': 'application/json', ...deployHeaders(req), ...reqHeaders(req) }, resPayload(req, { success: false, status: 'rejected', error: 'Method Not Allowed' }))(res);
   }
 
   const bt = log.bodyType(req);
@@ -164,7 +163,7 @@ module.exports = async (req, res) => {
     registry.registerLifecycle(log.requestId(req), { endpoint: 'sendContact', status: 'rejected', reason: 'bad_request', validationStage: 'parseBody', validationField: 'body', validationReason: 'parse_failed', receivedAt: req._lifecycle.startTime });
     tracer.trace(log.requestId(req), 'sendContact', 'parseBody', 'sendContact:parseBody');
     await persistWithTimeout(req);
-    return json(400, { 'Content-Type': 'application/json', ...deployHeaders(req), ...reqHeaders(req) }, resPayload(req, { success: false, status: 'rejected', error: 'INVALID_BODY', queuePosition: 0, queueDepth: 0 }))(res);
+    return json(400, { 'Content-Type': 'application/json', ...deployHeaders(req), ...reqHeaders(req) }, resPayload(req, { success: false, status: 'rejected', error: 'INVALID_BODY' }))(res);
   }
   log.event('body_parse.ok', req, { bodyType: bt, parseMethod: req._bodyParseMethod || 'unknown' });
   log.addTrace(req, 'body.parse', 'ok');
@@ -179,7 +178,7 @@ module.exports = async (req, res) => {
     registry.registerLifecycle(log.requestId(req), { endpoint: 'sendContact', status: 'rejected', reason: 'validation', validationStage: 'honeypotCheck', validationField: hp.field, validationReason: 'bot_detected', receivedAt: req._lifecycle.startTime });
     tracer.trace(log.requestId(req), 'sendContact', 'honeypotCheck', 'sendContact:honeypotCheck');
     await persistWithTimeout(req);
-    return json(200, { 'Content-Type': 'application/json', ...deployHeaders(req), ...reqHeaders(req), ...debugHeaders({ allowed: false }, RATE_LIMIT_REASON.BOT) }, resPayload(req, { success: true, status: 'processed', queuePosition: 0, queueDepth: 0 }))(res);
+    return json(200, { 'Content-Type': 'application/json', ...deployHeaders(req), ...reqHeaders(req), ...debugHeaders({ allowed: false }, RATE_LIMIT_REASON.BOT) }, resPayload(req, { success: true, status: 'processed' }))(res);
   }
 
   const tc = timingCheck(parsed);
@@ -191,7 +190,7 @@ module.exports = async (req, res) => {
     registry.registerLifecycle(log.requestId(req), { endpoint: 'sendContact', status: 'rejected', reason: 'validation', validationStage: 'timingCheck', validationField: 'submittedAt', validationReason: tc.reason, receivedAt: req._lifecycle.startTime });
     tracer.trace(log.requestId(req), 'sendContact', 'timingCheck', 'sendContact:timingCheck');
     await persistWithTimeout(req);
-    return json(400, { 'Content-Type': 'application/json', ...deployHeaders(req), ...reqHeaders(req) }, resPayload(req, { success: false, status: 'rejected', error: 'INVALID_REQUEST', queuePosition: 0, queueDepth: 0 }))(res);
+    return json(400, { 'Content-Type': 'application/json', ...deployHeaders(req), ...reqHeaders(req) }, resPayload(req, { success: false, status: 'rejected', error: 'INVALID_REQUEST' }))(res);
   }
   log.event('timing_check.ok', req, { elapsedMs: tc.elapsedMs });
 
@@ -206,7 +205,7 @@ module.exports = async (req, res) => {
     registry.registerLifecycle(log.requestId(req), { endpoint: 'sendContact', status: 'rejected', reason: 'validation', validationStage: 'sanitizeAndValidateName', validationField: 'name', validationReason: nameCheck.reason, receivedAt: req._lifecycle.startTime });
     tracer.trace(log.requestId(req), 'sendContact', 'sanitizeAndValidateName', 'sendContact:sanitizeAndValidateName');
     await persistWithTimeout(req);
-    return json(400, { 'Content-Type': 'application/json', ...deployHeaders(req), ...reqHeaders(req) }, resPayload(req, { success: false, status: 'rejected', error: 'INVALID_REQUEST', queuePosition: 0, queueDepth: 0 }))(res);
+    return json(400, { 'Content-Type': 'application/json', ...deployHeaders(req), ...reqHeaders(req) }, resPayload(req, { success: false, status: 'rejected', error: 'INVALID_REQUEST' }))(res);
   }
   const safeName = nameCheck.value;
 
@@ -218,7 +217,7 @@ module.exports = async (req, res) => {
     registry.registerLifecycle(log.requestId(req), { endpoint: 'sendContact', status: 'rejected', reason: 'validation', validationStage: 'validateEmail', validationField: 'email', validationReason: 'invalid_format', receivedAt: req._lifecycle.startTime });
     tracer.trace(log.requestId(req), 'sendContact', 'validateEmail', 'sendContact:validateEmail');
     await persistWithTimeout(req);
-    return json(400, { 'Content-Type': 'application/json', ...deployHeaders(req), ...reqHeaders(req) }, resPayload(req, { success: false, status: 'rejected', error: 'INVALID_REQUEST', queuePosition: 0, queueDepth: 0 }))(res);
+    return json(400, { 'Content-Type': 'application/json', ...deployHeaders(req), ...reqHeaders(req) }, resPayload(req, { success: false, status: 'rejected', error: 'INVALID_REQUEST' }))(res);
   }
 
   if (!message || typeof message !== 'string' || message.trim().length === 0) {
@@ -229,7 +228,7 @@ module.exports = async (req, res) => {
     registry.registerLifecycle(log.requestId(req), { endpoint: 'sendContact', status: 'rejected', reason: 'validation', validationStage: 'validateMessage', validationField: 'message', validationReason: 'empty', receivedAt: req._lifecycle.startTime });
     tracer.trace(log.requestId(req), 'sendContact', 'validateMessage:empty', 'sendContact:validateMessage:empty');
     await persistWithTimeout(req);
-    return json(400, { 'Content-Type': 'application/json', ...deployHeaders(req), ...reqHeaders(req) }, resPayload(req, { success: false, status: 'rejected', error: 'INVALID_REQUEST', queuePosition: 0, queueDepth: 0 }))(res);
+    return json(400, { 'Content-Type': 'application/json', ...deployHeaders(req), ...reqHeaders(req) }, resPayload(req, { success: false, status: 'rejected', error: 'INVALID_REQUEST' }))(res);
   }
   if (message.length > 100000) {
     log.debugLog(req, 'Message too long', { ip, length: message.length });
@@ -239,7 +238,7 @@ module.exports = async (req, res) => {
     registry.registerLifecycle(log.requestId(req), { endpoint: 'sendContact', status: 'rejected', reason: 'validation', validationStage: 'validateMessage', validationField: 'message', validationReason: 'too_long', receivedAt: req._lifecycle.startTime });
     tracer.trace(log.requestId(req), 'sendContact', 'validateMessage:tooLong', 'sendContact:validateMessage:tooLong');
     await persistWithTimeout(req);
-    return json(400, { 'Content-Type': 'application/json', ...deployHeaders(req), ...reqHeaders(req) }, resPayload(req, { success: false, status: 'rejected', error: 'INVALID_REQUEST', queuePosition: 0, queueDepth: 0 }))(res);
+    return json(400, { 'Content-Type': 'application/json', ...deployHeaders(req), ...reqHeaders(req) }, resPayload(req, { success: false, status: 'rejected', error: 'INVALID_REQUEST' }))(res);
   }
   log.addTrace(req, 'validation', 'ok');
   log.structured(req, { stage: 'validation', status: 'ok' });
@@ -256,7 +255,7 @@ module.exports = async (req, res) => {
     tracer.trace(log.requestId(req), 'sendContact', 'rateLimit:ip', 'sendContact:rateLimit:ip');
     await persistWithTimeout(req);
     const nowMs = Date.now();
-    return json(429, { ...deployHeaders(req), ...reqHeaders(req), ...rateLimitHeaders(edge), ...debugHeaders(edge, RATE_LIMIT_REASON.IP_BURST) }, resPayload(req, { success: false, status: 'rate_limited', error: 'RATE_LIMITED', retryAfterMs: Math.max(1, edge.retryAfter) * 1000, retryAfterSeconds: Math.max(1, edge.retryAfter), resetTime: new Date(nowMs + Math.max(1, edge.retryAfter) * 1000).toISOString(), limitType: 'ip', currentUsage: edge.currentUsage, limitThreshold: edge.limit, queuePosition: 0, queueDepth: 0 }))(res);
+    return json(429, { ...deployHeaders(req), ...reqHeaders(req), ...rateLimitHeaders(edge), ...debugHeaders(edge, RATE_LIMIT_REASON.IP_BURST) }, resPayload(req, { success: false, status: 'rate_limited', error: 'RATE_LIMITED', retryAfterMs: Math.max(1, edge.retryAfter) * 1000, retryAfterSeconds: Math.max(1, edge.retryAfter), resetTime: new Date(nowMs + Math.max(1, edge.retryAfter) * 1000).toISOString(), limitType: 'ip', currentUsage: edge.currentUsage, limitThreshold: edge.limit }))(res);
   }
 
   const dedupCheck = emailDedup(email);
@@ -269,7 +268,7 @@ module.exports = async (req, res) => {
     tracer.trace(log.requestId(req), 'sendContact', 'rateLimit:email', 'sendContact:rateLimit:email');
     await persistWithTimeout(req);
     const nowMs = Date.now();
-    return json(429, { ...deployHeaders(req), ...reqHeaders(req), ...rateLimitHeaders(dedupCheck), ...debugHeaders(dedupCheck, RATE_LIMIT_REASON.EMAIL_DUP) }, resPayload(req, { success: false, status: 'rate_limited', error: 'RATE_LIMITED', retryAfterMs: Math.max(1, dedupCheck.retryAfter) * 1000, retryAfterSeconds: Math.max(1, dedupCheck.retryAfter), resetTime: new Date(nowMs + Math.max(1, dedupCheck.retryAfter) * 1000).toISOString(), limitType: 'email', currentUsage: dedupCheck.currentUsage, limitThreshold: dedupCheck.limit, queuePosition: 0, queueDepth: 0 }))(res);
+    return json(429, { ...deployHeaders(req), ...reqHeaders(req), ...rateLimitHeaders(dedupCheck), ...debugHeaders(dedupCheck, RATE_LIMIT_REASON.EMAIL_DUP) }, resPayload(req, { success: false, status: 'rate_limited', error: 'RATE_LIMITED', retryAfterMs: Math.max(1, dedupCheck.retryAfter) * 1000, retryAfterSeconds: Math.max(1, dedupCheck.retryAfter), resetTime: new Date(nowMs + Math.max(1, dedupCheck.retryAfter) * 1000).toISOString(), limitType: 'email', currentUsage: dedupCheck.currentUsage, limitThreshold: dedupCheck.limit }))(res);
   }
 
   log.event('rate_limit.ok', req, { edgeRemaining: edge.remaining });
@@ -288,7 +287,7 @@ module.exports = async (req, res) => {
     registry.registerLifecycle(log.requestId(req), { endpoint: 'sendContact', status: 'rejected', reason: 'bad_request', validationStage: 'configCheck', validationField: 'smtp', validationReason: 'missing_credentials', receivedAt: req._lifecycle.startTime });
     tracer.trace(log.requestId(req), 'sendContact', 'configCheck', 'sendContact:configCheck');
     await persistWithTimeout(req);
-    return json(500, { 'Content-Type': 'application/json', ...deployHeaders(req), ...reqHeaders(req) }, resPayload(req, { success: false, status: 'rejected', error: 'Email service misconfigured', queuePosition: 0, queueDepth: 0 }))(res);
+    return json(500, { 'Content-Type': 'application/json', ...deployHeaders(req), ...reqHeaders(req) }, resPayload(req, { success: false, status: 'rejected', error: 'Email service misconfigured' }))(res);
   }
 
   const transporter = nodemailer.createTransport({
@@ -317,7 +316,7 @@ module.exports = async (req, res) => {
     registry.registerLifecycle(log.requestId(req), { endpoint: 'sendContact', status: 'rejected', reason: 'smtp_failure', validationStage: 'transporterVerify', validationField: 'smtp', validationReason: verifyErr.message, receivedAt: req._lifecycle.startTime });
     tracer.trace(log.requestId(req), 'sendContact', 'transporterVerify', 'sendContact:transporterVerify');
     await persistWithTimeout(req);
-    return json(500, { 'Content-Type': 'application/json', ...deployHeaders(req), ...reqHeaders(req) }, resPayload(req, { success: false, status: 'rejected', error: 'Email service unavailable', queuePosition: 0, queueDepth: 0 }))(res);
+    return json(500, { 'Content-Type': 'application/json', ...deployHeaders(req), ...reqHeaders(req) }, resPayload(req, { success: false, status: 'rejected', error: 'Email service unavailable' }))(res);
   }
 
   const isES = lang === 'es';
@@ -328,7 +327,7 @@ module.exports = async (req, res) => {
 
   const templateData = { name: safeName, email, company, project, message, dateStr, lang: isES ? 'es' : 'en' };
 
-  // ── 10. Send emails inline (diagnostic: bypass queue) ───────────
+  // ── 10. Send emails inline ───────────────────────────────────────
   stage(req, 'before_email_send');
   log.addTrace(req, 'email.admin.start', 'ok');
   log.addTrace(req, 'email.client.start', 'ok');
@@ -390,7 +389,6 @@ module.exports = async (req, res) => {
     log.error(req, 'Unexpected error in sendContact', { error: err.message });
     return json(500, { 'Content-Type': 'application/json', ...deployHeaders(req), ...reqHeaders(req) }, resPayload(req, { success: false, status: 'error', error: 'INTERNAL_ERROR' }))(res);
   } finally {
-    emailQueue.waitUntilEmpty().catch(() => {});
     const drainStart = Date.now();
     try {
       await Promise.race([
