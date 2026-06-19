@@ -53,6 +53,7 @@ Lead generation and client onboarding through contact forms, AI-powered brief co
 │   ├── design-system/         # Design System Engine (CSS tokens)
 │   ├── preview/               # Preview Engine (simulation)
 │   ├── saas/                  # SaaS Core (Phase 7.1) — RBAC, auth, users, orgs, workspaces, projects, sessions, API keys, usage, audit, settings, storage
+│   ├── context/                # Context Builder (Phase 7.3.4) — 12 modules: builder, normalizer, merger, inferer, defaults, entities, assets, history, serializer, validator, events, errors
 │   ├── conversation/           # AI Conversation Engine (Phase 7.3.1–7.3.3) — manager, memory, context, summarizer, events, serializer, validator + questions/ sub-module (generator, prioritizer, templates, mapper, scorer, validator)
 │   └── runtime/               # SaaS pipeline orchestrator
 ├── ui/                        # Dashboard UI (Phase 7.2)
@@ -331,6 +332,7 @@ These modules form the Agent Pack v1 pipeline — converting client briefs into 
 | **SaaS Core** | `lib/saas/` | Implemented | 12 modules: RBAC, auth (Email/GitHub/Google), users, orgs, workspaces, projects, sessions, API keys, usage tracking, audit log, settings, storage abstraction |
 | **Dashboard UI** | `ui/dashboard/` | Implemented | 10 server-rendered pages (+ 1 conversation page), 15 reusable components, 1 layout, served via `api/dashboard-saas.js` |
 | **Conversation Engine** | `lib/conversation/` | Implemented | 9 base modules + 6 question sub-modules: intent→question mapping, 4-dimension scoring, prioritization (blocking/high/optional), missing-field detection, events |
+| **Context Builder** | `lib/context/` | Implemented | 12 modules: full pipeline — load conversation, normalize, infer, merge defaults, validate, serialize, emit events, convert to Plan IR |
 | **Runtime** | `lib/runtime/` | Implemented | SaaS pipeline orchestrator with Neon persistence |
 | **Form Persistence** | `lib/db/formResponses.js` | Implemented | Brief Maestro responses to Neon |
 | **Orchestrator** | `lib/orchestrator/` | Implemented | Brief → Plan IR (intent, tone, features, structure) |
@@ -386,7 +388,7 @@ Content Generator (Content Pack — page copy, SEO, CTAs, tone-aware)
     ↓
     Question Generator (Phase 7.3.3 — missing-field detection, intelligent questioning, prioritization, scoring)
     ↓
-    Context Builder (Phase 7.3.4 — planned: conversation → full Blueprint/Plan IR/Design Strategy/Content Strategy)
+    Context Builder (Phase 7.3.4 — conversation → canonical Project Context → Plan IR → feeds Planner)
 ```
 
 ---
@@ -975,6 +977,7 @@ All dashboards read from `GET /api/telemetry`. The shared `dashboard-api.js` mod
 | v2.2.0 | 2026-06-18 | Phase 7.2 — Dashboard UI (11 server-rendered pages, 15 reusable components, 1 layout, served via api/dashboard-saas.js) |
 | v2.3.0 | 2026-06-18 | Phase 7.3.1 — Conversation Engine foundation (9 modules: manager, session, store, memory, context, summarizer, events, serializer, validator) |
 | v2.4.0 | 2026-06-18 | Phase 7.3.3 — Question Generator Engine (6 sub-modules: generator, prioritizer, templates, mapper, scorer, validator; 8 intent-specific mappings; priority system; event integration) |
+| v2.5.0 | 2026-06-19 | Phase 7.3.4 — Context Builder Engine (12 modules: builder, normalizer, merger, inference, defaults, entities, assets, history, serializer, validator, events + ContextValidationError; full conversation→Plan IR pipeline) |
 
 ---
 
@@ -1039,6 +1042,7 @@ The SaaS Core is implemented in `lib/saas/` — 12 modules providing the user-fa
 | **`docs/dashboard-ui.md`** | Dashboard UI architecture: 11 pages, 15 components, navigation map, responsive strategy, accessibility | ✅ Active — Phase 7.2 |
 | **`docs/conversation-engine.md`** | Conversation Engine architecture: 9 base + 6 question sub-modules, lifecycle, storage, event flow, validation, examples | ✅ Active — Phase 7.3.1–7.3.3 |
 | **`docs/question-generator.md`** | Question Generator architecture: scoring system, mapping logic, priority rules, 8 intent mappings, integration, test cases | ✅ Active — Phase 7.3.3 |
+| **`docs/context-builder.md`** | Context Builder architecture: pipeline, normalization rules, inference rules, defaults, page derivation, Plan IR conversion | ✅ Active — Phase 7.3.4 |
 | `AGENTS.md` | Former agent operations manual — content distributed across all 4 canonical files | ❌ Deprecated (deleted) |
 | `CHANGELOG.md` | Former detailed version history — compressed to Version History table in this file | ❌ Deprecated (deleted) |
 | `ARCHITECTURE-SAAS.md` | Former SaaS design document — compressed to SaaS Architecture section in this file | ❌ Deprecated (deleted) |
