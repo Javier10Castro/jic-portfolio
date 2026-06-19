@@ -97,6 +97,33 @@ Lead generation and client onboarding through contact forms, AI-powered brief co
   │   ├── taskQueue.js         # 6 queue types (priority, FIFO, LIFO, scheduled, delayed, deadLetter)
   │   ├── loadBalancer.js      # 6 dispatch strategies
   │   └── distributedScheduler.js # Schedule tasks across cluster
+  ├── events/                  # Global Event Streaming Engine (Phase 8.2.0)
+  │   ├── index.js             # Entry point — 20 exported functions + all classes + constants
+  │   ├── eventBus.js          # Central pub/sub with sync + async emit + wildcards
+  │   ├── eventStream.js       # Real-time streaming (buffered, SSE/WebSocket-ready)
+  │   ├── eventStore.js        # Append-only log with type/correlation/source indices
+  │   ├── eventReplayEngine.js # Filter, correlation, time-travel, snapshot replay
+  │   ├── eventSerializer.js   # Normalize, serialize, validate, clone
+  │   ├── eventSchemaRegistry.js # Per-event-type schema validation
+  │   ├── eventRouter.js       # Pattern-matching subsystem routes
+  │   ├── eventSubscriptions.js # Per-subscriber management
+  │   ├── eventFilters.js      # Register, chain, builtin filters
+  │   ├── eventCorrelator.js   # Cross-system trace tracking with spans
+  │   ├── eventBackpressure.js # Drop/buffer/throttle/block strategies
+  │   ├── eventMetrics.js      # Counters, gauges, histograms, throughput
+  │   ├── eventDeadLetterQueue.js # Failed event storage + retry
+  │   ├── eventVersioning.js   # Schema migration per event type
+  │   ├── eventHooks.js        # Integration hooks to existing engines
+  │   └── intelligence/        # Event Intelligence Layer (Phase 8.3.0)
+  │       ├── index.js         # Exports + attachToEventBus
+  │       ├── intelligenceEngine.js # Central orchestrator
+  │       ├── patternDetector.js    # Real-time pattern detection
+  │       ├── anomalyDetector.js    # Z-score anomaly detection
+  │       ├── correlationEngine.js  # Graph-based correlation
+  │       ├── insightGenerator.js   # Rule-based insight generation
+  │       ├── eventScorer.js        # Importance/urgency/impact scoring
+  │       ├── intelligenceStore.js  # In-memory + JSON persistence
+  │       └── intelligenceAPI.js    # 5 REST API bindings
   └── runtime/                # SaaS pipeline orchestrator
 ├── ui/                        # Dashboard UI (Phase 7.2)
 │   └── dashboard/             # 15 components, 10 pages, 1 layout, entry point + CSS
@@ -385,6 +412,8 @@ These modules form the Agent Pack v1 pipeline — converting client briefs into 
 | **Workflow Engine** | `lib/workflows/` | Implemented | Phase 7.9.0 — Durable Workflow Execution Engine: 10-state machine, DAG execution, checkpoints, scheduler, retry (exponential/linear/fixed), compensation, versioning, metrics, 11 event types, priority queue, delayed/cron/periodic scheduling, 11 API endpoints, dashboard page |
 | **Telemetry Platform** | `lib/telemetry/` | Implemented | Phase 8.0.0 — Observability & Telemetry Platform: metrics (counter/gauge/histogram), distributed tracing with nested spans, structured logging (5 levels), health monitoring (11 components), diagnostics (snapshots, error summaries), analytics (daily/weekly/monthly), alert manager (configurable rules, 4 severity levels), event bus (8 telemetry event types), 8 API endpoints, dashboard observability page |
 | **Distributed Cluster** | `lib/cluster/` | Implemented | Phase 8.1.0 — Distributed Execution Cluster: 14 modules, worker lifecycle management, 6 queue types (priority/FIFO/LIFO/scheduled/delayed/deadLetter), 6 load balancing strategies, leader election with automatic failover, heartbeat monitoring (offline/stale detection), task dispatch with retry + dead letter, distributed scheduler, cluster-wide metrics, 11 event types, 8 API endpoints, dashboard cluster page, 190 tests |
+| **Event Streaming** | `lib/events/` | Implemented | Phase 8.2.0 — Global Event Streaming Engine: 15 modules, event bus with sync+async emit + wildcards, event stream with buffered SSE/WebSocket-ready output, append-only event store with type/correlation/source/time-range queries, event replay engine with filter/correlation/time-travel + snapshots, event serializer with normalize/serialize/validate/clone, event schema registry, event router with pattern-matching subsystem routes, event subscriptions with per-subscriber management, event filters with register/chain/builtins, event correlator with cross-system trace tracking + spans, event backpressure with drop/buffer/throttle/block strategies, event metrics with counters/gauges/histograms/throughput, event dead letter queue with push/retry/stats, event versioning with schema migration per event type; integration hooks wiring to Workflow Engine, Telemetry, Cluster, AI Router, Agent events without modifying any existing engine; 129 tests |
+| **Event Intelligence** | `lib/events/intelligence/` | Implemented | Phase 8.3.0 — Event Intelligence Layer: 8 modules, central intelligence engine consuming all events via EventBus wildcard, pattern detector (6 patterns: repeated_failures, retry_loops, cluster_imbalance, ai_fallback_chains, latency_bursts, unexpected_transitions), anomaly detector with rolling-window z-score approximation (error_rate_spike, volume_spike, latency_anomaly, invalid_transitions, orphaned_correlations), correlation engine with graph-based nodes+edges (temporal/causal/dependency relationships), insight generator with 7 rule-based detection→recommendation rules (retry_backoff, cluster_scale, provider_degradation, error_rate, latency, state_transition, system_stable), event scorer (importance/urgency/systemImpact 0–100), intelligence store with in-memory + JSON persistence, intelligence API (5 endpoints: insights, patterns, anomalies, correlation-graph, health-intelligence), attachToEventBus hook (filters intelligence.* events to prevent loops), 87 tests, verified <5ms per event average |
 | **Orchestrator** | `lib/orchestrator/` | Implemented | Brief → Plan IR (intent, tone, features, structure) |
 | **Planner** | `lib/planner/` | Implemented | Plan IR → Project Blueprint (pages, nav, sections, components) |
 | **Content Generator** | `lib/content-generator/` | Implemented | Blueprint + Design Strategy → Content Pack (copy, SEO, CTAs) |
@@ -466,6 +495,10 @@ Content Generator (Content Pack — page copy, SEO, CTAs, tone-aware)
     Telemetry Platform (Phase 8.0.0 — metrics, tracing, logging, health monitoring, diagnostics, analytics, alerts, event bus)
     ↓
     Distributed Cluster (Phase 8.1.0 — workers, queues, leader election, failover, load balancing)
+    ↓
+    Event Streaming Engine (Phase 8.2.0 — event bus, store, replay, routing, correlation, backpressure, subscriptions, filters, metrics, versioning, schema registry, dead letter queue)
+    ↓
+    Event Intelligence Layer (Phase 8.3.0 — pattern detection, anomaly detection, correlation graph, insight generation, event scoring, intelligence API)
 ```
 
 ---
@@ -1062,6 +1095,8 @@ All dashboards read from `GET /api/telemetry`. The shared `dashboard-api.js` mod
 | v3.0.0 | 2026-06-19 | Phase 7.9.0 — Workflow Execution Engine (16 modules: state machine with 10 states/transitions, DAG execution engine, JSON workflow definitions with 8 typed steps, auto-checkpoint system, retry engine with exponential/linear/fixed backoff, compensation engine, versioning with migration/diff, execution metrics, visual execution graph, scheduler with priority queue/delayed/cron/periodic, 11 event types, 11 API endpoints, dashboard workflows page; 136 tests; integrates with Multi-Agent Orchestrator) |
 | v3.1.0 | 2026-06-19 | Phase 8.0.0 — Observability & Telemetry Platform (11 modules: telemetry manager, metrics collector with counters/gauges/histograms, distributed tracing engine with nested spans, structured JSON logger with 5 levels, health monitor with 11 components, diagnostics with system snapshots/error summaries/dependency graph, analytics engine with daily/weekly/monthly reports, alert manager with configurable rules and 4 severity levels, telemetry event bus with 8 event types, telemetry storage; 8 API endpoints; dashboard observability page; 108 tests; full API test suite: 437 tests passing) |
 | v3.2.0 | 2026-06-19 | Phase 8.1.0 — Distributed Execution Cluster (14 modules: cluster manager, storage, events (11 types), metrics (counters/gauges/histograms), worker manager, registry, node model, heartbeat monitor (offline/stale detection), leader election (automatic failover), task dispatcher (retry + dead letter), task queue (6 types: priority/FIFO/LIFO/scheduled/delayed/deadLetter), load balancer (6 strategies: round_robin/least_busy/weighted/latency/cost/sticky), distributed scheduler; local simulation of 100 workers and 1000 concurrent tasks; 8 API endpoints; dashboard cluster center page; 190 tests; full test suite: 627 tests passing) |
+| v3.3.0 | 2026-06-19 | Phase 8.2.0 — Global Event Streaming Engine (15 modules: event bus, stream, store, replay engine, serializer, schema registry, router, subscriptions, filters, correlator, backpressure, metrics, dead letter queue, versioning; integration hooks to Workflow/Telemetry/Cluster/AI/Agent; 129 tests; full test suite: 756 tests passing) |
+| v3.3.0 | 2026-06-19 | Phase 8.3.0 — Event Intelligence Layer (8 modules: intelligence engine, pattern detector, anomaly detector with z-score, correlation engine with graph-based model, insight generator with 7 rules, event scorer, intelligence store, intelligence API with 5 endpoints); 87 tests; <5ms per event; full test suite: 843 tests passing |
 ---
 
 ## Historical Architecture Decisions
@@ -1133,6 +1168,8 @@ The SaaS Core is implemented in `lib/saas/` — 12 modules providing the user-fa
 | **`docs/workflow-engine.md`** | Workflow Execution Engine: architecture, state machine, step types, checkpoint system, retry policies, compensation, scheduling, API endpoints, example definitions, extension guide | ✅ Active — Phase 7.9.0 |
 | **`docs/observability.md`** | Observability Platform: architecture, metrics types, distributed tracing, structured logging, health monitoring, alerts, analytics, diagnostics, API endpoints, instrumentation guide | ✅ Active — Phase 8.0.0 |
 | **`docs/distributed-cluster.md`** | Distributed Execution Cluster: architecture, cluster topology, worker lifecycle, queues, scheduling, leader election, failover, metrics, API, scaling and deployment guides | ✅ Active — Phase 8.1.0 |
+| **`docs/event-streaming.md`** | Global Event Streaming Engine: architecture, event lifecycle, replay system, cross-system correlation, performance strategy, extension guide | ✅ Active — Phase 8.2.0 |
+| **`docs/event-intelligence.md`** | Event Intelligence Layer: architecture, detection models, correlation graph, scoring system, API endpoints, real-world use cases, extension guide | ✅ Active — Phase 8.3.0 |
 | `AGENTS.md` | Former agent operations manual — content distributed across all 4 canonical files | ❌ Deprecated (deleted) |
 | `CHANGELOG.md` | Former detailed version history — compressed to Version History table in this file | ❌ Deprecated (deleted) |
 | `ARCHITECTURE-SAAS.md` | Former SaaS design document — compressed to SaaS Architecture section in this file | ❌ Deprecated (deleted) |
