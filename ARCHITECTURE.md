@@ -55,7 +55,49 @@ Lead generation and client onboarding through contact forms, AI-powered brief co
 │   ├── saas/                  # SaaS Core (Phase 7.1) — RBAC, auth, users, orgs, workspaces, projects, sessions, API keys, usage, audit, settings, storage
 │   ├── context/                # Context Builder (Phase 7.3.4) — 12 modules: builder, normalizer, merger, inferer, defaults, entities, assets, history, serializer, validator, events, errors
 │   ├── conversation/           # AI Conversation Engine (Phase 7.3.1–7.3.3) — manager, memory, context, summarizer, events, serializer, validator + questions/ sub-module (generator, prioritizer, templates, mapper, scorer, validator)
-│   └── runtime/               # SaaS pipeline orchestrator
+│   ├── workflows/              # Workflow Execution Engine (Phase 7.9.0)
+  │   ├── index.js            # Entry point
+  │   ├── workflowManager.js  # CRUD, lifecycle, orchestration
+  │   ├── executionEngine.js  # DAG execution, conditional, parallel
+  │   ├── workflowDefinition.js # JSON schema validation
+  │   ├── workflowStateMachine.js # 10-state machine
+  │   ├── workflowEvents.js   # 11 event types
+  │   ├── workflowStorage.js  # Persistence layer
+  │   ├── checkpointManager.js # Auto-save/load/resume
+  │   ├── retryEngine.js      # Backoff strategies
+  │   ├── compensationEngine.js # Rollback logic
+  │   ├── workflowVersioning.js # Version tracking
+  │   ├── workflowMetrics.js  # Execution metrics
+  │   ├── executionGraph.js   # DAG graph
+  │   └── scheduler/          # Queue, cron, delayed
+  │   ├── telemetry/              # Observability & Telemetry Platform (Phase 8.0.0)
+  │   │   ├── index.js            # Entry point — 8 exported functions + all classes
+  │   │   ├── telemetryManager.js # Central manager, auto-collect, enable/disable
+  │   │   ├── telemetryStorage.js # In-memory persistence for all telemetry data
+  │   │   ├── metricsCollector.js # Counters, gauges, histograms, tag support
+  │   │   ├── tracingEngine.js    # Distributed tracing, spans, parent-child trees
+  │   │   ├── logger.js           # Structured JSON logging, 5 levels
+  │   │   ├── healthMonitor.js    # Component health (healthy/degraded/offline/unknown)
+  │   │   ├── diagnostics.js      # System snapshots, error summaries, dependency graph
+  │   │   ├── analytics.js        # Daily/weekly/monthly analytics reports
+  │   │   ├── alertManager.js     # Configurable rules, severity, acknowledge/resolve
+  │   │   └── eventBus.js         # Event pub/sub with wildcard support
+  ├── cluster/                 # Distributed Execution Cluster (Phase 8.1.0)
+  │   ├── index.js             # Entry point — 10 exported functions + all classes
+  │   ├── clusterManager.js    # Central coordinator
+  │   ├── clusterStorage.js    # In-memory persistence
+  │   ├── clusterEvents.js     # 11 event types + pub/sub
+  │   ├── clusterMetrics.js    # Counters, gauges, histograms
+  │   ├── workerManager.js     # Worker lifecycle management
+  │   ├── workerRegistry.js    # Worker registration and querying
+  │   ├── workerNode.js        # Worker representation + status management
+  │   ├── heartbeatMonitor.js  # Offline/stale detection
+  │   ├── leaderElection.js    # Active coordinator with failover
+  │   ├── taskDispatcher.js    # Task dispatch + retry + dead letter
+  │   ├── taskQueue.js         # 6 queue types (priority, FIFO, LIFO, scheduled, delayed, deadLetter)
+  │   ├── loadBalancer.js      # 6 dispatch strategies
+  │   └── distributedScheduler.js # Schedule tasks across cluster
+  └── runtime/                # SaaS pipeline orchestrator
 ├── ui/                        # Dashboard UI (Phase 7.2)
 │   └── dashboard/             # 15 components, 10 pages, 1 layout, entry point + CSS
 ├── public/                    # Static assets
@@ -82,7 +124,9 @@ Lead generation and client onboarding through contact forms, AI-powered brief co
 │   ├── deployment-engine.md   # Deployment Engine architecture (Phase 6)
 │   ├── saas-core.md           # SaaS Core architecture (Phase 7.1)
 │   ├── dashboard-ui.md        # Dashboard UI architecture (Phase 7.2)
-│   └── conversation-engine.md # Conversation Engine architecture (Phase 7.3.1)
+│   ├── conversation-engine.md # Conversation Engine architecture (Phase 7.3.1)
+│   ├── observability.md       # Observability Platform architecture (Phase 8.0.0)
+│   └── distributed-cluster.md # Distributed Execution Cluster architecture (Phase 8.1.0)
 ├── scripts/                   # CLI tools and test scripts
 ├── package.json
 ├── ARCHITECTURE.md            # This file — single source of truth
@@ -335,6 +379,12 @@ These modules form the Agent Pack v1 pipeline — converting client briefs into 
 | **Context Builder** | `lib/context/` | Implemented | 12 modules: full pipeline — load conversation, normalize, infer, merge defaults, validate, serialize, emit events, convert to Plan IR |
 | **Runtime** | `lib/runtime/` | Implemented | SaaS pipeline orchestrator with Neon persistence |
 | **Form Persistence** | `lib/db/formResponses.js` | Implemented | Brief Maestro responses to Neon |
+| **AI Provider Layer** | `lib/ai/` | Implemented | Phase 7.7.0 — Multi-provider AI routing: 4 providers (OpenAI, Anthropic, Gemini, Ollama), 5 routing strategies, fallback chains, load balancing, cost/latency/quality optimization, streaming, token estimation, event integration |
+| **Platform API** | `lib/api/` | Implemented | Phase 7.5.0 — RESTful public API: middleware stack, 12 controllers, 12 route files, OpenAPI-ready, Express app with Vercel wrapper |
+| **Multi-Agent System** | `lib/agents/` | Implemented | Phase 7.8.0 — Multi-Agent Orchestration System: 10 specialized agents, DAG-based execution graph, shared/working/agent memory, message bus, consensus engine, conflict resolver, full workflow orchestration |
+| **Workflow Engine** | `lib/workflows/` | Implemented | Phase 7.9.0 — Durable Workflow Execution Engine: 10-state machine, DAG execution, checkpoints, scheduler, retry (exponential/linear/fixed), compensation, versioning, metrics, 11 event types, priority queue, delayed/cron/periodic scheduling, 11 API endpoints, dashboard page |
+| **Telemetry Platform** | `lib/telemetry/` | Implemented | Phase 8.0.0 — Observability & Telemetry Platform: metrics (counter/gauge/histogram), distributed tracing with nested spans, structured logging (5 levels), health monitoring (11 components), diagnostics (snapshots, error summaries), analytics (daily/weekly/monthly), alert manager (configurable rules, 4 severity levels), event bus (8 telemetry event types), 8 API endpoints, dashboard observability page |
+| **Distributed Cluster** | `lib/cluster/` | Implemented | Phase 8.1.0 — Distributed Execution Cluster: 14 modules, worker lifecycle management, 6 queue types (priority/FIFO/LIFO/scheduled/delayed/deadLetter), 6 load balancing strategies, leader election with automatic failover, heartbeat monitoring (offline/stale detection), task dispatch with retry + dead letter, distributed scheduler, cluster-wide metrics, 11 event types, 8 API endpoints, dashboard cluster page, 190 tests |
 | **Orchestrator** | `lib/orchestrator/` | Implemented | Brief → Plan IR (intent, tone, features, structure) |
 | **Planner** | `lib/planner/` | Implemented | Plan IR → Project Blueprint (pages, nav, sections, components) |
 | **Content Generator** | `lib/content-generator/` | Implemented | Blueprint + Design Strategy → Content Pack (copy, SEO, CTAs) |
@@ -361,10 +411,25 @@ Scaffold Engine (physical files on disk)
 ```
 **Note**: This pipeline is for the Agent Pack project generation system. The contact/brief email system (`api/sendBrief`, `api/sendContact`) operates independently and does not use this pipeline.
 
-### AI Website Generator Pipeline (Phase 1-7.3.1)
+### AI Website Generator Pipeline (Phase 1–7.5.0)
 
 ```
-Brief (client form data)
+HTTP Client (Dashboard, CLI, SDK, curl)
+    ↓
+```
+
+/api/v1/* — Platform API (Phase 7.5.0)
+```
+    ↓
+    Middleware: CORS → RequestId → Logging → RateLimit → Auth → Authorization → Validation
+    ↓
+    Controllers: conversation, project, pipeline, deployment, dashboard, workspace, apikey, generation, context, planner, health
+    ↓
+```
+
+Existing Engines
+```
+Brief (client form data)  ←  Conversation Engine / Context Builder
     ↓
 Orchestrator (Plan IR — intent, tone, features, structure)
     ↓
@@ -389,6 +454,18 @@ Content Generator (Content Pack — page copy, SEO, CTAs, tone-aware)
     Question Generator (Phase 7.3.3 — missing-field detection, intelligent questioning, prioritization, scoring)
     ↓
     Context Builder (Phase 7.3.4 — conversation → canonical Project Context → Plan IR → feeds Planner)
+    ↓
+    Pipeline Orchestrator (Phase 7.4.0 — 11-stage end-to-end pipeline orchestration, caching, recovery, metrics, events, visualization)
+    ↓
+    AI Provider Layer (Phase 7.7.0 — Multi-provider routing: OpenAI/Anthropic/Gemini/Ollama, fallback chains, load balancing, streaming, cost optimization)
+    ↓
+    Multi-Agent System (Phase 7.8.0 — 10 specialized agents: architect, designer, developer, content, seo, accessibility, performance, deployment, reviewer, qa; DAG execution; consensus engine; conflict resolution; memory management)
+    ↓
+    Workflow Engine (Phase 7.9.0 — 10-state machine, DAG execution, checkpoints, scheduler, retry, compensation, versioning, metrics)
+    ↓
+    Telemetry Platform (Phase 8.0.0 — metrics, tracing, logging, health monitoring, diagnostics, analytics, alerts, event bus)
+    ↓
+    Distributed Cluster (Phase 8.1.0 — workers, queues, leader election, failover, load balancing)
 ```
 
 ---
@@ -978,7 +1055,13 @@ All dashboards read from `GET /api/telemetry`. The shared `dashboard-api.js` mod
 | v2.3.0 | 2026-06-18 | Phase 7.3.1 — Conversation Engine foundation (9 modules: manager, session, store, memory, context, summarizer, events, serializer, validator) |
 | v2.4.0 | 2026-06-18 | Phase 7.3.3 — Question Generator Engine (6 sub-modules: generator, prioritizer, templates, mapper, scorer, validator; 8 intent-specific mappings; priority system; event integration) |
 | v2.5.0 | 2026-06-19 | Phase 7.3.4 — Context Builder Engine (12 modules: builder, normalizer, merger, inference, defaults, entities, assets, history, serializer, validator, events + ContextValidationError; full conversation→Plan IR pipeline) |
-
+| v2.6.0 | 2026-06-19 | Phase 7.4.0 — Pipeline Orchestrator (12 modules: manager, executor, state, events, logger, cache, metrics, validator, serializer, visualizer, recovery, PipelineError; 11-stage E2E pipeline; 8-state machine; TTL cache; checkpoint recovery; retry with exponential backoff; dashboard page) |
+| v2.7.0 | 2026-06-19 | Phase 7.5.0 — Platform API (Express REST API; middleware: CORS, requestId, logging, rateLimiter, authentication, authorization, validation, errorHandler; 11 controllers; 11 route files; 6 error classes; 2 response helpers; OpenAPI-ready; Vercel-deployed) |
+| v2.8.0 | 2026-06-19 | Phase 7.7.0 — AI Provider Routing Layer (4 providers: OpenAI, Anthropic, Gemini, Ollama; 5 routing strategies: quality, cost, latency, hybrid, intent; fallback chains; load balancer: round-robin, latency, cost, hybrid; token estimation; cost optimizer; streaming; 5 API endpoints; integration wrappers for Planner/Generator/Content Engine) |
+| v2.9.0 | 2026-06-19 | Phase 7.8.0 — Multi-Agent Orchestration System (10 specialized agents: architect, designer, developer, content, seo, accessibility, performance, deployment, reviewer, qa; DAG execution graph; shared/working/agent memory; message bus; consensus engine; conflict resolver; full workflow orchestration with sequential/parallel/review/QA modes; 6 API endpoints; dashboard agents page) |
+| v3.0.0 | 2026-06-19 | Phase 7.9.0 — Workflow Execution Engine (16 modules: state machine with 10 states/transitions, DAG execution engine, JSON workflow definitions with 8 typed steps, auto-checkpoint system, retry engine with exponential/linear/fixed backoff, compensation engine, versioning with migration/diff, execution metrics, visual execution graph, scheduler with priority queue/delayed/cron/periodic, 11 event types, 11 API endpoints, dashboard workflows page; 136 tests; integrates with Multi-Agent Orchestrator) |
+| v3.1.0 | 2026-06-19 | Phase 8.0.0 — Observability & Telemetry Platform (11 modules: telemetry manager, metrics collector with counters/gauges/histograms, distributed tracing engine with nested spans, structured JSON logger with 5 levels, health monitor with 11 components, diagnostics with system snapshots/error summaries/dependency graph, analytics engine with daily/weekly/monthly reports, alert manager with configurable rules and 4 severity levels, telemetry event bus with 8 event types, telemetry storage; 8 API endpoints; dashboard observability page; 108 tests; full API test suite: 437 tests passing) |
+| v3.2.0 | 2026-06-19 | Phase 8.1.0 — Distributed Execution Cluster (14 modules: cluster manager, storage, events (11 types), metrics (counters/gauges/histograms), worker manager, registry, node model, heartbeat monitor (offline/stale detection), leader election (automatic failover), task dispatcher (retry + dead letter), task queue (6 types: priority/FIFO/LIFO/scheduled/delayed/deadLetter), load balancer (6 strategies: round_robin/least_busy/weighted/latency/cost/sticky), distributed scheduler; local simulation of 100 workers and 1000 concurrent tasks; 8 API endpoints; dashboard cluster center page; 190 tests; full test suite: 627 tests passing) |
 ---
 
 ## Historical Architecture Decisions
@@ -1026,7 +1109,7 @@ The SaaS Core is implemented in `lib/saas/` — 12 modules providing the user-fa
 - **Billing tiers**: Free (3 projects), Starter (15), Pro (50), Enterprise (unlimited)
 - **Preview system**: Live preview with Redis TTL caching, approval gating
 - **Async job queue**: Bull/Redis for non-blocking AI pipeline
-- **REST API layer**: Express/Fastify over the SaaS Core modules
+- **REST API layer**: ✅ Implemented — Phase 7.5.0 `lib/api/` (Express, middleware stack, 11 controllers, 11 route files, OpenAPI-ready, Vercel-deployed via `api/platform-api.js`)
 - **WebSocket events**: Real-time pipeline progress
 
 ---
@@ -1043,6 +1126,13 @@ The SaaS Core is implemented in `lib/saas/` — 12 modules providing the user-fa
 | **`docs/conversation-engine.md`** | Conversation Engine architecture: 9 base + 6 question sub-modules, lifecycle, storage, event flow, validation, examples | ✅ Active — Phase 7.3.1–7.3.3 |
 | **`docs/question-generator.md`** | Question Generator architecture: scoring system, mapping logic, priority rules, 8 intent mappings, integration, test cases | ✅ Active — Phase 7.3.3 |
 | **`docs/context-builder.md`** | Context Builder architecture: pipeline, normalization rules, inference rules, defaults, page derivation, Plan IR conversion | ✅ Active — Phase 7.3.4 |
+| **`docs/pipeline-orchestrator.md`** | Pipeline Orchestrator architecture: 11 stages, state machine, recovery strategy, cache strategy, metrics, examples, extension guide | ✅ Active — Phase 7.4.0 |
+| **`docs/platform-api.md`** | Platform API: architecture, authentication, authorization, endpoint catalog, response format, pagination, errors, rate limits, versioning, SDK support | ✅ Active — Phase 7.5.0 |
+| **`docs/ai-provider-layer.md`** | AI Provider Routing Layer: architecture, providers, routing flow, selection strategies, fallback system, load balancing, cost model, streaming, integration, API endpoints | ✅ Active — Phase 7.7.0 |
+| **`docs/multi-agent-system.md`** | Multi-Agent Orchestration System: 10 agents, DAG execution flow, memory management, coordination, consensus engine, conflict resolution, API endpoints | ✅ Active — Phase 7.8.0 |
+| **`docs/workflow-engine.md`** | Workflow Execution Engine: architecture, state machine, step types, checkpoint system, retry policies, compensation, scheduling, API endpoints, example definitions, extension guide | ✅ Active — Phase 7.9.0 |
+| **`docs/observability.md`** | Observability Platform: architecture, metrics types, distributed tracing, structured logging, health monitoring, alerts, analytics, diagnostics, API endpoints, instrumentation guide | ✅ Active — Phase 8.0.0 |
+| **`docs/distributed-cluster.md`** | Distributed Execution Cluster: architecture, cluster topology, worker lifecycle, queues, scheduling, leader election, failover, metrics, API, scaling and deployment guides | ✅ Active — Phase 8.1.0 |
 | `AGENTS.md` | Former agent operations manual — content distributed across all 4 canonical files | ❌ Deprecated (deleted) |
 | `CHANGELOG.md` | Former detailed version history — compressed to Version History table in this file | ❌ Deprecated (deleted) |
 | `ARCHITECTURE-SAAS.md` | Former SaaS design document — compressed to SaaS Architecture section in this file | ❌ Deprecated (deleted) |
