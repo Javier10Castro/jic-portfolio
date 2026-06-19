@@ -53,7 +53,7 @@ Lead generation and client onboarding through contact forms, AI-powered brief co
 │   ├── design-system/         # Design System Engine (CSS tokens)
 │   ├── preview/               # Preview Engine (simulation)
 │   ├── saas/                  # SaaS Core (Phase 7.1) — RBAC, auth, users, orgs, workspaces, projects, sessions, API keys, usage, audit, settings, storage
-│   ├── conversation/           # AI Conversation Engine (Phase 7.3.1) — 9 modules: session, store, memory, context, summarizer, events, serializer, validator, manager
+│   ├── conversation/           # AI Conversation Engine (Phase 7.3.1–7.3.3) — manager, memory, context, summarizer, events, serializer, validator + questions/ sub-module (generator, prioritizer, templates, mapper, scorer, validator)
 │   └── runtime/               # SaaS pipeline orchestrator
 ├── ui/                        # Dashboard UI (Phase 7.2)
 │   └── dashboard/             # 15 components, 10 pages, 1 layout, entry point + CSS
@@ -330,7 +330,7 @@ These modules form the Agent Pack v1 pipeline — converting client briefs into 
 | **Deployment** | `lib/deployment/` | Implemented | Provider-based deployment: Vercel, GitHub, versioning, rollback, history, dry-run |
 | **SaaS Core** | `lib/saas/` | Implemented | 12 modules: RBAC, auth (Email/GitHub/Google), users, orgs, workspaces, projects, sessions, API keys, usage tracking, audit log, settings, storage abstraction |
 | **Dashboard UI** | `ui/dashboard/` | Implemented | 10 server-rendered pages (+ 1 conversation page), 15 reusable components, 1 layout, served via `api/dashboard-saas.js` |
-| **Conversation Engine** | `lib/conversation/` | Implemented | 9 modules: conversation CRUD, message memory, context tracking, deterministic summarization, validation, events, serialization |
+| **Conversation Engine** | `lib/conversation/` | Implemented | 9 base modules + 6 question sub-modules: intent→question mapping, 4-dimension scoring, prioritization (blocking/high/optional), missing-field detection, events |
 | **Runtime** | `lib/runtime/` | Implemented | SaaS pipeline orchestrator with Neon persistence |
 | **Form Persistence** | `lib/db/formResponses.js` | Implemented | Brief Maestro responses to Neon |
 | **Orchestrator** | `lib/orchestrator/` | Implemented | Brief → Plan IR (intent, tone, features, structure) |
@@ -381,6 +381,12 @@ Content Generator (Content Pack — page copy, SEO, CTAs, tone-aware)
     Dashboard UI (Phase 7.2 — 11 pages, 15 components, Server-side rendered via api/dashboard-saas.js)
     ↓
     Conversation Engine (Phase 7.3.1 — 9 infrastructure modules, deterministic summarization, no LLM calls)
+    ↓
+    Intent Detection (Phase 7.3.2 — intent classification, entity extraction)
+    ↓
+    Question Generator (Phase 7.3.3 — missing-field detection, intelligent questioning, prioritization, scoring)
+    ↓
+    Context Builder (Phase 7.3.4 — planned: conversation → full Blueprint/Plan IR/Design Strategy/Content Strategy)
 ```
 
 ---
@@ -968,6 +974,7 @@ All dashboards read from `GET /api/telemetry`. The shared `dashboard-api.js` mod
 | v2.1.0 | 2026-06-18 | Phase 7.1 — SaaS Core foundation (12 modules: RBAC, auth, users, orgs, workspaces, projects, sessions, API keys, usage, audit, settings, storage) |
 | v2.2.0 | 2026-06-18 | Phase 7.2 — Dashboard UI (11 server-rendered pages, 15 reusable components, 1 layout, served via api/dashboard-saas.js) |
 | v2.3.0 | 2026-06-18 | Phase 7.3.1 — Conversation Engine foundation (9 modules: manager, session, store, memory, context, summarizer, events, serializer, validator) |
+| v2.4.0 | 2026-06-18 | Phase 7.3.3 — Question Generator Engine (6 sub-modules: generator, prioritizer, templates, mapper, scorer, validator; 8 intent-specific mappings; priority system; event integration) |
 
 ---
 
@@ -1030,7 +1037,8 @@ The SaaS Core is implemented in `lib/saas/` — 12 modules providing the user-fa
 | **`DEVELOPMENT_RULES.md`** | Developer workflow: naming conventions, CSS/JS style, Git commits, module boundaries, API design, testing strategy, security | ✅ Active |
 | **`DEPLOYMENT.md`** | Infrastructure: Vercel deployment, CI/CD, environment setup, rollback, rate limits, CLI reference | ✅ Active |
 | **`docs/dashboard-ui.md`** | Dashboard UI architecture: 11 pages, 15 components, navigation map, responsive strategy, accessibility | ✅ Active — Phase 7.2 |
-| **`docs/conversation-engine.md`** | Conversation Engine architecture: 9 modules, lifecycle, storage model, event flow, validation, examples | ✅ Active — Phase 7.3.1 |
+| **`docs/conversation-engine.md`** | Conversation Engine architecture: 9 base + 6 question sub-modules, lifecycle, storage, event flow, validation, examples | ✅ Active — Phase 7.3.1–7.3.3 |
+| **`docs/question-generator.md`** | Question Generator architecture: scoring system, mapping logic, priority rules, 8 intent mappings, integration, test cases | ✅ Active — Phase 7.3.3 |
 | `AGENTS.md` | Former agent operations manual — content distributed across all 4 canonical files | ❌ Deprecated (deleted) |
 | `CHANGELOG.md` | Former detailed version history — compressed to Version History table in this file | ❌ Deprecated (deleted) |
 | `ARCHITECTURE-SAAS.md` | Former SaaS design document — compressed to SaaS Architecture section in this file | ❌ Deprecated (deleted) |
