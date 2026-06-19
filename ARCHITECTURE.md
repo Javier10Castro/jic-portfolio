@@ -51,6 +51,7 @@ Lead generation and client onboarding through contact forms, AI-powered brief co
 │   ├── deployment/            # Deployment Engine (Git/GitHub)
 │   ├── design-system/         # Design System Engine (CSS tokens)
 │   ├── preview/               # Preview Engine (simulation)
+│   ├── saas/                  # SaaS Core (Phase 7.1) — RBAC, auth, users, orgs, workspaces, projects, sessions, API keys, usage, audit, settings, storage
 │   └── runtime/               # SaaS pipeline orchestrator
 ├── public/                    # Static assets
 │   ├── index.html             # Portfolio landing page
@@ -62,8 +63,19 @@ Lead generation and client onboarding through contact forms, AI-powered brief co
 ├── data/                      # Runtime storage (not committed)
 │   ├── decisions.json         # Architectural decision records
 │   ├── deployments.json       # Deployment records
+│   ├── users.json             # SaaS Core — user profiles
+│   ├── organizations.json     # SaaS Core — orgs & members
+│   ├── workspaces.json        # SaaS Core — workspace registry
+│   ├── projects.json          # SaaS Core — project lifecycle
+│   ├── sessions.json          # SaaS Core — auth sessions
+│   ├── apiKeys.json           # SaaS Core — API key registry
+│   ├── usage.json             # SaaS Core — usage metrics
+│   ├── settings.json          # SaaS Core — scoped settings
+│   ├── audit.json             # SaaS Core — immutable audit log
 │   └── migrations/            # SQL migration scripts
-├── docs/                      # (reserved — no active files)
+├── docs/
+│   ├── deployment-engine.md   # Deployment Engine architecture (Phase 6)
+│   └── saas-core.md           # SaaS Core architecture (Phase 7.1)
 ├── scripts/                   # CLI tools and test scripts
 ├── package.json
 ├── ARCHITECTURE.md            # This file — single source of truth
@@ -305,6 +317,7 @@ These modules form the Agent Pack v1 pipeline — converting client briefs into 
 | **Preview** | `lib/preview/` | Implemented | Visual preview simulation |
 | **Decision** | `lib/decision/` | Implemented | Architectural decision records |
 | **Deployment** | `lib/deployment/` | Implemented | Provider-based deployment: Vercel, GitHub, versioning, rollback, history, dry-run |
+| **SaaS Core** | `lib/saas/` | Implemented | 12 modules: RBAC, auth (Email/GitHub/Google), users, orgs, workspaces, projects, sessions, API keys, usage tracking, audit log, settings, storage abstraction |
 | **Runtime** | `lib/runtime/` | Implemented | SaaS pipeline orchestrator with Neon persistence |
 | **Form Persistence** | `lib/db/formResponses.js` | Implemented | Brief Maestro responses to Neon |
 | **Orchestrator** | `lib/orchestrator/` | Implemented | Brief → Plan IR (intent, tone, features, structure) |
@@ -333,7 +346,7 @@ Scaffold Engine (physical files on disk)
 ```
 **Note**: This pipeline is for the Agent Pack project generation system. The contact/brief email system (`api/sendBrief`, `api/sendContact`) operates independently and does not use this pipeline.
 
-### AI Website Generator Pipeline (Phase 1-6)
+### AI Website Generator Pipeline (Phase 1-7.1)
 
 ```
 Brief (client form data)
@@ -349,6 +362,8 @@ Content Generator (Content Pack — page copy, SEO, CTAs, tone-aware)
     Website Builder (Deployable HTML/CSS/JS — /dist/ static site)
     ↓
     Deployment Engine (Vercel/GitHub — provider abstraction, versioning, rollback)
+    ↓
+    SaaS Core (Phase 7.1 — RBAC, auth, users, orgs, workspaces, projects, sessions, API keys, usage, audit, settings, storage)
 ```
 
 ---
@@ -933,6 +948,7 @@ All dashboards read from `GET /api/telemetry`. The shared `dashboard-api.js` mod
 | v1.9.0 | 2026-06-10 | x-test-mode header, health sections, detailed stats |
 | v1.9.1 | 2026-06-10 | Per-email progress stages, retry traces, rate-limit headers |
 | v2.0.0 | 2026-06-18 | Documentation consolidation (4 canonical docs) |
+| v2.1.0 | 2026-06-18 | Phase 7.1 — SaaS Core foundation (12 modules: RBAC, auth, users, orgs, workspaces, projects, sessions, API keys, usage, audit, settings, storage) |
 
 ---
 
@@ -955,20 +971,34 @@ The in-memory BackgroundQueue was removed (commit `1e93884`). Emails now send in
 
 ---
 
-## 🔮 SaaS Architecture (Future — Not Implemented)
+## ⚡ SaaS Core (Phase 7.1 — Implemented)
 
-Design for a multi-tenant website generation platform. This section summarizes the key design elements — full details were in the (now consolidated) design document.
+The SaaS Core is implemented in `lib/saas/` — 12 modules providing the user-facing foundation. See `docs/saas-core.md` for full details.
 
-### Key Design Elements
-- **Multi-tenant isolation**: Row-Level Security (RLS) on PostgreSQL, workspace-scoped data
-- **14-table schema**: workspaces, users, workspace_members, projects, project_inputs, project_states, previews, deployments, executions, decisions, artifacts, webhook_events, api_keys, form_responses
+### Implemented Modules
+
+| Module | Purpose |
+|---|---|
+| `authorization.js` | RBAC — Owner/Admin/Editor/Viewer, 7 resource categories, 24 permission cells |
+| `auditLog.js` | Immutable append-only audit trail to `data/audit.json` |
+| `storageManager.js` | Abstract adapter registry with built-in filesystem adapter |
+| `userManager.js` | User CRUD, profiles, preferences, email lookup |
+| `organizationManager.js` | Orgs, members, role-based invite/remove/change |
+| `workspaceManager.js` | Personal/org/team workspace lifecycle |
+| `projectManager.js` | Full project lifecycle (create, update, delete, duplicate, archive, list) |
+| `authentication.js` | Provider abstraction — Email, GitHub OAuth, Google OAuth |
+| `sessionManager.js` | Session create, validate, refresh, revoke, multi-device support |
+| `apiKeys.js` | Generate, rotate, revoke, validate with hashed storage |
+| `usageTracker.js` | Track projects, deployments, AI generations, storage, bandwidth |
+| `settingsManager.js` | Scoped settings (workspace/project/org/user) with defaults |
+
+### Remaining (Future — Not Implemented)
+- **Multi-tenant isolation**: Row-Level Security (RLS) on PostgreSQL
 - **Billing tiers**: Free (3 projects), Starter (15), Pro (50), Enterprise (unlimited)
-- **Preview system**: Live preview with Redis TTL caching, design token injection, approval gating
+- **Preview system**: Live preview with Redis TTL caching, approval gating
 - **Async job queue**: Bull/Redis for non-blocking AI pipeline
-- **User roles**: owner, admin, member, viewer per workspace
-- **State machine**: DRAFT → PROCESSING → PREVIEW → APPROVED → DEPLOYING → DEPLOYED (with FAILED and REJECTED branches)
-- **Decision Engine**: 5-dimension evaluation (contrast 25%, UX 25%, conversion 20%, clarity 15%, SEO 15%) — archived in ENGINE_RULES.md
-- **Auto-improvement**: Up to 2 regeneration attempts on score < 50
+- **REST API layer**: Express/Fastify over the SaaS Core modules
+- **WebSocket events**: Real-time pipeline progress
 
 ---
 
