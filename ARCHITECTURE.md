@@ -309,6 +309,7 @@ These modules form the Agent Pack v1 pipeline — converting client briefs into 
 | **Form Persistence** | `lib/db/formResponses.js` | Implemented | Brief Maestro responses to Neon |
 | **Orchestrator** | `lib/orchestrator/` | Implemented | Brief → Plan IR (intent, tone, features, structure) |
 | **Planner** | `lib/planner/` | Implemented | Plan IR → Project Blueprint (pages, nav, sections, components) |
+| **Content Generator** | `lib/content-generator/` | Implemented | Blueprint + Design Strategy → Content Pack (copy, SEO, CTAs) |
 | **Project Loader** | `lib/loader/` | Planned | Read-only project reconstruction from DB |
 
 ### Pipeline Flow
@@ -415,6 +416,118 @@ The Design Strategy feeds into the future Design System Engine (currently `lib/d
 ### Isolation
 
 The Design Strategy engine is completely independent. It does not access any API handler, frontend code, database, or email system. It is not yet called in any production flow.
+
+---
+
+## Content Generator Engine
+
+### Purpose
+
+Transform a validated Project Blueprint and Design Strategy into a structured Content Pack — deterministic, conversion-focused, tone-aware website copy for every page and section defined in the Blueprint.
+
+### Input
+
+- **Project Blueprint** — from the Planner (`lib/planner/`)
+- **Design Strategy** — from the Design Strategy Engine (`lib/design-strategy/`)
+
+### Output
+
+Content Pack JSON:
+
+```
+{
+  meta:  { generatedAt, version, source, blueprintVersion, designStrategyVersion, language },
+  pages: [{
+    path, title,
+    seo: { title, description },
+    sections: [{ id, heading, subheading, body, cta }]
+  }],
+  global: {
+    brandVoice: { tone, values[], profile{} },
+    ctaLibrary: [{ text }],
+    seoDefaults: { siteName, siteDescription, language }
+  }
+}
+```
+
+### Execution Order
+
+```
+generateContent(blueprint, designStrategy)
+  ├── buildToneProfile()        → formality, warmth, directness, inspiration, technicality scores
+  ├── detectLanguage()          → lang (currently 'en'; ES content templates exist)
+  ├── pageContent()             → iterate pages from Blueprint
+  │   ├── sectionContent()      → generate copy per section type (< 40 section types)
+  │   │   ├── tone-aware templates (EN/ES)
+  │   │   └── CTA picker        → context + tone-aware CTAs from library
+  │   └── seoForPage()          → page-level seo.title + seo.description
+  ├── buildGlobalCtaLibrary()   → site-wide CTA catalogue
+  └── validateContentPack()     → schema validation (throws ContentPackValidationError)
+```
+
+### Module Responsibilities
+
+| Module | File | Responsibility |
+|---|---|---|
+| Entry | `lib/content-generator/index.js` | Orchestrates page iteration, tone, SEO, validation |
+| Page Content | `lib/content-generator/pageContentGenerator.js` | Generates page-level content + SEO + section orchestration per page |
+| Section Content | `lib/content-generator/sectionContentGenerator.js` | ~40 section-type generators (hero, about, services, etc.) with EN/ES templates |
+| Tone Engine | `lib/content-generator/toneEngine.js` | Builds tone profile from Design Strategy brand voice (5 dimensions, 1-5 scale) |
+| SEO Generator | `lib/content-generator/seoGenerator.js` | Page-level title + description templates per project type, toned |
+| Content Validator | `lib/content-generator/validateContentPack.js` | Schema validation — ensures pages, sections, SEO, and global structure |
+
+### Section Content Coverage
+
+The generator handles ~40 section types including:
+- **Structural**: hero, about, services, portfolio, products, testimonials, contact, footer
+- **About pages**: story, mission, team, values
+- **Services**: overview, list, cta, benefits, process, pricing, plans, comparison
+- **Portfolio**: grid, filter, featured, description, testimonial, gallery, related, share
+- **E-commerce**: shop, products, categories, items, cart, checkout, payment, summary, profile, orders, settings
+- **Features**: booking, calendar, confirmation, blog, faq, search, content
+
+### Tone Enforcement
+
+The Tone Engine evaluates 5 dimensions from Design Strategy's brandVoice:
+
+| Dimension | Scale | Source |
+|---|---|---|
+| Formality | 1-5 | voice.formal + brandTone |
+| Warmth | 1-5 | voice.warm + brandTone |
+| Directness | 1-5 | voice.direct + brandTone |
+| Inspiration | 1-5 | voice.inspirational + brandTone |
+| Technicality | 1-5 | voice.technical + brandTone |
+
+Each dimension adjusts vocabulary tier, sentence structure, CTA style (direct_action / invitation / benefit_driven / polished_request), and emphasis approach (aspirational / empathetic / visionary / direct_value).
+
+### Supported Languages
+
+- EN — primary (all templates complete)
+- ES — secondary (all templates have es variants for hero, about, services, etc.)
+
+Language detection currently defaults to `'en'`. The ES templates are ready for multi-language switching without code changes.
+
+### Determinism
+
+Fully deterministic. Given the same Blueprint + Design Strategy, the Content Pack output is always identical. No randomness, no LLM calls, no filler — every string is rule-generated from project data, section type, and tone profile.
+
+### Relationship with Pipeline
+
+```
+  ┌─────────────┐    ┌─────────────┐    ┌──────────────────┐    ┌──────────────────┐
+  │ Orchestrator │ →  │   Planner   │ →  │ Design Strategy  │ →  │ Content Generator│
+  │  (Plan IR)   │    │ (Blueprint) │    │   (Strategy)     │    │  (Content Pack)  │
+  └─────────────┘    └─────────────┘    └──────────────────┘    └──────────────────┘
+                                                                         ↓
+                                                                  Design System Engine
+                                                                  (future — tokens/CSS)
+```
+
+The Content Pack feeds into the future Design System Engine, which will translate these copy decisions into final rendered pages.
+
+### Isolation
+
+The Content Generator engine is completely independent. It does not access any API handler, frontend code, database, or email system. It is not yet called in any production flow.
 
 ---
 

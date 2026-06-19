@@ -93,6 +93,7 @@ See `ARCHITECTURE.md` (Execution Model → Serverless Memory Isolation) for the 
 | `decision/` | Decision Engine — see ARCHITECTURE.md Engine Overview | None |
 | `deployment/` | Deployment Engine — see ARCHITECTURE.md Engine Overview | None |
 | `design-system/` | Design System Engine — see ARCHITECTURE.md Engine Overview | None |
+| `content-generator/` | Content Generator Engine — see ARCHITECTURE.md Engine Overview | `lib/planner/`, `lib/design-strategy/` |
 | `preview/` | Preview Engine — see ARCHITECTURE.md Engine Overview | None |
 | `runtime/` | Runtime Engine — see ARCHITECTURE.md Engine Overview | `lib/db/`, `lib/plan/`, etc. |
 
@@ -209,6 +210,33 @@ fetch('/test-data.json').then(r => r.json()).then(d => {
 | Docs + code change | Split into `docs:` + `feat:`/`fix:` |
 | Multiple files, same purpose | Single commit |
 | Formatting/lint-only changes | `chore:` commit, separate from logic |
+
+## Copy Consistency Rules (Content Generator)
+
+- All website copy must flow through the Content Generator pipeline — no manual copy in engine modules
+- Every section must have a dedicated generator function in `sectionContentGenerator.js`
+- Tone must come from `toneEngine.js` — never hardcoded per-section
+- CTAs must be selected from `pickCta()` — never hardcoded in section templates
+- EN and ES templates must exist in parallel for every section type
+- Copy must be conversion-focused: clear value proposition, action-oriented, scannable
+- Avoid generic filler: every heading/body must be specific to project type and section purpose
+- SEO titles must stay under 70 chars, descriptions under 165 chars
+- Content Pack must pass `validateContentPack()` before any consumer use
+
+### Tone Enforcement Rules
+
+- `toneEngine.buildToneProfile()` evaluates 5 dimensions from Design Strategy brandVoice
+- Each dimension scores 1-5, computed via deterministic rules
+  - Formality: voice.formal (+2 if true), adjusted by brandTone
+  - Warmth: voice.warm (+2 if true), adjusted by brandTone
+  - Directness: voice.direct (+2 if true), adjusted by brandTone
+  - Inspiration: voice.inspirational (+2 if true), adjusted by brandTone
+  - Technicality: voice.technical (+2 if true), adjusted by brandTone
+- CTA style determined by directness + warmth: direct_action / invitation / benefit_driven / polished_request / neutral
+- Vocabulary tier determined by (formality + technicality) / 2: simple / standard / sophisticated
+- Emphasis style determined by inspiration + warmth: aspirational / empathetic / visionary / direct_value
+- Tone is applied AFTER base template selection (templates are project-type-specific)
+- Never bypass the tone system for section content — even structural sections (footer, legal) get tone-appropriate language
 
 ## File Modification Policy
 
