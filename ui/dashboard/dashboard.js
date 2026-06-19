@@ -8,6 +8,7 @@ const { renderProfile } = require('./pages/profile');
 const { renderApiKeys } = require('./pages/apiKeys');
 const { renderUsage } = require('./pages/usage');
 const { renderAuditLog } = require('./pages/auditLog');
+const { renderConversations } = require('./pages/conversations');
 const fs = require('fs');
 const path = require('path');
 const css = fs.readFileSync(path.join(__dirname, 'dashboard.css'), 'utf-8');
@@ -23,6 +24,7 @@ const ROUTES = {
   apiKeys: { render: renderApiKeys, title: 'API Keys' },
   usage: { render: renderUsage, title: 'Usage' },
   auditLog: { render: renderAuditLog, title: 'Audit Log' },
+  conversations: { render: renderConversations, title: 'Conversations' },
 };
 
 function serveDashboard(params = {}) {
