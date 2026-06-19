@@ -138,7 +138,49 @@ The Agent Pack pipeline is defined in `ARCHITECTURE.md` (Engine Overview → Pip
 - Approval is idempotent: approving an already-approved project is a no-op
 - Admin can force-approve a FAIL-scored project (bypasses scoring gate)
 
-## Pipeline Execution Rules
+## Website Builder Engine (Phase 5)
+
+### Rendering Rules
+
+- All HTML output must be valid HTML5 with `<!DOCTYPE html>` and proper nesting
+- Every page must include: `<head>` with meta charset, viewport, description, title, stylesheet link
+- Navigation must be present on every page with links to all non-legal, non-dynamic pages
+- Current page must be marked with `class="active"` on its nav link
+- Content must come exclusively from the Content Pack — no hardcoded or AI-generated copy in the engine
+- Section rendering: each section type has exactly one HTML template in `componentMapper.js`
+
+### Deterministic Generation
+
+- Same input always produces identical output — no randomness in color selection, font assignment, layout choice, or component rendering
+- Design Strategy → CSS mapping must use a closed-form lookup table (palettes, typography maps, spacing scales)
+- No LLM calls, no random number generation, no date-dependent output (except copyright year)
+- Build time variance must stay under 10ms for identical inputs
+
+### CSS Generation
+
+- All CSS must use CSS custom properties defined in `:root` — no hardcoded color/typography values
+- Design tokens must be derived from Design Strategy via deterministic mapping functions:
+  - `brandTone` → color palette (closed set of 10 schemes)
+  - `designStyle` → font families + heading/body sizes
+  - `layout.spacing` → spacing scale
+  - `interaction.*` → animation/transition values
+- Responsive breakpoints: 768px (tablet) and 480px (mobile) minimum
+- Generated CSS must include styles for: reset, typography, layout, header/nav, hero, buttons, cards (service/portfolio/product/pricing/testimonial), contact form, CTA, FAQ, footer, sidebar, animations
+
+### Component Mapping
+
+- Every section type must have a component function: `heroComponent`, `aboutComponent`, etc.
+- Missing section types fall back to `fallbackComponent` which renders a placeholder
+- All user-facing text must be HTML-escaped via `esc()` utility
+- Forms must include semantic HTML5 validation attributes (`required`, `type="email"`, etc.)
+- Template sections (services grid, portfolio grid, pricing cards) render 3 placeholder items with real headings
+
+### Output Validation
+
+- Must validate: all required files exist, DOCTYPE present, `<html>` tags balanced, CSS has `:root` with `--accent` tokens
+- Validation throws `GeneratedWebsiteValidationError` with specific failure details
+- Empty files or missing navigation are validation failures
+- Each generated HTML file must include a reference to `assets/styles.css`
 
 ### Timeouts
 - Pipeline step timeout: 120s per step

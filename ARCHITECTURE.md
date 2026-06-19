@@ -310,6 +310,7 @@ These modules form the Agent Pack v1 pipeline — converting client briefs into 
 | **Orchestrator** | `lib/orchestrator/` | Implemented | Brief → Plan IR (intent, tone, features, structure) |
 | **Planner** | `lib/planner/` | Implemented | Plan IR → Project Blueprint (pages, nav, sections, components) |
 | **Content Generator** | `lib/content-generator/` | Implemented | Blueprint + Design Strategy → Content Pack (copy, SEO, CTAs) |
+| **Website Builder** | `lib/generator/` | Implemented | Content Pack + Design Strategy → Deployable HTML/CSS/JS website |
 | **Project Loader** | `lib/loader/` | Planned | Read-only project reconstruction from DB |
 
 ### Pipeline Flow
@@ -331,6 +332,22 @@ Scaffold Engine (physical files on disk)
 Deployment Engine (Git → GitHub → Vercel)
 ```
 **Note**: This pipeline is for the Agent Pack project generation system. The contact/brief email system (`api/sendBrief`, `api/sendContact`) operates independently and does not use this pipeline.
+
+### AI Website Generator Pipeline (Phase 1-5)
+
+```
+Brief (client form data)
+    ↓
+Orchestrator (Plan IR — intent, tone, features, structure)
+    ↓
+Planner (Project Blueprint — pages, nav, sections, components)
+    ↓
+Design Strategy (visual system + tone — personality, layout, imagery, interaction, brand)
+    ↓
+Content Generator (Content Pack — page copy, SEO, CTAs, tone-aware)
+    ↓
+Website Builder (Deployable HTML/CSS/JS — /dist/ static site)
+```
 
 ---
 
@@ -528,6 +545,158 @@ The Content Pack feeds into the future Design System Engine, which will translat
 ### Isolation
 
 The Content Generator engine is completely independent. It does not access any API handler, frontend code, database, or email system. It is not yet called in any production flow.
+
+---
+
+## AI Generation Layer (Website Builder Engine)
+
+### Purpose
+
+Transform a validated Content Pack + Design Strategy + Blueprint into real, deployable static HTML/CSS/JS websites. This is the final transformation layer that converts structured AI output into a production-ready multi-page website.
+
+### Input
+
+- **Content Pack** — from the Content Generator (`lib/content-generator/`)
+- **Design Strategy** — from the Design Strategy Engine (`lib/design-strategy/`)
+- **Blueprint** — from the Planner (`lib/planner/`)
+
+### Output
+
+Deployable static website files:
+
+```
+/dist/index.html          # Home page
+/dist/about.html          # About page
+/dist/contact.html        # Contact page
+/dist/services.html       # Services page
+/dist/shop.html           # Shop page (ecommerce)
+/dist/cart.html           # Cart page (ecommerce)
+/dist/checkout.html       # Checkout page (ecommerce)
+/dist/account.html        # Account page (ecommerce)
+/dist/privacy.html        # Privacy policy
+/dist/terms.html          # Terms of service
+/dist/assets/styles.css   # Design system CSS
+/dist/assets/script.js    # Site JS (smooth scroll, interactions)
+```
+
+Return JSON:
+
+```
+{
+  files: {
+    "/dist/index.html": "<!DOCTYPE html>...",
+    "/dist/about.html": "...",
+    "/dist/assets/styles.css": ":root{...}"
+  },
+  meta: {
+    pagesGenerated: number,
+    componentsRendered: number,
+    buildTimeMs: number
+  }
+}
+```
+
+### Execution Order
+
+```
+generateWebsite(contentPack, blueprint, designStrategy)
+  │
+  ├── STEP 1 — Layout Engine
+  │   ├── defineLayout(page, pages) → layout template per page type
+  │   ├── buildNavigation(pages) → nav item list (deduplicated, ordered)
+  │   └── layoutConfig(layout, navItems) → rendering config
+  │
+  ├── STEP 2 — Component Mapping
+  │   ├── mapSection(section, pageType) → HTML component string
+  │   ├── Handles ~45 section types (hero, about, services, products, etc.)
+  │   └── Every section type has a dedicated HTML template
+  │
+  ├── STEP 3 — HTML Generation
+  │   ├── generateHtmlPage(pageContent, layoutConfig, designStrategy)
+  │   ├── Full DOCTYPE with lang, head meta, SEO, font links
+  │   ├── Fixed header with navigation (active page highlighted)
+  │   ├── Main content with hero, filtered sections per layout mode
+  │   ├── Optional sidebar for ecommerce pages
+  │   └── Footer with copyright
+  │
+  ├── STEP 4 — CSS Generation
+  │   ├── generateCss(designStrategy) → full stylesheet
+  │   ├── Design tokens from palette (10 color schemes × brandTone)
+  │   ├── Typography from designStyle (Inter, Playfair Display)
+  │   ├── Spacing from layout.spacing (compact/balanced/generous)
+  │   ├── Component styles for all section types
+  │   ├── Responsive breakpoints (768px, 480px)
+  │   └── Animations from interaction settings
+  │
+  ├── STEP 5 — Asset Injection
+  │   ├── injectAssets(html, pageContent) → scripts, meta
+  │   └── generateScriptFile() → smooth scroll JS (438 bytes)
+  │
+  └── STEP 6 — Output Validation
+      ├── validateOutput({ files, meta })
+      ├── Ensures all required files exist
+      ├── Validates DOCTYPE, html tags, navigation, CSS tokens
+      └── Throws GeneratedWebsiteValidationError on failure
+```
+
+### Module Responsibilities
+
+| Module | File | Responsibility |
+|---|---|---|
+| Entry | `lib/generator/index.js` | Orchestrates 6-step pipeline, builds file output |
+| Layout Engine | `lib/generator/layoutEngine.js` | Page layout templates (10 types), navigation builder |
+| Component Mapper | `lib/generator/componentMapper.js` | ~45 section types → HTML components with content |
+| HTML Generator | `lib/generator/htmlGenerator.js` | Full HTML page assembly, SEO, fonts, nav, footer |
+| CSS Generator | `lib/generator/cssGenerator.js` | Design tokens → complete stylesheet from Design Strategy |
+| Asset Injector | `lib/generator/assetInjector.js` | Meta tags, scripts, SEO verification |
+| Output Validator | `lib/generator/validateOutput.js` | Schema validation, HTML structure checks |
+
+### Design Token System
+
+The CSS Generator converts Design Strategy concepts into real CSS values deterministically:
+
+| Design Strategy Property | CSS Output | Example |
+|---|---|---|
+| `brandTone` | Color palette (10 schemes) | `persuasive_professional` → blue/navy |
+| `visualPersonality` | Color fallback palette | `creative_showcase` → purple/pink |
+| `designStyle` | Font families, sizes | `editorial_flow` → Playfair + Inter |
+| `layout.spacing` | Spacing scale (xs-xl) | `compact` → 0.5-5rem, `generous` → 1-8rem |
+| `interaction.transitionType` | Transition speed | `quick_ease` → 0.15s |
+| `interaction.hoverStyle` | Hover effects | `scale_highlight` → scale(1.02) |
+| `interaction.scrollBehavior` | Scroll behavior | `parallax` → smooth |
+| `interaction.pageTransition` | Page animation | `fade` → fadeIn keyframes |
+
+### Page Type → Layout Mapping
+
+| Blueprint Type | HTML Template | Hero | Sidebar | Width |
+|---|---|---|---|---|
+| `home` | full | Yes | No | full |
+| `landing` | full | Yes | No | full |
+| `about` | standard | No | No | contained |
+| `contact` | split | No | No | contained |
+| `services` | grid | No | No | contained |
+| `ecommerce` | grid | No | Yes | wide |
+| `portfolio` | grid | No | No | full |
+| `legal` | minimal | No | No | narrow |
+| `content` | standard | No | Yes | contained |
+| `feature` | standard | No | No | contained |
+
+### Supported Section Types (~45)
+
+- **Structural**: hero, about, services, portfolio, products, testimonials, contact, footer
+- **Content**: story, mission, team, values, overview, benefits, process, content
+- **Interactive**: form, info, cta, booking, calendar, confirmation, faq, search
+- **E-commerce**: products, categories, items, cart, checkout, payment, summary, profile, orders, settings
+- **Portfolio**: grid, gallery, filter, featured, description, testimonial, related, share
+- **Pricing**: pricing, plans, comparison
+
+### Determinism
+
+Fully deterministic. Given the same Blueprint + Design Strategy + Content Pack, the generated website output is always identical. No randomness in color selection, layout assignment, or component rendering.
+
+### Isolation
+
+The Website Builder engine is completely independent. It does not access any API handler, frontend code, database, or email system. It is not yet called in any production flow.
 
 ---
 

@@ -94,6 +94,7 @@ See `ARCHITECTURE.md` (Execution Model → Serverless Memory Isolation) for the 
 | `deployment/` | Deployment Engine — see ARCHITECTURE.md Engine Overview | None |
 | `design-system/` | Design System Engine — see ARCHITECTURE.md Engine Overview | None |
 | `content-generator/` | Content Generator Engine — see ARCHITECTURE.md Engine Overview | `lib/planner/`, `lib/design-strategy/` |
+| `generator/` | Website Builder Engine — see ARCHITECTURE.md Engine Overview | `lib/content-generator/`, `lib/design-strategy/`, `lib/planner/` |
 | `preview/` | Preview Engine — see ARCHITECTURE.md Engine Overview | None |
 | `runtime/` | Runtime Engine — see ARCHITECTURE.md Engine Overview | `lib/db/`, `lib/plan/`, etc. |
 
@@ -237,6 +238,21 @@ fetch('/test-data.json').then(r => r.json()).then(d => {
 - Emphasis style determined by inspiration + warmth: aspirational / empathetic / visionary / direct_value
 - Tone is applied AFTER base template selection (templates are project-type-specific)
 - Never bypass the tone system for section content — even structural sections (footer, legal) get tone-appropriate language
+
+## Website Building Rules (Generator)
+
+- All generated HTML must be valid HTML5 (`<!DOCTYPE html>`, proper nesting, closing tags)
+- Every page must include navigation that links to all other non-legal, non-dynamic pages
+- Navigation item for the current page must have `class="active"`
+- CSS must use CSS custom properties for all design decisions — no hardcoded values
+- Section content must come exclusively from the Content Pack — never hardcode copy in generator
+- Design tokens must map deterministically from Design Strategy using closed-form lookup tables
+- Every section type needs a dedicated component function in `componentMapper.js`
+- Missing section types render via `fallbackComponent` placeholder — never crash
+- All user-facing text must be HTML-escaped
+- Generated website must pass `validateOutput()` before being considered deployable
+- Output format: `{ files: { "/dist/index.html": "...", "/dist/assets/styles.css": "..." }, meta: {} }`
+- Pages with dynamic routes (`:slug`) are skipped from file generation
 
 ## File Modification Policy
 
