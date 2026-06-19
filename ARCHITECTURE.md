@@ -132,8 +132,11 @@ Lead generation and client onboarding through contact forms, AI-powered brief co
   │   ├── remediationStore.js  # In-memory + JSON persistence
   │   └── remediationAPI.js    # 14 REST API bindings
   └── runtime/                # SaaS pipeline orchestrator
-├── ui/                        # Dashboard UI (Phase 7.2)
-│   └── dashboard/             # 15 components, 10 pages, 1 layout, entry point + CSS
+├── ui/                        # Dashboard UI (Phase 7.2) + Control Plane (Phase 8.5.0)
+│   ├── dashboard/             # 15 components, 10 pages, 1 layout, entry point + CSS
+│   └── control-plane/         # Real-time control plane (Phase 8.5.0)
+│       ├── index.js           # SSR page renderer with 6 widgets
+│       └── controlPlane.css   # Widget styles, SSE indicator, severity badges, timeline
 ├── public/                    # Static assets
 │   ├── index.html             # Portfolio landing page
 │   ├── brief-maestro.html     # Brief Maestro tool (14 sections)
@@ -508,6 +511,8 @@ Content Generator (Content Pack — page copy, SEO, CTAs, tone-aware)
     Event Intelligence Layer (Phase 8.3.0 — pattern detection, anomaly detection, correlation graph, insight generation, event scoring, intelligence API)
     ↓
     Auto-Remediation Engine (Phase 8.4.0 — self-healing policies, 8 remediation actions, approval gates, cooldowns, action history)
+    ↓
+    Control Plane Dashboard (Phase 8.5.0 — real-time unified visibility: event stream, intelligence insights, anomalies, remediation, cluster health, workflow traces)
 ```
 
 ---
@@ -1107,6 +1112,7 @@ All dashboards read from `GET /api/telemetry`. The shared `dashboard-api.js` mod
 | v3.3.0 | 2026-06-19 | Phase 8.2.0 — Global Event Streaming Engine (15 modules: event bus, stream, store, replay engine, serializer, schema registry, router, subscriptions, filters, correlator, backpressure, metrics, dead letter queue, versioning; integration hooks to Workflow/Telemetry/Cluster/AI/Agent; 129 tests; full test suite: 756 tests passing) |
 | v3.3.0 | 2026-06-19 | Phase 8.3.0 — Event Intelligence Layer (8 modules: intelligence engine, pattern detector, anomaly detector with z-score, correlation engine with graph-based model, insight generator with 7 rules, event scorer, intelligence store, intelligence API with 5 endpoints); 87 tests; <5ms per event; full test suite: 843 tests passing |
 | v3.4.0 | 2026-06-19 | Phase 8.4.0 — Auto-Remediation Engine (6 modules: remediation engine, 8 built-in actions, 7 default policies with safety guardrails, store with history/state, API with 14 endpoints, EventBus integration); 75 tests; full test suite: 918 tests passing |
+| v3.5.0 | 2026-06-19 | Phase 8.5.0 — Control Plane Dashboard Layer (10 API endpoints: overview, events, insights, anomalies, patterns, cluster, workflows, remediation policies/history/approvals; SSE real-time event stream; SSR dashboard page with 6 widgets; sidebar integration); 24 tests; full test suite: 942 tests passing |
 ---
 
 ## Historical Architecture Decisions
@@ -1181,6 +1187,7 @@ The SaaS Core is implemented in `lib/saas/` — 12 modules providing the user-fa
 | **`docs/event-streaming.md`** | Global Event Streaming Engine: architecture, event lifecycle, replay system, cross-system correlation, performance strategy, extension guide | ✅ Active — Phase 8.2.0 |
 | **`docs/event-intelligence.md`** | Event Intelligence Layer: architecture, detection models, correlation graph, scoring system, API endpoints, real-world use cases, extension guide | ✅ Active — Phase 8.3.0 |
 | **`docs/auto-remediation.md`** | Auto-Remediation Engine: architecture, built-in actions, default policies, safety model (cooldowns, rate limits, approval gates), API reference, extension guide | ✅ Active — Phase 8.4.0 |
+| **`ui/control-plane/`** | Control Plane Dashboard (SSR page + 2 files): real-time event stream (SSE), 6 system widgets (events, insights, anomalies, remediation, cluster, workflows), remediation policy toggles, StatsCard metrics grid | ✅ Active — Phase 8.5.0 |
 | `AGENTS.md` | Former agent operations manual — content distributed across all 4 canonical files | ❌ Deprecated (deleted) |
 | `CHANGELOG.md` | Former detailed version history — compressed to Version History table in this file | ❌ Deprecated (deleted) |
 | `ARCHITECTURE-SAAS.md` | Former SaaS design document — compressed to SaaS Architecture section in this file | ❌ Deprecated (deleted) |

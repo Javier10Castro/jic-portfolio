@@ -8,6 +8,7 @@ const LINKS = [
     { id: 'workflows', label: 'Workflows', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>' },
     { id: 'observability', label: 'Observability', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>' },
     { id: 'cluster', label: 'Cluster', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="8" height="8" rx="1"/><rect x="14" y="2" width="8" height="8" rx="1"/><rect x="8" y="12" width="8" height="8" rx="1"/><line x1="10" y1="6" x2="14" y2="6"/><line x1="12" y1="10" x2="12" y2="12"/></svg>' },
+    { id: 'controlPlane', label: 'Control Plane', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20V10M18 20V4M6 20v-4"/><circle cx="12" cy="10" r="2"/><circle cx="18" cy="4" r="2"/><circle cx="6" cy="16" r="2"/></svg>' },
   ]},
   { section: 'Workspace', items: [
     { id: 'workspace', label: 'Workspace', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>' },
