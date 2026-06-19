@@ -123,7 +123,14 @@ Lead generation and client onboarding through contact forms, AI-powered brief co
   │       ├── insightGenerator.js   # Rule-based insight generation
   │       ├── eventScorer.js        # Importance/urgency/impact scoring
   │       ├── intelligenceStore.js  # In-memory + JSON persistence
-  │       └── intelligenceAPI.js    # 5 REST API bindings
+  │               └── intelligenceAPI.js    # 5 REST API bindings
+  ├── remediation/            # Auto-Remediation Engine (Phase 8.4.0)
+  │   ├── index.js             # Entry point — exports + attachToEventBus
+  │   ├── remediationEngine.js # Central orchestrator
+  │   ├── remediationActions.js# 8 built-in action types + custom registration
+  │   ├── remediationPolicies.js# 7 default policies with matching + safety guards
+  │   ├── remediationStore.js  # In-memory + JSON persistence
+  │   └── remediationAPI.js    # 14 REST API bindings
   └── runtime/                # SaaS pipeline orchestrator
 ├── ui/                        # Dashboard UI (Phase 7.2)
 │   └── dashboard/             # 15 components, 10 pages, 1 layout, entry point + CSS
@@ -499,6 +506,8 @@ Content Generator (Content Pack — page copy, SEO, CTAs, tone-aware)
     Event Streaming Engine (Phase 8.2.0 — event bus, store, replay, routing, correlation, backpressure, subscriptions, filters, metrics, versioning, schema registry, dead letter queue)
     ↓
     Event Intelligence Layer (Phase 8.3.0 — pattern detection, anomaly detection, correlation graph, insight generation, event scoring, intelligence API)
+    ↓
+    Auto-Remediation Engine (Phase 8.4.0 — self-healing policies, 8 remediation actions, approval gates, cooldowns, action history)
 ```
 
 ---
@@ -1097,6 +1106,7 @@ All dashboards read from `GET /api/telemetry`. The shared `dashboard-api.js` mod
 | v3.2.0 | 2026-06-19 | Phase 8.1.0 — Distributed Execution Cluster (14 modules: cluster manager, storage, events (11 types), metrics (counters/gauges/histograms), worker manager, registry, node model, heartbeat monitor (offline/stale detection), leader election (automatic failover), task dispatcher (retry + dead letter), task queue (6 types: priority/FIFO/LIFO/scheduled/delayed/deadLetter), load balancer (6 strategies: round_robin/least_busy/weighted/latency/cost/sticky), distributed scheduler; local simulation of 100 workers and 1000 concurrent tasks; 8 API endpoints; dashboard cluster center page; 190 tests; full test suite: 627 tests passing) |
 | v3.3.0 | 2026-06-19 | Phase 8.2.0 — Global Event Streaming Engine (15 modules: event bus, stream, store, replay engine, serializer, schema registry, router, subscriptions, filters, correlator, backpressure, metrics, dead letter queue, versioning; integration hooks to Workflow/Telemetry/Cluster/AI/Agent; 129 tests; full test suite: 756 tests passing) |
 | v3.3.0 | 2026-06-19 | Phase 8.3.0 — Event Intelligence Layer (8 modules: intelligence engine, pattern detector, anomaly detector with z-score, correlation engine with graph-based model, insight generator with 7 rules, event scorer, intelligence store, intelligence API with 5 endpoints); 87 tests; <5ms per event; full test suite: 843 tests passing |
+| v3.4.0 | 2026-06-19 | Phase 8.4.0 — Auto-Remediation Engine (6 modules: remediation engine, 8 built-in actions, 7 default policies with safety guardrails, store with history/state, API with 14 endpoints, EventBus integration); 75 tests; full test suite: 918 tests passing |
 ---
 
 ## Historical Architecture Decisions
@@ -1170,6 +1180,7 @@ The SaaS Core is implemented in `lib/saas/` — 12 modules providing the user-fa
 | **`docs/distributed-cluster.md`** | Distributed Execution Cluster: architecture, cluster topology, worker lifecycle, queues, scheduling, leader election, failover, metrics, API, scaling and deployment guides | ✅ Active — Phase 8.1.0 |
 | **`docs/event-streaming.md`** | Global Event Streaming Engine: architecture, event lifecycle, replay system, cross-system correlation, performance strategy, extension guide | ✅ Active — Phase 8.2.0 |
 | **`docs/event-intelligence.md`** | Event Intelligence Layer: architecture, detection models, correlation graph, scoring system, API endpoints, real-world use cases, extension guide | ✅ Active — Phase 8.3.0 |
+| **`docs/auto-remediation.md`** | Auto-Remediation Engine: architecture, built-in actions, default policies, safety model (cooldowns, rate limits, approval gates), API reference, extension guide | ✅ Active — Phase 8.4.0 |
 | `AGENTS.md` | Former agent operations manual — content distributed across all 4 canonical files | ❌ Deprecated (deleted) |
 | `CHANGELOG.md` | Former detailed version history — compressed to Version History table in this file | ❌ Deprecated (deleted) |
 | `ARCHITECTURE-SAAS.md` | Former SaaS design document — compressed to SaaS Architecture section in this file | ❌ Deprecated (deleted) |
