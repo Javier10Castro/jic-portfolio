@@ -33,7 +33,8 @@ Lead generation and client onboarding through contact forms, AI-powered brief co
 ├── api/                       # Vercel Serverless Functions
 │   ├── sendBrief.js           # Brief: validation → PDF → 2 emails
 │   ├── sendContact.js         # Contact: validation → 2 emails
-│   └── telemetry.js           # Observability (logs, traces, health, coverage)
+│   ├── telemetry.js           # Observability (logs, traces, health, coverage)
+│   └── dashboard-saas.js      # SaaS Dashboard server-side renderer (Phase 7.2)
 ├── lib/                       # Internal system modules
 │   ├── rate-limit.js          # IP sliding window, email dedup, honeypot
 │   ├── request-registry.js    # Lifecycle tracking (Neon + memory, 5min TTL)
@@ -53,6 +54,8 @@ Lead generation and client onboarding through contact forms, AI-powered brief co
 │   ├── preview/               # Preview Engine (simulation)
 │   ├── saas/                  # SaaS Core (Phase 7.1) — RBAC, auth, users, orgs, workspaces, projects, sessions, API keys, usage, audit, settings, storage
 │   └── runtime/               # SaaS pipeline orchestrator
+├── ui/                        # Dashboard UI (Phase 7.2)
+│   └── dashboard/             # 15 components, 10 pages, 1 layout, entry point + CSS
 ├── public/                    # Static assets
 │   ├── index.html             # Portfolio landing page
 │   ├── brief-maestro.html     # Brief Maestro tool (14 sections)
@@ -75,7 +78,8 @@ Lead generation and client onboarding through contact forms, AI-powered brief co
 │   └── migrations/            # SQL migration scripts
 ├── docs/
 │   ├── deployment-engine.md   # Deployment Engine architecture (Phase 6)
-│   └── saas-core.md           # SaaS Core architecture (Phase 7.1)
+│   ├── saas-core.md           # SaaS Core architecture (Phase 7.1)
+│   └── dashboard-ui.md        # Dashboard UI architecture (Phase 7.2)
 ├── scripts/                   # CLI tools and test scripts
 ├── package.json
 ├── ARCHITECTURE.md            # This file — single source of truth
@@ -210,6 +214,11 @@ telemetry.js ──┘
   1. Admin notification to `GMAIL_USER`
   2. Client confirmation to `[email, GMAIL_USER]`
 
+### `GET /api/dashboard-saas` — SaaS Dashboard (Phase 7.2)
+- **Response**: Full server-rendered HTML page
+- **Parameters**: `page` (home/projects/projectDetails/deployments/workspace/settings/profile/apiKeys/usage/auditLog), `workspaceId`, `userId`, `projectId`, `status`, `search`, `view`, `resource`, `actor`, `limit`
+- **Flow**: Route → page renderer → SaaS Core data → component composition → layout → full HTML
+
 ### `GET /api/telemetry` — Consolidated observability
 | Parameter | Returns |
 |---|---|
@@ -318,6 +327,7 @@ These modules form the Agent Pack v1 pipeline — converting client briefs into 
 | **Decision** | `lib/decision/` | Implemented | Architectural decision records |
 | **Deployment** | `lib/deployment/` | Implemented | Provider-based deployment: Vercel, GitHub, versioning, rollback, history, dry-run |
 | **SaaS Core** | `lib/saas/` | Implemented | 12 modules: RBAC, auth (Email/GitHub/Google), users, orgs, workspaces, projects, sessions, API keys, usage tracking, audit log, settings, storage abstraction |
+| **Dashboard UI** | `ui/dashboard/` | Implemented | 10 server-rendered pages, 15 reusable components, 1 layout, served via `api/dashboard-saas.js` |
 | **Runtime** | `lib/runtime/` | Implemented | SaaS pipeline orchestrator with Neon persistence |
 | **Form Persistence** | `lib/db/formResponses.js` | Implemented | Brief Maestro responses to Neon |
 | **Orchestrator** | `lib/orchestrator/` | Implemented | Brief → Plan IR (intent, tone, features, structure) |
@@ -346,7 +356,7 @@ Scaffold Engine (physical files on disk)
 ```
 **Note**: This pipeline is for the Agent Pack project generation system. The contact/brief email system (`api/sendBrief`, `api/sendContact`) operates independently and does not use this pipeline.
 
-### AI Website Generator Pipeline (Phase 1-7.1)
+### AI Website Generator Pipeline (Phase 1-7.2)
 
 ```
 Brief (client form data)
@@ -364,6 +374,8 @@ Content Generator (Content Pack — page copy, SEO, CTAs, tone-aware)
     Deployment Engine (Vercel/GitHub — provider abstraction, versioning, rollback)
     ↓
     SaaS Core (Phase 7.1 — RBAC, auth, users, orgs, workspaces, projects, sessions, API keys, usage, audit, settings, storage)
+    ↓
+    Dashboard UI (Phase 7.2 — 10 pages, 15 components, Server-side rendered via api/dashboard-saas.js)
 ```
 
 ---
@@ -949,6 +961,7 @@ All dashboards read from `GET /api/telemetry`. The shared `dashboard-api.js` mod
 | v1.9.1 | 2026-06-10 | Per-email progress stages, retry traces, rate-limit headers |
 | v2.0.0 | 2026-06-18 | Documentation consolidation (4 canonical docs) |
 | v2.1.0 | 2026-06-18 | Phase 7.1 — SaaS Core foundation (12 modules: RBAC, auth, users, orgs, workspaces, projects, sessions, API keys, usage, audit, settings, storage) |
+| v2.2.0 | 2026-06-18 | Phase 7.2 — Dashboard UI (10 server-rendered pages, 15 reusable components, 1 layout, served via api/dashboard-saas.js) |
 
 ---
 
@@ -1010,6 +1023,7 @@ The SaaS Core is implemented in `lib/saas/` — 12 modules providing the user-fa
 | **`ENGINE_RULES.md`** | AI pipeline behavior rules: engine specifications, scoring system, state machine, validation rules, approval logic | ✅ Active |
 | **`DEVELOPMENT_RULES.md`** | Developer workflow: naming conventions, CSS/JS style, Git commits, module boundaries, API design, testing strategy, security | ✅ Active |
 | **`DEPLOYMENT.md`** | Infrastructure: Vercel deployment, CI/CD, environment setup, rollback, rate limits, CLI reference | ✅ Active |
+| **`docs/dashboard-ui.md`** | Dashboard UI architecture: 10 pages, 15 components, navigation map, responsive strategy, accessibility | ✅ Active — Phase 7.2 |
 | `AGENTS.md` | Former agent operations manual — content distributed across all 4 canonical files | ❌ Deprecated (deleted) |
 | `CHANGELOG.md` | Former detailed version history — compressed to Version History table in this file | ❌ Deprecated (deleted) |
 | `ARCHITECTURE-SAAS.md` | Former SaaS design document — compressed to SaaS Architecture section in this file | ❌ Deprecated (deleted) |
