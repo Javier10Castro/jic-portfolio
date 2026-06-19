@@ -304,7 +304,7 @@ These modules form the Agent Pack v1 pipeline — converting client briefs into 
 | **Design System** | `lib/design-system/` | Implemented | CSS variable generation, design tokens |
 | **Preview** | `lib/preview/` | Implemented | Visual preview simulation |
 | **Decision** | `lib/decision/` | Implemented | Architectural decision records |
-| **Deployment** | `lib/deployment/` | Implemented | Git init, commit, GitHub repo creation, push |
+| **Deployment** | `lib/deployment/` | Implemented | Provider-based deployment: Vercel, GitHub, versioning, rollback, history, dry-run |
 | **Runtime** | `lib/runtime/` | Implemented | SaaS pipeline orchestrator with Neon persistence |
 | **Form Persistence** | `lib/db/formResponses.js` | Implemented | Brief Maestro responses to Neon |
 | **Orchestrator** | `lib/orchestrator/` | Implemented | Brief → Plan IR (intent, tone, features, structure) |
@@ -329,11 +329,11 @@ Preview Engine (visual simulation)
     ↓
 Scaffold Engine (physical files on disk)
     ↓
-Deployment Engine (Git → GitHub → Vercel)
+    Deployment Engine (provider abstraction → Vercel/GitHub → versioning + rollback)
 ```
 **Note**: This pipeline is for the Agent Pack project generation system. The contact/brief email system (`api/sendBrief`, `api/sendContact`) operates independently and does not use this pipeline.
 
-### AI Website Generator Pipeline (Phase 1-5)
+### AI Website Generator Pipeline (Phase 1-6)
 
 ```
 Brief (client form data)
@@ -346,7 +346,9 @@ Design Strategy (visual system + tone — personality, layout, imagery, interact
     ↓
 Content Generator (Content Pack — page copy, SEO, CTAs, tone-aware)
     ↓
-Website Builder (Deployable HTML/CSS/JS — /dist/ static site)
+    Website Builder (Deployable HTML/CSS/JS — /dist/ static site)
+    ↓
+    Deployment Engine (Vercel/GitHub — provider abstraction, versioning, rollback)
 ```
 
 ---
@@ -697,6 +699,76 @@ Fully deterministic. Given the same Blueprint + Design Strategy + Content Pack, 
 ### Isolation
 
 The Website Builder engine is completely independent. It does not access any API handler, frontend code, database, or email system. It is not yet called in any production flow.
+
+---
+
+## Deployment Engine
+
+### Purpose
+
+Publish generated websites to production with versioning, deployment history, rollback support, and provider abstraction. The Deployment Engine is the final step in the generation pipeline — it takes the build output from the Website Builder and deploys it to a hosting provider.
+
+### Architecture
+
+```
+  Build Artifacts (from Website Builder)
+       │
+       ▼
+  Deployment Manager
+       │
+       ├── Provider Registry
+       │      ├── Vercel Provider   (production default)
+       │      └── GitHub Provider   (source control + releases)
+       │
+       ├── Deployment History  (data/deployments.json)
+       ├── Rollback Manager    (data/rollbacks.json)
+       └── Deployment Report
+```
+
+### Provider Abstraction
+
+Every provider implements four methods — `deploy()`, `status()`, `rollback()`, `health()`. New providers (Cloudflare Pages, Netlify, AWS Amplify, etc.) can be added without modifying any existing code by calling `registerProvider()`.
+
+### Module Responsibilities
+
+| Module | File | Responsibility |
+|---|---|---|
+| Entry | `lib/deployment/index.js` | Exposes deploy, status, history, rollback |
+| Manager | `lib/deployment/deploymentManager.js` | Orchestrates complete deployment lifecycle |
+| Provider | `lib/deployment/deploymentProvider.js` | Provider registry — register, get, list, health |
+| Vercel | `lib/deployment/vercelProvider.js` | Vercel deploy, status, rollback, health (simulated without credentials) |
+| GitHub | `lib/deployment/githubProvider.js` | GitHub repo create, push, tag releases (simulated without gh CLI) |
+| History | `lib/deployment/deploymentHistory.js` | Persistence layer for deployment records |
+| Rollback | `lib/deployment/rollbackManager.js` | Rollback to previous versions |
+| Artifacts | `lib/deployment/buildArtifacts.js` | Package build files into deployable bundles |
+| Reports | `lib/deployment/deploymentReport.js` | Deployment report generation and history summaries |
+
+### Deployment Flow
+
+```
+  1. deploy({ buildPath, projectName, version, providerName })
+  2.   ├── packageBuild()        → scan files, build manifest
+  3.   ├── provider.deploy()     → call selected provider
+  4.   ├── history.record()      → persist deployment record
+  5.   ├── report.generate()     → build deployment report
+  6.   └── return result
+```
+
+### Execution Modes
+
+| Mode | Trigger | Behavior |
+|---|---|---|
+| Dry-run | `{ dryRun: true }` | Simulates deployment — no external calls, no persistence |
+| Production | default | Real deployment via provider, persisted to history |
+| Simulated | missing credentials | Provider returns realistic simulated responses |
+
+### Determinism
+
+The deployment engine itself is deterministic — the same inputs produce the same deployment metadata. Provider responses may vary based on external API state.
+
+### Isolation
+
+The Deployment Engine is independent. It does not access API handlers, frontend code, databases, or email systems. It consumes the build output from the Website Builder.
 
 ---
 
