@@ -154,6 +154,29 @@ Lead generation and client onboarding through contact forms, AI-powered brief co
   │   ├── directory/           # 5 modules: SCIM, LDAP, AD, Google Workspace, Entra
   │   ├── security/            # 4 modules: Secrets, Key Rotation, Encryption, Signatures
   │   └── threats/             # 4 modules: Threat Detector, Risk Scorer, Anomaly, Account Protection
+  ├── billing/                 # Billing & Subscription Platform (Phase 9.2.0)
+  │   ├── index.js             # Entry point — exports + getDefaultEngine + createEngine
+  │   ├── billingManager.js    # Central orchestrator — 30+ sub-module references
+  │   ├── subscriptionManager.js # Subscription lifecycle (create/cancel/change/renew)
+  │   ├── customerManager.js   # Customer CRUD
+  │   ├── invoiceManager.js    # Invoice lifecycle (draft/open/paid/failed/void)
+  │   ├── paymentManager.js    # Payment processing with provider abstraction
+  │   ├── checkoutManager.js   # Checkout session management
+  │   ├── usageMeter.js        # Usage tracking per customer/metric
+  │   ├── pricingEngine.js     # Flat/seat/usage pricing calculation
+  │   ├── taxEngine.js         # Regional tax calculation
+  │   ├── discountEngine.js    # Coupons and promotions
+  │   ├── creditManager.js     # Credit management with expiry
+  │   ├── refundManager.js     # Refund processing
+  │   ├── webhookProcessor.js  # Webhook dispatch with handlers
+  │   ├── billingEvents.js     # 20+ billing event types + pub/sub
+  │   ├── billingStorage.js    # In-memory storage layer
+  │   ├── plans/               # Plan registry, features, limits, versions, trials
+  │   ├── usage/               # Tracker, aggregator, quota calculator, overage calculator
+  │   ├── payments/providers/  # Base, Stripe, PayPal, Manual, Mock providers
+  │   ├── invoices/            # Generator, PDF, numbering, exporter
+  │   ├── customers/           # Portal, billing profile, payment methods, addresses
+  │   └── analytics/           # MRR, ARR, Churn, LTV, Cohort, Revenue Forecast
   └── runtime/                # SaaS pipeline orchestrator
 ├── ui/                        # Dashboard UI (Phase 7.2) + Control Plane (Phase 8.5.0)
 │   ├── dashboard/             # 15 components, 10 pages, 1 layout, entry point + CSS
@@ -163,7 +186,8 @@ Lead generation and client onboarding through contact forms, AI-powered brief co
 │   ├── cost.js            # SSR page renderer with 5-tab Cost Optimization page
 │   ├── cost.css           # Cost tab styles, gauge widgets, progress bars
 │   ├── security.js        # SSR page renderer with 6-tab Security Dashboard page
-│       └── security.css       # Security tab styles, metric cards, threat badges
+│   ├── security.css       # Security tab styles, metric cards, threat badges
+│       └── billing.js         # SSR page renderer with 5-tab Billing Dashboard page
 ├── public/                    # Static assets
 │   ├── index.html             # Portfolio landing page
 │   ├── brief-maestro.html     # Brief Maestro tool (14 sections)
@@ -192,7 +216,8 @@ Lead generation and client onboarding through contact forms, AI-powered brief co
 │   ├── observability.md       # Observability Platform architecture (Phase 8.0.0)
 │   ├── distributed-cluster.md # Distributed Execution Cluster architecture (Phase 8.1.0)
 │   ├── cost-engine.md         # Cost Optimization & Resource Governance architecture (Phase 9.0.0)
-│   └── security-platform.md   # Enterprise Identity & Security Platform architecture (Phase 9.1.0)
+│   ├── security-platform.md   # Enterprise Identity & Security Platform architecture (Phase 9.1.0)
+│   └── billing-platform.md    # Billing & Subscription Platform architecture (Phase 9.2.0)
 ├── scripts/                   # CLI tools and test scripts
 ├── package.json
 ├── ARCHITECTURE.md            # This file — single source of truth
@@ -455,6 +480,7 @@ These modules form the Agent Pack v1 pipeline — converting client briefs into 
 | **Event Intelligence** | `lib/events/intelligence/` | Implemented | Phase 8.3.0 — Event Intelligence Layer: 8 modules, central intelligence engine consuming all events via EventBus wildcard, pattern detector (6 patterns: repeated_failures, retry_loops, cluster_imbalance, ai_fallback_chains, latency_bursts, unexpected_transitions), anomaly detector with rolling-window z-score approximation (error_rate_spike, volume_spike, latency_anomaly, invalid_transitions, orphaned_correlations), correlation engine with graph-based nodes+edges (temporal/causal/dependency relationships), insight generator with 7 rule-based detection→recommendation rules (retry_backoff, cluster_scale, provider_degradation, error_rate, latency, state_transition, system_stable), event scorer (importance/urgency/systemImpact 0–100), intelligence store with in-memory + JSON persistence, intelligence API (5 endpoints: insights, patterns, anomalies, correlation-graph, health-intelligence), attachToEventBus hook (filters intelligence.* events to prevent loops), 87 tests, verified <5ms per event average |
 | **Cost Optimization** | `lib/cost/` | Implemented | Phase 9.0.0 — Cost Optimization & Resource Governance Engine: 11 modules, cost engine orchestrator with analyze/optimize/forecast/recommend, cost analyzer (6 domains: AI token usage, cluster utilization, workflow cost, deployment cost, storage usage, API consumption), pricing models (OpenAI, Anthropic, Gemini, Ollama + custom provider support), budget manager (scoped budgets, soft/hard limits, threshold alerts), optimizer (6 recommendation types: provider/model/batch/parallel/cache/worker), forecast engine (linear regression trend, daily/monthly/quarterly/yearly projections), recommendation engine (scored by impact/category with expected savings/risk/confidence), quota manager (6 tracked resources: tokens/requests/deployments/storage/workflows/cluster minutes), policy engine (5 default policies: max cost/preferred providers/min quality/latency threshold/green computing), cost events (8 event types with EventBus integration); 12 API endpoints; cost dashboard page with 5 tabs (Overview, Budgets, Forecast, Optimization Center, Usage Explorer); 176 tests |
 | **Security Platform** | `lib/security/` | Implemented | Phase 9.1.0 — Enterprise Identity & Security Platform: 38+ modules across 9 subdirectories. Authentication (7 providers: JWT, API Key, OAuth, SAML, MFA/TOTP, Password, Session), Authorization (5 modules: RBAC, Permissions, Policy Engine, Role Manager, Resource Access), Organizations (5 modules: Org Manager, Tenant Isolation, Teams, Membership, Invitations), Audit (4 modules: Audit Logger, Security Events, Audit Search, Compliance Exporter), Sessions (4 modules: Session Manager, Device Manager, Token Rotation, Login History), Directory (5 providers: SCIM 2.0, LDAP, Active Directory, Google Workspace, Entra ID), Security (4 modules: Secret Manager, Key Rotation, Encryption, Signature), Threats (4 modules: Threat Detector, Risk Scorer, Anomaly Detector, Account Protection); Identity Manager orchestrator; 25 API endpoints at /api/v1/security/; Security Dashboard UI (6 tabs); 287 tests |
+| **Billing Platform** | `lib/billing/` | Implemented | Phase 9.2.0 — Billing & Subscription Platform: 30+ modules across 7 subdirectories. Core: BillingManager orchestrator, SubscriptionManager (full lifecycle: create/cancel/change/renew/pause/resume), CustomerManager, InvoiceManager (draft/open/paid/failed/void), PaymentManager (provider abstraction), CheckoutManager, UsageMeter, PricingEngine, TaxEngine, DiscountEngine, CreditManager, RefundManager, WebhookProcessor, BillingEvents (20+ types), BillingStorage. Plans: PlanRegistry (5 default plans Free/Starter/Professional/Business/Enterprise + custom), PlanFeatures, PlanLimits, PlanVersions, TrialManager. Usage: UsageTracker, UsageAggregator, QuotaCalculator, OverageCalculator. Payments: 5 providers (Base/Stripe/PayPal/Manual/Mock). Invoices: InvoiceGenerator, InvoicePdf, InvoiceNumbering, InvoiceExporter. Customers: CustomerPortal, BillingProfile, PaymentMethods, Addresses. Analytics: MrrCalculator, ArrCalculator, ChurnCalculator, LtvCalculator, CohortAnalyzer, RevenueForecast. 19 API endpoints at /api/v1/billing/; Billing Dashboard UI (5 tabs); 255 tests |
 | **Orchestrator** | `lib/orchestrator/` | Implemented | Brief → Plan IR (intent, tone, features, structure) |
 | **Planner** | `lib/planner/` | Implemented | Plan IR → Project Blueprint (pages, nav, sections, components) |
 | **Content Generator** | `lib/content-generator/` | Implemented | Blueprint + Design Strategy → Content Pack (copy, SEO, CTAs) |
@@ -548,6 +574,8 @@ Content Generator (Content Pack — page copy, SEO, CTAs, tone-aware)
     Cost Optimization Engine (Phase 9.0.0 — pricing models, budgets, forecasts, quotas, policies, recommendations, optimization)
     ↓
     Security & Identity Platform (Phase 9.1.0 — authentication, authorization, RBAC, organizations, audit, sessions, directory sync, threat detection, secrets, encryption)
+    ↓
+    Billing & Subscription Platform (Phase 9.2.0 — subscriptions, invoices, payments, usage billing, quotas, discounts, credits, refunds, revenue analytics)
 ```
 
 ---
@@ -1150,6 +1178,7 @@ All dashboards read from `GET /api/telemetry`. The shared `dashboard-api.js` mod
 | v3.5.0 | 2026-06-19 | Phase 8.5.0 — Control Plane Dashboard Layer (10 API endpoints: overview, events, insights, anomalies, patterns, cluster, workflows, remediation policies/history/approvals; SSE real-time event stream; SSR dashboard page with 6 widgets; sidebar integration); 24 tests; full test suite: 942 tests passing |
 | v4.0.0 | 2026-06-19 | Phase 9.0.0 — Cost Optimization & Resource Governance Engine (11 modules: cost engine orchestrator, cost analyzer with 6 analysis domains, pricing models for 4 providers + custom, budget manager with scoped budgets/soft+hard limits/threshold alerts, optimizer with 6 recommendation types, forecast engine with linear regression trend, recommendation engine with scored recommendations, quota manager with 6 tracked resources, policy engine with 5 default policies, cost events with 8 event types; 12 API endpoints; cost dashboard page with 5 tabs; 176 tests; full test suite: 1118 tests passing) |
 | v4.1.0 | 2026-06-19 | Phase 9.1.0 — Enterprise Identity & Security Platform (38+ modules across 9 subdirectories: 7 authentication providers, 5 authorization modules including RBAC, 5 organization modules, 4 audit modules, 4 session modules, 5 directory providers, 4 security modules, 4 threat modules; Identity Manager orchestrator; 25 API endpoints; Security Dashboard UI with 6 tabs; 287 tests; full test suite: 1405 tests passing) |
+| v4.2.0 | 2026-06-19 | Phase 9.2.0 — Billing & Subscription Platform (30+ modules across 7 subdirectories: BillingManager orchestrator, SubscriptionManager, CustomerManager, InvoiceManager, PaymentManager, CheckoutManager, UsageMeter, PricingEngine, TaxEngine, DiscountEngine, CreditManager, RefundManager, WebhookProcessor, BillingEvents, BillingStorage; PlanRegistry with 5 default plans; 5 payment providers; analytics suite with MRR/ARR/Churn/LTV/Cohort/Forecast; 19 API endpoints at /api/v1/billing/; Billing Dashboard UI with 5 tabs; 255 tests; full test suite: 780 tests passing) |
 ---
 
 ## Historical Architecture Decisions
