@@ -10,6 +10,7 @@ const { renderUsage } = require('./pages/usage');
 const { renderAuditLog } = require('./pages/auditLog');
 const { renderConversations } = require('./pages/conversations');
 const { renderControlPlane } = require('../control-plane/index');
+const { renderCostOverview } = require('../control-plane/cost');
 const fs = require('fs');
 const path = require('path');
 const css = fs.readFileSync(path.join(__dirname, 'dashboard.css'), 'utf-8');
@@ -27,6 +28,7 @@ const ROUTES = {
   auditLog: { render: renderAuditLog, title: 'Audit Log' },
   conversations: { render: renderConversations, title: 'Conversations' },
   controlPlane: { render: renderControlPlane, title: 'Control Plane' },
+  costOptimization: { render: renderCostOverview, title: 'Cost Optimization' },
 };
 
 function serveDashboard(params = {}) {

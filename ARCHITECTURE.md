@@ -131,12 +131,39 @@ Lead generation and client onboarding through contact forms, AI-powered brief co
   │   ├── remediationPolicies.js# 7 default policies with matching + safety guards
   │   ├── remediationStore.js  # In-memory + JSON persistence
   │   └── remediationAPI.js    # 14 REST API bindings
+  ├── cost/                    # Cost Optimization & Resource Governance (Phase 9.0.0)
+  │   ├── index.js             # Entry point — exports + getCostEngine
+  │   ├── costEngine.js        # Central orchestrator (analyze/optimize/forecast/recommend)
+  │   ├── costAnalyzer.js      # 6 analysis domains (AI, cluster, workflow, deploy, storage, API)
+  │   ├── pricingModels.js     # Provider pricing (OpenAI/Anthropic/Gemini/Ollama + custom)
+  │   ├── budgetManager.js     # Scoped budgets, soft/hard limits, threshold alerts
+  │   ├── optimizer.js         # 6 recommendation types with impact scoring
+  │   ├── forecastEngine.js    # Linear regression trend projection
+  │   ├── recommendationEngine.js # Scored recommendations by impact/category
+  │   ├── quotaManager.js      # 6 tracked resources with limit enforcement
+  │   ├── policyEngine.js      # 5 default policies (max cost, preferred providers, etc.)
+  │   └── costEvents.js        # 8 event types with EventBus integration
+  ├── security/                # Enterprise Identity & Security Platform (Phase 9.1.0)
+  │   ├── index.js             # Entry point — exports + getDefaultEngine
+  │   ├── identityManager.js   # Central orchestrator
+  │   ├── authentication/      # 7 providers: JWT, API Key, OAuth, SAML, MFA, Password, Session
+  │   ├── authorization/       # 5 modules: RBAC, Permissions, Policies, Roles, Resource Access
+  │   ├── organizations/       # 5 modules: Org, Tenant, Team, Membership, Invitations
+  │   ├── audit/               # 4 modules: Logger, Events, Search, Compliance
+  │   ├── sessions/            # 4 modules: Session, Device, Token Rotation, Login History
+  │   ├── directory/           # 5 modules: SCIM, LDAP, AD, Google Workspace, Entra
+  │   ├── security/            # 4 modules: Secrets, Key Rotation, Encryption, Signatures
+  │   └── threats/             # 4 modules: Threat Detector, Risk Scorer, Anomaly, Account Protection
   └── runtime/                # SaaS pipeline orchestrator
 ├── ui/                        # Dashboard UI (Phase 7.2) + Control Plane (Phase 8.5.0)
 │   ├── dashboard/             # 15 components, 10 pages, 1 layout, entry point + CSS
-│   └── control-plane/         # Real-time control plane (Phase 8.5.0)
+│   └── control-plane/         # Control Plane Dashboard + Cost Optimization (Phase 8.5.0/9.0.0)
 │       ├── index.js           # SSR page renderer with 6 widgets
-│       └── controlPlane.css   # Widget styles, SSE indicator, severity badges, timeline
+│       ├── controlPlane.css   # Widget styles, SSE indicator, severity badges, timeline
+│   ├── cost.js            # SSR page renderer with 5-tab Cost Optimization page
+│   ├── cost.css           # Cost tab styles, gauge widgets, progress bars
+│   ├── security.js        # SSR page renderer with 6-tab Security Dashboard page
+│       └── security.css       # Security tab styles, metric cards, threat badges
 ├── public/                    # Static assets
 │   ├── index.html             # Portfolio landing page
 │   ├── brief-maestro.html     # Brief Maestro tool (14 sections)
@@ -163,7 +190,9 @@ Lead generation and client onboarding through contact forms, AI-powered brief co
 │   ├── dashboard-ui.md        # Dashboard UI architecture (Phase 7.2)
 │   ├── conversation-engine.md # Conversation Engine architecture (Phase 7.3.1)
 │   ├── observability.md       # Observability Platform architecture (Phase 8.0.0)
-│   └── distributed-cluster.md # Distributed Execution Cluster architecture (Phase 8.1.0)
+│   ├── distributed-cluster.md # Distributed Execution Cluster architecture (Phase 8.1.0)
+│   ├── cost-engine.md         # Cost Optimization & Resource Governance architecture (Phase 9.0.0)
+│   └── security-platform.md   # Enterprise Identity & Security Platform architecture (Phase 9.1.0)
 ├── scripts/                   # CLI tools and test scripts
 ├── package.json
 ├── ARCHITECTURE.md            # This file — single source of truth
@@ -424,6 +453,8 @@ These modules form the Agent Pack v1 pipeline — converting client briefs into 
 | **Distributed Cluster** | `lib/cluster/` | Implemented | Phase 8.1.0 — Distributed Execution Cluster: 14 modules, worker lifecycle management, 6 queue types (priority/FIFO/LIFO/scheduled/delayed/deadLetter), 6 load balancing strategies, leader election with automatic failover, heartbeat monitoring (offline/stale detection), task dispatch with retry + dead letter, distributed scheduler, cluster-wide metrics, 11 event types, 8 API endpoints, dashboard cluster page, 190 tests |
 | **Event Streaming** | `lib/events/` | Implemented | Phase 8.2.0 — Global Event Streaming Engine: 15 modules, event bus with sync+async emit + wildcards, event stream with buffered SSE/WebSocket-ready output, append-only event store with type/correlation/source/time-range queries, event replay engine with filter/correlation/time-travel + snapshots, event serializer with normalize/serialize/validate/clone, event schema registry, event router with pattern-matching subsystem routes, event subscriptions with per-subscriber management, event filters with register/chain/builtins, event correlator with cross-system trace tracking + spans, event backpressure with drop/buffer/throttle/block strategies, event metrics with counters/gauges/histograms/throughput, event dead letter queue with push/retry/stats, event versioning with schema migration per event type; integration hooks wiring to Workflow Engine, Telemetry, Cluster, AI Router, Agent events without modifying any existing engine; 129 tests |
 | **Event Intelligence** | `lib/events/intelligence/` | Implemented | Phase 8.3.0 — Event Intelligence Layer: 8 modules, central intelligence engine consuming all events via EventBus wildcard, pattern detector (6 patterns: repeated_failures, retry_loops, cluster_imbalance, ai_fallback_chains, latency_bursts, unexpected_transitions), anomaly detector with rolling-window z-score approximation (error_rate_spike, volume_spike, latency_anomaly, invalid_transitions, orphaned_correlations), correlation engine with graph-based nodes+edges (temporal/causal/dependency relationships), insight generator with 7 rule-based detection→recommendation rules (retry_backoff, cluster_scale, provider_degradation, error_rate, latency, state_transition, system_stable), event scorer (importance/urgency/systemImpact 0–100), intelligence store with in-memory + JSON persistence, intelligence API (5 endpoints: insights, patterns, anomalies, correlation-graph, health-intelligence), attachToEventBus hook (filters intelligence.* events to prevent loops), 87 tests, verified <5ms per event average |
+| **Cost Optimization** | `lib/cost/` | Implemented | Phase 9.0.0 — Cost Optimization & Resource Governance Engine: 11 modules, cost engine orchestrator with analyze/optimize/forecast/recommend, cost analyzer (6 domains: AI token usage, cluster utilization, workflow cost, deployment cost, storage usage, API consumption), pricing models (OpenAI, Anthropic, Gemini, Ollama + custom provider support), budget manager (scoped budgets, soft/hard limits, threshold alerts), optimizer (6 recommendation types: provider/model/batch/parallel/cache/worker), forecast engine (linear regression trend, daily/monthly/quarterly/yearly projections), recommendation engine (scored by impact/category with expected savings/risk/confidence), quota manager (6 tracked resources: tokens/requests/deployments/storage/workflows/cluster minutes), policy engine (5 default policies: max cost/preferred providers/min quality/latency threshold/green computing), cost events (8 event types with EventBus integration); 12 API endpoints; cost dashboard page with 5 tabs (Overview, Budgets, Forecast, Optimization Center, Usage Explorer); 176 tests |
+| **Security Platform** | `lib/security/` | Implemented | Phase 9.1.0 — Enterprise Identity & Security Platform: 38+ modules across 9 subdirectories. Authentication (7 providers: JWT, API Key, OAuth, SAML, MFA/TOTP, Password, Session), Authorization (5 modules: RBAC, Permissions, Policy Engine, Role Manager, Resource Access), Organizations (5 modules: Org Manager, Tenant Isolation, Teams, Membership, Invitations), Audit (4 modules: Audit Logger, Security Events, Audit Search, Compliance Exporter), Sessions (4 modules: Session Manager, Device Manager, Token Rotation, Login History), Directory (5 providers: SCIM 2.0, LDAP, Active Directory, Google Workspace, Entra ID), Security (4 modules: Secret Manager, Key Rotation, Encryption, Signature), Threats (4 modules: Threat Detector, Risk Scorer, Anomaly Detector, Account Protection); Identity Manager orchestrator; 25 API endpoints at /api/v1/security/; Security Dashboard UI (6 tabs); 287 tests |
 | **Orchestrator** | `lib/orchestrator/` | Implemented | Brief → Plan IR (intent, tone, features, structure) |
 | **Planner** | `lib/planner/` | Implemented | Plan IR → Project Blueprint (pages, nav, sections, components) |
 | **Content Generator** | `lib/content-generator/` | Implemented | Blueprint + Design Strategy → Content Pack (copy, SEO, CTAs) |
@@ -513,6 +544,10 @@ Content Generator (Content Pack — page copy, SEO, CTAs, tone-aware)
     Auto-Remediation Engine (Phase 8.4.0 — self-healing policies, 8 remediation actions, approval gates, cooldowns, action history)
     ↓
     Control Plane Dashboard (Phase 8.5.0 — real-time unified visibility: event stream, intelligence insights, anomalies, remediation, cluster health, workflow traces)
+    ↓
+    Cost Optimization Engine (Phase 9.0.0 — pricing models, budgets, forecasts, quotas, policies, recommendations, optimization)
+    ↓
+    Security & Identity Platform (Phase 9.1.0 — authentication, authorization, RBAC, organizations, audit, sessions, directory sync, threat detection, secrets, encryption)
 ```
 
 ---
@@ -1113,6 +1148,8 @@ All dashboards read from `GET /api/telemetry`. The shared `dashboard-api.js` mod
 | v3.3.0 | 2026-06-19 | Phase 8.3.0 — Event Intelligence Layer (8 modules: intelligence engine, pattern detector, anomaly detector with z-score, correlation engine with graph-based model, insight generator with 7 rules, event scorer, intelligence store, intelligence API with 5 endpoints); 87 tests; <5ms per event; full test suite: 843 tests passing |
 | v3.4.0 | 2026-06-19 | Phase 8.4.0 — Auto-Remediation Engine (6 modules: remediation engine, 8 built-in actions, 7 default policies with safety guardrails, store with history/state, API with 14 endpoints, EventBus integration); 75 tests; full test suite: 918 tests passing |
 | v3.5.0 | 2026-06-19 | Phase 8.5.0 — Control Plane Dashboard Layer (10 API endpoints: overview, events, insights, anomalies, patterns, cluster, workflows, remediation policies/history/approvals; SSE real-time event stream; SSR dashboard page with 6 widgets; sidebar integration); 24 tests; full test suite: 942 tests passing |
+| v4.0.0 | 2026-06-19 | Phase 9.0.0 — Cost Optimization & Resource Governance Engine (11 modules: cost engine orchestrator, cost analyzer with 6 analysis domains, pricing models for 4 providers + custom, budget manager with scoped budgets/soft+hard limits/threshold alerts, optimizer with 6 recommendation types, forecast engine with linear regression trend, recommendation engine with scored recommendations, quota manager with 6 tracked resources, policy engine with 5 default policies, cost events with 8 event types; 12 API endpoints; cost dashboard page with 5 tabs; 176 tests; full test suite: 1118 tests passing) |
+| v4.1.0 | 2026-06-19 | Phase 9.1.0 — Enterprise Identity & Security Platform (38+ modules across 9 subdirectories: 7 authentication providers, 5 authorization modules including RBAC, 5 organization modules, 4 audit modules, 4 session modules, 5 directory providers, 4 security modules, 4 threat modules; Identity Manager orchestrator; 25 API endpoints; Security Dashboard UI with 6 tabs; 287 tests; full test suite: 1405 tests passing) |
 ---
 
 ## Historical Architecture Decisions
@@ -1187,6 +1224,7 @@ The SaaS Core is implemented in `lib/saas/` — 12 modules providing the user-fa
 | **`docs/event-streaming.md`** | Global Event Streaming Engine: architecture, event lifecycle, replay system, cross-system correlation, performance strategy, extension guide | ✅ Active — Phase 8.2.0 |
 | **`docs/event-intelligence.md`** | Event Intelligence Layer: architecture, detection models, correlation graph, scoring system, API endpoints, real-world use cases, extension guide | ✅ Active — Phase 8.3.0 |
 | **`docs/auto-remediation.md`** | Auto-Remediation Engine: architecture, built-in actions, default policies, safety model (cooldowns, rate limits, approval gates), API reference, extension guide | ✅ Active — Phase 8.4.0 |
+| **`docs/cost-engine.md`** | Cost Optimization & Resource Governance: architecture, pricing model, forecast algorithm, optimization strategy, quota model, policy engine, examples | ✅ Active — Phase 9.0.0 |
 | **`ui/control-plane/`** | Control Plane Dashboard (SSR page + 2 files): real-time event stream (SSE), 6 system widgets (events, insights, anomalies, remediation, cluster, workflows), remediation policy toggles, StatsCard metrics grid | ✅ Active — Phase 8.5.0 |
 | `AGENTS.md` | Former agent operations manual — content distributed across all 4 canonical files | ❌ Deprecated (deleted) |
 | `CHANGELOG.md` | Former detailed version history — compressed to Version History table in this file | ❌ Deprecated (deleted) |
