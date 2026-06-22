@@ -1,0 +1,19 @@
+{
+  "info": { "name": "Platform API", "description": "AI Platform Public API", "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json", "_exporter_id": "platform-sdk" },
+  "item": [
+    { "name": "List Plugins", "request": { "method": "GET", "header": [{"key": "Authorization", "value": "Bearer {{apiKey}}", "type": "text"}], "url": {"raw": "{{baseUrl}}/plugins", "host": ["{{baseUrl}}"], "path": ["plugins"]} } },
+    { "name": "Get Plugin", "request": { "method": "GET", "header": [{"key": "Authorization", "value": "Bearer {{apiKey}}", "type": "text"}], "url": {"raw": "{{baseUrl}}/plugins/:id", "host": ["{{baseUrl}}"], "path": ["plugins", ":id"], "variable": [{"key": "id", "value": "plugin-id"}]} } },
+    { "name": "List Integrations", "request": { "method": "GET", "header": [{"key": "Authorization", "value": "Bearer {{apiKey}}", "type": "text"}], "url": {"raw": "{{baseUrl}}/integrations", "host": ["{{baseUrl}}"], "path": ["integrations"]} } },
+    { "name": "Connect Integration", "request": { "method": "POST", "header": [{"key": "Authorization", "value": "Bearer {{apiKey}}", "type": "text"}, {"key": "Content-Type", "value": "application/json", "type": "text"}], "body": {"mode": "raw", "raw": "{\"provider\": \"github\", \"config\": {\"auth\": {\"type\": \"oauth2\", \"token\": \"...\"}}}"}, "url": {"raw": "{{baseUrl}}/integrations/connect", "host": ["{{baseUrl}}"], "path": ["integrations", "connect"]} } },
+    { "name": "List Deployments", "request": { "method": "GET", "header": [{"key": "Authorization", "value": "Bearer {{apiKey}}", "type": "text"}], "url": {"raw": "{{baseUrl}}/deployments", "host": ["{{baseUrl}}"], "path": ["deployments"]} } },
+    { "name": "Create Deployment", "request": { "method": "POST", "header": [{"key": "Authorization", "value": "Bearer {{apiKey}}", "type": "text"}, {"key": "Content-Type", "value": "application/json", "type": "text"}], "body": {"mode": "raw", "raw": "{\"project\": \"my-app\", \"environment\": \"production\"}"}, "url": {"raw": "{{baseUrl}}/deployments", "host": ["{{baseUrl}}"], "path": ["deployments"]} } },
+    { "name": "Login", "request": { "method": "POST", "header": [{"key": "Content-Type", "value": "application/json", "type": "text"}], "body": {"mode": "raw", "raw": "{\"email\": \"user@example.com\", \"password\": \"***\"}"}, "url": {"raw": "{{baseUrl}}/security/auth/login", "host": ["{{baseUrl}}"], "path": ["security", "auth", "login"]} } },
+    { "name": "List Workflows", "request": { "method": "GET", "header": [{"key": "Authorization", "value": "Bearer {{apiKey}}", "type": "text"}], "url": {"raw": "{{baseUrl}}/workflows", "host": ["{{baseUrl}}"], "path": ["workflows"]} } },
+    { "name": "Get Billing Plan", "request": { "method": "GET", "header": [{"key": "Authorization", "value": "Bearer {{apiKey}}", "type": "text"}], "url": {"raw": "{{baseUrl}}/billing/plans", "host": ["{{baseUrl}}"], "path": ["billing", "plans"]} } },
+    { "name": "Get Status", "request": { "method": "GET", "header": [{"key": "Authorization", "value": "Bearer {{apiKey}}", "type": "text"}], "url": {"raw": "{{baseUrl}}/developer/status", "host": ["{{baseUrl}}"], "path": ["developer", "status"]} } }
+  ],
+  "variable": [
+    { "key": "baseUrl", "value": "https://api.platform.io/v1", "type": "string" },
+    { "key": "apiKey", "value": "your-api-key", "type": "string" }
+  ]
+}

@@ -1,4 +1,4 @@
-# Architecture — Web Portfolio + Brief Maestro
+# Architecture — Web Portfolio + Brief Maestro (v4.7.0)
 
 ## System Overview
 
@@ -30,11 +30,14 @@ Lead generation and client onboarding through contact forms, AI-powered brief co
 
 ```
 /
-├── api/                       # Vercel Serverless Functions
+├── api/                       # Vercel Serverless Functions (9 active, 12 max Hobby)
 │   ├── sendBrief.js           # Brief: validation → PDF → 2 emails
 │   ├── sendContact.js         # Contact: validation → 2 emails
-│   ├── telemetry.js           # Observability (logs, traces, health, coverage)
-│   └── dashboard-saas.js      # SaaS Dashboard server-side renderer (Phase 7.2)
+│   ├── telemetry.js           # Consolidated observability (logs, traces, health, coverage)
+│   ├── dashboard-saas.js      # SaaS Dashboard server-side renderer (Phase 7.2)
+│   ├── platform-api.js        # Platform API — Express app at /api/v1/* (Phases 7.5–9.5)
+│   ├── logs.js                # Backward-compat proxy → telemetry.js (legacy)
+│   └── traces.js              # Backward-compat proxy → telemetry.js (legacy)
 ├── lib/                       # Internal system modules
 │   ├── rate-limit.js          # IP sliding window, email dedup, honeypot
 │   ├── request-registry.js    # Lifecycle tracking (Neon + memory, 5min TTL)
@@ -154,6 +157,53 @@ Lead generation and client onboarding through contact forms, AI-powered brief co
   │   ├── directory/           # 5 modules: SCIM, LDAP, AD, Google Workspace, Entra
   │   ├── security/            # 4 modules: Secrets, Key Rotation, Encryption, Signatures
   │   └── threats/             # 4 modules: Threat Detector, Risk Scorer, Anomaly, Account Protection
+  ├── governance/             # Enterprise Policy & Governance Platform (Phase 9.7.0)
+  │   ├── index.js            # Entry point — 12 exported classes + factories
+  │   ├── governanceManager.js # Central orchestrator — createPolicy, evaluateAll, simulate, compliance, approvals, rollback
+  │   ├── policyRegistry.js   # CRUD — register, unregister, get, list, search, count
+  │   ├── policyCompiler.js   # Compile declarative → executable rules
+  │   ├── policyEvaluator.js  # Evaluate conditions against data (16 operators)
+  │   ├── policyExecutor.js   # Execute actions — deny, warn, notify, log, require_approval
+  │   ├── policyStorage.js    # Namespaced key-value persistence
+  │   ├── policyEvents.js     # 20 event types — POLICY_CREATED, POLICY_VIOLATION, COMPLIANCE_SCAN, etc.
+  │   ├── policyMetrics.js    # Metric recording + aggregation
+  │   ├── policyScheduler.js  # Scheduled policy evaluation + compliance scans
+  │   ├── policySimulator.js  # Side-effect-free policy simulation
+  │   ├── policyReporter.js   # Report generation + CSV export
+  │   ├── ruleEngine.js       # Rule orchestration
+  │   ├── conditionParser.js  # Tokenize/parse policy conditions
+  │   ├── expressionEvaluator.js # Evaluate expressions against data (dot-notation resolution)
+  │   ├── constraintEngine.js # Validate data constraints
+  │   ├── approvalEngine.js   # Approval routing engine
+  │   ├── approvalManager.js  # Approval request lifecycle
+  │   ├── approvalWorkflow.js # Multi-step workflow definitions
+  │   ├── approvalHistory.js  # Approval event recording
+  │   ├── approvalRules.js    # Approval routing rules by policy type
+  │   ├── complianceEngine.js # Compliance scanning orchestrator
+  │   ├── complianceScanner.js # Per-policy compliance checks
+  │   ├── complianceReports.js # Report generation + JSON/CSV/Markdown export
+  │   ├── complianceTemplates.js # Report templates with sections
+  │   ├── auditEngine.js      # Audit event recording + querying
+  │   ├── auditTimeline.js    # Chronological audit timeline with date-range queries
+  │   ├── auditRetention.js   # Audit log retention (default 365 days, auto-purge)
+  │   ├── policyVersioning.js # Version snapshots with auto-increment
+  │   ├── policyDiff.js       # Version comparison (added/removed/changed)
+  │   ├── policyRollback.js   # Rollback to previous versions
+  │   ├── simulationEngine.js # Simulation management
+  │   ├── simulationRunner.js # Scenario-based simulation
+  │   ├── impactAnalyzer.js   # Impact analysis (resources/cost/user)
+  │   ├── governanceIntegration.js # AI Router integration — 12 check* methods
+  │   └── policies/           # 72 default policies across 10 types
+  │       ├── AiPolicies.js       # 10 policies
+  │       ├── AgentPolicies.js    # 8 policies
+  │       ├── WorkflowPolicies.js # 8 policies
+  │       ├── DeploymentPolicies.js # 8 policies
+  │       ├── BillingPolicies.js  # 7 policies
+  │       ├── SecurityPolicies.js # 8 policies
+  │       ├── PluginPolicies.js   # 8 policies
+  │       ├── IntegrationPolicies.js # 7 policies
+  │       ├── DeveloperPolicies.js # 7 policies
+  │       └── DataPolicies.js     # 8 policies
   ├── billing/                 # Billing & Subscription Platform (Phase 9.2.0)
   │   ├── index.js             # Entry point — exports + getDefaultEngine + createEngine
   │   ├── billingManager.js    # Central orchestrator — 30+ sub-module references
@@ -177,6 +227,62 @@ Lead generation and client onboarding through contact forms, AI-powered brief co
   │   ├── invoices/            # Generator, PDF, numbering, exporter
   │   ├── customers/           # Portal, billing profile, payment methods, addresses
   │   └── analytics/           # MRR, ARR, Churn, LTV, Cohort, Revenue Forecast
+  ├── integrations/               # Enterprise Integration Hub (Phase 9.4.0)
+  │   ├── integrationManager.js   # Central orchestrator
+  │   ├── integrationRegistry.js  # Provider registration & discovery
+  │   ├── integrationLoader.js    # Integration instance management
+  │   ├── integrationInstaller.js # Install/uninstall integrations
+  │   ├── integrationValidator.js # Config & auth validation
+  │   ├── integrationEvents.js    # 8 event types, pub/sub, history
+  │   ├── integrationStorage.js   # Namespaced per-provider storage
+  │   ├── integrationPermissions.js# 6 permission constants
+  │   ├── integrationHealth.js    # Connection health, latency, uptime
+  │   ├── integrationScheduler.js # Scheduled sync jobs
+  │   ├── integrationSync.js      # Incremental/full sync with retry
+  │   ├── integrationWebhook.js   # Incoming/outgoing webhooks w/ signatures
+  │   ├── integrationSecrets.js   # Encrypted credential storage
+  │   ├── integrationAudit.js     # Audit log for all operations
+  │   └── providers/              # 20+ provider implementations
+  │       ├── BaseIntegration.js  # Abstract base class
+  │       ├── github/             # GitHub (Repos, Actions, PRs, Issues, Webhooks)
+  │       ├── gitlab/             # GitLab (Pipelines, Repos, Merge Requests)
+  │       ├── bitbucket/          # Bitbucket
+  │       ├── vercel/             # Vercel (Projects, Deployments, Domains)
+  │       ├── netlify/            # Netlify
+  │       ├── slack/              # Slack (Channels, Messages, Notifications, Commands)
+  │       ├── teams/              # Microsoft Teams
+  │       ├── discord/            # Discord
+  │       ├── notion/             # Notion (Pages, Database)
+  │       ├── jira/               # Jira (Issues, Projects)
+  │       ├── linear/             # Linear
+  │       ├── trello/             # Trello
+  │       ├── asana/              # Asana
+  │       ├── google/             # Google (Drive, Docs, Sheets, OAuth)
+  │       ├── office365/          # Microsoft 365 (OneDrive, Outlook)
+  │       ├── dropbox/            # Dropbox
+  │       ├── aws/                # AWS (S3, Secrets Manager)
+  │       ├── cloudflare/         # Cloudflare (Pages, DNS, KV)
+  │       ├── postgres/           # PostgreSQL sync
+  │       ├── mysql/              # MySQL sync
+  │       ├── mongodb/            # MongoDB sync
+  │       └── redis/              # Redis sync
+  ├── developer/               # Developer Platform (Phase 9.5.0)
+  │   ├── index.js             # Entry — exports 10 modules
+  │   ├── developerPlatform.js # Central orchestrator
+  │   ├── sdkRegistry.js       # SDK registration and querying
+  │   ├── sdkGenerator.js      # SDK package generation (7 languages)
+  │   ├── clientGenerator.js   # API client generation
+  │   ├── openApiGenerator.js  # OpenAPI 3.1 spec generation
+  │   ├── schemaGenerator.js   # JSON Schema generation
+  │   ├── developerEvents.js   # Event pub/sub (8 event types)
+  │   ├── developerStorage.js  # Key-value storage
+  │   ├── developerAnalytics.js# API call tracking and stats
+  │   ├── developerPortal.js   # Developer portal renderer
+  │   ├── cli/                 # CLI (15 commands)
+  │   ├── sdk/                 # 7 language SDKs (JS, TS, Python, Go, Java, C#, PHP)
+  │   ├── terraform/           # Terraform provider (8 resources)
+  │   ├── postman/             # Postman collection
+  │   └── extensions/vscode/   # VS Code extension (6 commands)
   └── runtime/                # SaaS pipeline orchestrator
 ├── ui/                        # Dashboard UI (Phase 7.2) + Control Plane (Phase 8.5.0)
 │   ├── dashboard/             # 15 components, 10 pages, 1 layout, entry point + CSS
@@ -239,38 +345,28 @@ BROWSER
   ├─ brief-maestro.html (14-section wizard)
   ├─ dashboard*.html (observability)
   └─ Console (E2E test helpers)
-       │
-       │ POST /api/sendBrief
-       │ POST /api/sendContact
-       │ GET  /api/telemetry
-       │ GET  /api/traces
-       ▼
-┌──────────────────────────────────────────────────────────┐
-│                 VERCEL SERVERLESS FUNCTIONS                │
-│                                                          │
-│  ┌──────────┐   ┌──────────┐   ┌──────────┐             │
-│  │ sendBrief│   │sendContact│   │telemetry │             │
-│  └─────┬────┘   └────┬─────┘   └──────────┘             │
-│        │              │                                   │
-│  ┌─────▼──────────────▼────────────────────────────────┐ │
-│  │              RATE LIMIT GATE                         │ │
-│  │  IP sliding window · Email dedup                     │ │
-│  │  Honeypot · Timing check · Field validation          │ │
-│  └─────────────────────┬────────────────────────────────┘ │
-│                        │ passed                           │
-│  ┌─────────────────────▼────────────────────────────────┐ │
-│  │              INLINE SMTP EXECUTION                    │ │
-│  │  Promise.allSettled([ admin email, client email ])    │ │
-│  │  5s timeout per email · No retry                     │ │
-│  └─────────────────────┬────────────────────────────────┘ │
-│                        │                                   │
-│  ┌─────────────────────▼────────────────────────────────┐ │
-│  │              OBSERVABILITY                            │ │
-│  │  request-registry.js (lifecycle tracking)             │ │
-│  │  tracer.js (path tracing, memory + Neon)              │ │
-│  │  logger.js (structured logging)                       │ │
-│  └──────────────────────────────────────────────────────┘ │
-└──────────────────────────────────────────────────────────┘
+│
+        │ POST /api/sendBrief
+        │ POST /api/sendContact
+        │ GET  /api/telemetry?type={logs|traces|health|coverage|range}
+        │ GET  /api/platform-api     →  /api/v1/* (Phases 7.5–9.5)
+        ▼
+┌──────────────────────────────────────────────────────────────────┐
+│                     VERCEL SERVERLESS FUNCTIONS                    │
+│                                                                  │
+│  ┌──────────┐   ┌──────────┐   ┌──────────┐   ┌──────────────┐ │
+│  │ sendBrief│   │sendContact│   │telemetry │   │ platform-api │ │
+│  └─────┬────┘   └────┬─────┘   └────┬─────┘   └──────┬───────┘ │
+│        │              │              │                 │         │
+│  ┌─────▼──────────────▼──────────────▼─────────────────▼───────┐ │
+│  │                   LIB MODULES (shared)                       │ │
+│  │  lib/rate-limit.js · lib/request-registry.js                │ │
+│  │  lib/tracer.js · lib/logger.js · lib/safeBodyParser.js      │ │
+│  │  lib/saas/ · lib/conversation/ · lib/workflows/             │ │
+│  │  lib/cost/ · lib/security/ · lib/billing/                   │ │
+│  │  lib/plugins/ · lib/integrations/ · lib/developer/          │ │
+│  └──────────────────────────────────────────────────────────────┘ │
+└──────────────────────────────────────────────────────────────────┘
 ```
 
 ---
@@ -481,6 +577,9 @@ These modules form the Agent Pack v1 pipeline — converting client briefs into 
 | **Cost Optimization** | `lib/cost/` | Implemented | Phase 9.0.0 — Cost Optimization & Resource Governance Engine: 11 modules, cost engine orchestrator with analyze/optimize/forecast/recommend, cost analyzer (6 domains: AI token usage, cluster utilization, workflow cost, deployment cost, storage usage, API consumption), pricing models (OpenAI, Anthropic, Gemini, Ollama + custom provider support), budget manager (scoped budgets, soft/hard limits, threshold alerts), optimizer (6 recommendation types: provider/model/batch/parallel/cache/worker), forecast engine (linear regression trend, daily/monthly/quarterly/yearly projections), recommendation engine (scored by impact/category with expected savings/risk/confidence), quota manager (6 tracked resources: tokens/requests/deployments/storage/workflows/cluster minutes), policy engine (5 default policies: max cost/preferred providers/min quality/latency threshold/green computing), cost events (8 event types with EventBus integration); 12 API endpoints; cost dashboard page with 5 tabs (Overview, Budgets, Forecast, Optimization Center, Usage Explorer); 176 tests |
 | **Security Platform** | `lib/security/` | Implemented | Phase 9.1.0 — Enterprise Identity & Security Platform: 38+ modules across 9 subdirectories. Authentication (7 providers: JWT, API Key, OAuth, SAML, MFA/TOTP, Password, Session), Authorization (5 modules: RBAC, Permissions, Policy Engine, Role Manager, Resource Access), Organizations (5 modules: Org Manager, Tenant Isolation, Teams, Membership, Invitations), Audit (4 modules: Audit Logger, Security Events, Audit Search, Compliance Exporter), Sessions (4 modules: Session Manager, Device Manager, Token Rotation, Login History), Directory (5 providers: SCIM 2.0, LDAP, Active Directory, Google Workspace, Entra ID), Security (4 modules: Secret Manager, Key Rotation, Encryption, Signature), Threats (4 modules: Threat Detector, Risk Scorer, Anomaly Detector, Account Protection); Identity Manager orchestrator; 25 API endpoints at /api/v1/security/; Security Dashboard UI (6 tabs); 287 tests |
 | **Billing Platform** | `lib/billing/` | Implemented | Phase 9.2.0 — Billing & Subscription Platform: 30+ modules across 7 subdirectories. Core: BillingManager orchestrator, SubscriptionManager (full lifecycle: create/cancel/change/renew/pause/resume), CustomerManager, InvoiceManager (draft/open/paid/failed/void), PaymentManager (provider abstraction), CheckoutManager, UsageMeter, PricingEngine, TaxEngine, DiscountEngine, CreditManager, RefundManager, WebhookProcessor, BillingEvents (20+ types), BillingStorage. Plans: PlanRegistry (5 default plans Free/Starter/Professional/Business/Enterprise + custom), PlanFeatures, PlanLimits, PlanVersions, TrialManager. Usage: UsageTracker, UsageAggregator, QuotaCalculator, OverageCalculator. Payments: 5 providers (Base/Stripe/PayPal/Manual/Mock). Invoices: InvoiceGenerator, InvoicePdf, InvoiceNumbering, InvoiceExporter. Customers: CustomerPortal, BillingProfile, PaymentMethods, Addresses. Analytics: MrrCalculator, ArrCalculator, ChurnCalculator, LtvCalculator, CohortAnalyzer, RevenueForecast. 19 API endpoints at /api/v1/billing/; Billing Dashboard UI (5 tabs); 255 tests |
+| **Integration Hub** | `lib/integrations/` | v4.4.0 | Enterprise Integration Hub — OAuth, Webhooks, Sync Engine, 20+ providers |
+| **Developer Platform** | `lib/developer/` | v4.5.0 | Developer Platform — SDKs, CLI, OpenAPI, Terraform Provider, GitHub Action, VS Code Extension, Postman Collection, Developer Portal, Analytics |
+| **Governance Platform** | `lib/governance/` | v4.7.0 | Phase 9.7.0 — Enterprise Policy & Governance Platform: 46 modules across 10 subdirectories. Policy DSL with declarative conditions/actions (16 operators, 8 action types, 3 enforcement modes). 72 default policies across 10 policy types. Policy lifecycle: register → compile → evaluate → execute → audit. Multi-step approval workflows with routing rules. Compliance scanning with scoring and report generation. Audit engine with retention and timeline queries. Version management with diff and rollback. Side-effect-free simulation with impact analysis. AI Router integration — 12 check* methods covering all subsystems. 16 API endpoints at /api/v1/governance/. Governance Center UI (7 tabs, 7 widgets). Plugin SDK extensions (PolicyProvider, ComplianceTemplate, ApprovalRule). 450+ tests. |
 | **Orchestrator** | `lib/orchestrator/` | Implemented | Brief → Plan IR (intent, tone, features, structure) |
 | **Planner** | `lib/planner/` | Implemented | Plan IR → Project Blueprint (pages, nav, sections, components) |
 | **Content Generator** | `lib/content-generator/` | Implemented | Blueprint + Design Strategy → Content Pack (copy, SEO, CTAs) |
@@ -506,6 +605,21 @@ Scaffold Engine (physical files on disk)
     Deployment Engine (provider abstraction → Vercel/GitHub → versioning + rollback)
 ```
 **Note**: This pipeline is for the Agent Pack project generation system. The contact/brief email system (`api/sendBrief`, `api/sendContact`) operates independently and does not use this pipeline.
+
+### Governance Policy Pipeline (Phase 9.7.0)
+```
+Policy Definition (Policy DSL JSON)
+    ↓
+PolicyRegistry.register() → PolicyCompiler.compile()
+    ↓
+GovernanceManager.evaluateAll(data)
+    ↓
+PolicyEvaluator (16 condition operators × dot-notation field resolution)
+    ↓
+PolicyExecutor (hard=deny, soft=warn, audit=log, require_approval)
+    ↓
+AuditEngine.record() + ComplianceScanner.check() + PolicyReporter.generate()
+```
 
 ### AI Website Generator Pipeline (Phase 1–7.5.0)
 
@@ -576,6 +690,10 @@ Content Generator (Content Pack — page copy, SEO, CTAs, tone-aware)
     Security & Identity Platform (Phase 9.1.0 — authentication, authorization, RBAC, organizations, audit, sessions, directory sync, threat detection, secrets, encryption)
     ↓
     Billing & Subscription Platform (Phase 9.2.0 — subscriptions, invoices, payments, usage billing, quotas, discounts, credits, refunds, revenue analytics)
+    ↓
+    Integration Hub (Phase 9.4.0 — OAuth, Webhooks, Sync Engine, 20+ providers)
+    ↓
+    Developer Platform (Phase 9.5.0 — SDKs, CLI, OpenAPI, Terraform Provider, GitHub Action, VS Code Extension)
 ```
 
 ---
@@ -1179,6 +1297,9 @@ All dashboards read from `GET /api/telemetry`. The shared `dashboard-api.js` mod
 | v4.0.0 | 2026-06-19 | Phase 9.0.0 — Cost Optimization & Resource Governance Engine (11 modules: cost engine orchestrator, cost analyzer with 6 analysis domains, pricing models for 4 providers + custom, budget manager with scoped budgets/soft+hard limits/threshold alerts, optimizer with 6 recommendation types, forecast engine with linear regression trend, recommendation engine with scored recommendations, quota manager with 6 tracked resources, policy engine with 5 default policies, cost events with 8 event types; 12 API endpoints; cost dashboard page with 5 tabs; 176 tests; full test suite: 1118 tests passing) |
 | v4.1.0 | 2026-06-19 | Phase 9.1.0 — Enterprise Identity & Security Platform (38+ modules across 9 subdirectories: 7 authentication providers, 5 authorization modules including RBAC, 5 organization modules, 4 audit modules, 4 session modules, 5 directory providers, 4 security modules, 4 threat modules; Identity Manager orchestrator; 25 API endpoints; Security Dashboard UI with 6 tabs; 287 tests; full test suite: 1405 tests passing) |
 | v4.2.0 | 2026-06-19 | Phase 9.2.0 — Billing & Subscription Platform (30+ modules across 7 subdirectories: BillingManager orchestrator, SubscriptionManager, CustomerManager, InvoiceManager, PaymentManager, CheckoutManager, UsageMeter, PricingEngine, TaxEngine, DiscountEngine, CreditManager, RefundManager, WebhookProcessor, BillingEvents, BillingStorage; PlanRegistry with 5 default plans; 5 payment providers; analytics suite with MRR/ARR/Churn/LTV/Cohort/Forecast; 19 API endpoints at /api/v1/billing/; Billing Dashboard UI with 5 tabs; 255 tests; full test suite: 780 tests passing) |
+| v4.4.0 | 2026-06 | Enterprise Integration Hub — OAuth, Webhooks, Sync Engine, 20+ providers |
+| v4.5.0 | 2026-06-19 | Phase 9.5.0 — Developer Platform: 10 core modules, CLI with 15 commands, 7 language SDKs (JS/TS/Python/Go/Java/C#/PHP), OpenAPI 3.1 generator, Terraform provider with 8 resources, GitHub Action, VS Code Extension, Postman Collection, Developer Portal, event-driven analytics, 13 API endpoints, Developer Center SSR page in Control Plane UI; 350+ tests; full test suite: 1,130+ tests passing |
+| v4.7.0 | 2026-06-21 | Phase 9.7.0 — Enterprise Policy & Governance Platform: 46 modules across 10 subdirectories (Core, Policies, Rule Engine, Approvals, Compliance, Audit, Versioning, Simulation, Integration, API). Declarative Policy DSL with 16 condition operators, 8 action types, 3 enforcement modes. 72 default policies across 10 policy types (AI, Agent, Workflow, Deployment, Billing, Security, Plugin, Integration, Developer, Data). GovernanceManager orchestrator with createPolicy/evaluateAll/simulate/compliance/approvals/rollback. Multi-step approval workflows with routing rules. Compliance scanning with scoring/reports/templates. Audit engine with timeline and retention. Policy versioning with diff and rollback. Side-effect-free simulation with impact analysis. GovernanceIntegration — 12 check* methods for all subsystems (AI Routing, Agents, Workflows, Billing, Developer, Plugin, Marketplace, Integration, Security, Deployments, Evaluation, Data). Governance Center UI (7 tabs, 7 widgets). Plugin SDK extensions. 16 API endpoints. 450+ tests. |
 ---
 
 ## Historical Architecture Decisions
@@ -1255,6 +1376,20 @@ The SaaS Core is implemented in `lib/saas/` — 12 modules providing the user-fa
 | **`docs/auto-remediation.md`** | Auto-Remediation Engine: architecture, built-in actions, default policies, safety model (cooldowns, rate limits, approval gates), API reference, extension guide | ✅ Active — Phase 8.4.0 |
 | **`docs/cost-engine.md`** | Cost Optimization & Resource Governance: architecture, pricing model, forecast algorithm, optimization strategy, quota model, policy engine, examples | ✅ Active — Phase 9.0.0 |
 | **`ui/control-plane/`** | Control Plane Dashboard (SSR page + 2 files): real-time event stream (SSE), 6 system widgets (events, insights, anomalies, remediation, cluster, workflows), remediation policy toggles, StatsCard metrics grid | ✅ Active — Phase 8.5.0 |
+| [Integration Platform](docs/integration-platform.md) | Integration Hub architecture, providers, OAuth, webhooks, sync | |
+| **`docs/developer-platform.md`** | Developer Platform architecture: 10 core modules, CLI, 7 SDKs, OpenAPI, Terraform, VS Code, GitHub Action, Postman, API catalog, developer portal | ✅ Active — Phase 9.5.0 |
+| **`docs/sdk-guide.md`** | SDK Guide: installation for 7 languages, authentication, basic usage, pagination, streaming, retries, error handling, TypeScript types | ✅ Active — Phase 9.5.0 |
+| **`docs/cli-reference.md`** | CLI Reference: 15 commands with options and examples, exit codes, configuration, environment variables, workflows | ✅ Active — Phase 9.5.0 |
+| **`docs/openapi.md`** | OpenAPI Documentation: OpenAPI 3.1 spec, API versioning, authentication, endpoints, schemas, Swagger UI, Redoc | ✅ Active — Phase 9.5.0 |
+| **`docs/terraform-provider.md`** | Terraform Provider: installation, configuration, 8 resources with examples, authentication, example project | ✅ Active — Phase 9.5.0 |
+| **`docs/github-action.md`** | GitHub Action: setup, inputs, usage examples, workflow examples, secrets management | ✅ Active — Phase 9.5.0 |
+| **`docs/governance-platform.md`** | Governance Platform architecture overview — 46 modules, policy DSL, evaluation pipeline, simulation flow, compliance model, approval workflow | ✅ Active — Phase 9.7.0 |
+| **`docs/policy-engine.md`** | Policy Engine architecture — 12 core modules, policy lifecycle, condition operators, action types, enforcement modes, API | ✅ Active — Phase 9.7.0 |
+| **`docs/compliance.md`** | Compliance scanning — scan lifecycle, scoring, reports, templates, integration | ✅ Active — Phase 9.7.0 |
+| **`docs/approvals.md`** | Approval workflows — workflow lifecycle, routing rules, multi-step definitions, integration | ✅ Active — Phase 9.7.0 |
+| **`docs/policy-language.md`** | Policy DSL reference — JSON schema, conditions (16 operators), actions (8 types), enforcement, severity, tags, examples | ✅ Active — Phase 9.7.0 |
+| **`docs/policy-simulator.md`** | Policy simulation — simulation engine, runner, impact analysis, scenarios, batch runs | ✅ Active — Phase 9.7.0 |
+| **`ui/control-plane/governance.js`** | Governance Center UI — 7 tabs (Overview, Policies, Compliance, Approvals, Audit, Simulation, Reports), 7 widgets, approve/reject, simulation, compliance scan | ✅ Active — Phase 9.7.0 |
 | `AGENTS.md` | Former agent operations manual — content distributed across all 4 canonical files | ❌ Deprecated (deleted) |
 | `CHANGELOG.md` | Former detailed version history — compressed to Version History table in this file | ❌ Deprecated (deleted) |
 | `ARCHITECTURE-SAAS.md` | Former SaaS design document — compressed to SaaS Architecture section in this file | ❌ Deprecated (deleted) |

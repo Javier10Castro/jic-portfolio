@@ -1,0 +1,31 @@
+{
+  "name": "platform-vscode",
+  "displayName": "Platform Extension",
+  "description": "AI Platform management directly from VS Code",
+  "version": "4.5.0",
+  "publisher": "platform",
+  "engines": { "vscode": "^1.80.0" },
+  "categories": ["Other"],
+  "activationEvents": ["onStartupFinished"],
+  "main": "./extension.js",
+  "contributes": {
+    "commands": [
+      { "command": "platform.login", "title": "Platform: Login" },
+      { "command": "platform.showDashboard", "title": "Platform: Show Dashboard" },
+      { "command": "platform.deploy", "title": "Platform: Deploy Project" },
+      { "command": "platform.showLogs", "title": "Platform: Show Logs" },
+      { "command": "platform.showWorkflows", "title": "Platform: Show Workflows" },
+      { "command": "platform.aiChat", "title": "Platform: AI Chat" }
+    ],
+    "menus": {
+      "commandPalette": [
+        { "command": "platform.login" },
+        { "command": "platform.showDashboard" },
+        { "command": "platform.deploy" },
+        { "command": "platform.showLogs" },
+        { "command": "platform.showWorkflows" },
+        { "command": "platform.aiChat" }
+      ]
+    }
+  }
+}

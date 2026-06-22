@@ -1,0 +1,13 @@
+{
+  "id": "example-custom-api",
+  "name": "Custom Health API",
+  "version": "1.0.0",
+  "author": "Platform",
+  "license": "MIT",
+  "description": "Adds a /api/v1/plugins/:id/health endpoint for custom health checks.",
+  "type": "api",
+  "permissions": ["core.read", "telemetry"],
+  "hooks": {},
+  "categories": ["api", "monitoring"],
+  "minimumPlatformVersion": "4.0.0"
+}

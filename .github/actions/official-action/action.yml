@@ -1,0 +1,24 @@
+name: 'Platform Deploy Action'
+description: 'Deploy and manage your platform projects from GitHub Actions'
+author: 'Platform'
+branding:
+  icon: 'cloud'
+  color: 'blue'
+inputs:
+  api-key:
+    description: 'Platform API key'
+    required: true
+  command:
+    description: 'Command to execute (deploy, generate, run-workflow, manage-agents)'
+    required: true
+    default: 'deploy'
+  project:
+    description: 'Project name or ID'
+    required: false
+  environment:
+    description: 'Deployment environment'
+    required: false
+    default: 'production'
+runs:
+  using: 'node20'
+  main: 'index.js'

@@ -1,0 +1,15 @@
+{
+  "id": "example-workflow-approval",
+  "name": "Workflow Approval Gate",
+  "version": "1.0.0",
+  "author": "Platform",
+  "license": "MIT",
+  "description": "Adds a manual approval step to deployment workflows.",
+  "type": "workflow",
+  "permissions": ["core.read", "core.write", "workflows"],
+  "hooks": {
+    "beforeDeployment": {}
+  },
+  "categories": ["workflows", "devops"],
+  "minimumPlatformVersion": "4.0.0"
+}

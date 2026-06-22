@@ -1,0 +1,13 @@
+{
+  "id": "example-dark-theme",
+  "name": "Dark Theme Pack",
+  "version": "1.0.0",
+  "author": "Platform",
+  "license": "MIT",
+  "description": "An alternative dark theme for the dashboard with custom color palette.",
+  "type": "theme",
+  "permissions": [],
+  "hooks": {},
+  "categories": ["themes", "ui"],
+  "minimumPlatformVersion": "4.0.0"
+}

@@ -1,0 +1,13 @@
+{
+  "id": "example-analytics-widget",
+  "name": "Analytics Widget",
+  "version": "1.0.0",
+  "author": "Platform",
+  "license": "MIT",
+  "description": "Adds a custom analytics dashboard widget showing real-time metrics.",
+  "type": "widget",
+  "permissions": ["core.read"],
+  "hooks": {},
+  "categories": ["analytics", "dashboard"],
+  "minimumPlatformVersion": "4.0.0"
+}

@@ -1,0 +1,16 @@
+{
+  "id": "example-slack-notifier",
+  "name": "Slack Notifier",
+  "version": "1.0.0",
+  "author": "Platform",
+  "license": "MIT",
+  "description": "Sends deployment and billing notifications to Slack via webhook.",
+  "type": "agent",
+  "permissions": ["core.read", "webhooks", "network"],
+  "hooks": {
+    "afterDeployment": {},
+    "afterBilling": {}
+  },
+  "categories": ["notifications", "devops"],
+  "minimumPlatformVersion": "4.0.0"
+}
