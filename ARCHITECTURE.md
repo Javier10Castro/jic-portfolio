@@ -1,4 +1,4 @@
-# Architecture — Web Portfolio + Brief Maestro (v4.9.0)
+# Architecture — Web Portfolio + Brief Maestro (v5.0.0)
 
 ## System Overview
 
@@ -442,6 +442,25 @@ Lead generation and client onboarding through contact forms, AI-powered brief co
 │   ├── killSwitchManager.js # Kill switch management
 │   ├── emergencyControls.js # Emergency mode
 │   └── safeMode.js        # Safe mode with feature whitelist
+├── lifecycle/             # Project Lifecycle Platform (Phase 10.0.0) — 17 core modules
+│   ├── index.js            # Entry point — 17 classes + getDefaultLifecycle
+│   ├── lifecycleManager.js # Central orchestrator — all modules composed
+│   ├── projectLifecycle.js # State machine — create/transition/state/history
+│   ├── environmentManager.js # Environment CRUD — development/preview/qa/staging/production + custom
+│   ├── releaseManager.js  # Release lifecycle — draft/released/hotfix/rolled_back, changelog, milestones, tags
+│   ├── releasePipeline.js # Pipeline execution — define stages, execute, status
+│   ├── promotionManager.js # Environment promotion — promote/approve/reject
+│   ├── versionManager.js  # Semantic versioning — major/minor/patch increment
+│   ├── snapshotManager.js # Snapshots — create/list/restore/delete (all types)
+│   ├── migrationManager.js # Project migration — create/execute/rollback/validate
+│   ├── projectTemplates.js # Template registry — register/get/list/apply/remove
+│   ├── projectCloner.js   # Project cloning with history
+│   ├── projectImporter.js # Project import — JSON/YAML/ZIP, validation
+│   ├── projectExporter.js # Project export — project/bundle/template
+│   ├── lifecycleEvents.js # Event emitter — 15 event types
+│   ├── lifecycleMetrics.js # Metrics recording + aggregation
+│   ├── lifecycleStorage.js # Key-value persistence
+│   └── lifecycleIntegration.js # 12 subsystem integration hooks
 ├── ui/                        # Dashboard UI (Phase 7.2) + Control Plane (Phase 8.5.0)
 │   ├── dashboard/             # 15 components, 10 pages, 1 layout, entry point + CSS
 │   └── control-plane/         # Control Plane Dashboard + Cost Optimization (Phase 8.5.0/9.0.0)
@@ -740,6 +759,7 @@ These modules form the Agent Pack v1 pipeline — converting client briefs into 
 | **Governance Platform** | `lib/governance/` | v4.7.0 | Phase 9.7.0 — Enterprise Policy & Governance Platform: 46 modules across 10 subdirectories. Policy DSL with declarative conditions/actions (16 operators, 8 action types, 3 enforcement modes). 72 default policies across 10 policy types. Policy lifecycle: register → compile → evaluate → execute → audit. Multi-step approval workflows with routing rules. Compliance scanning with scoring and report generation. Audit engine with retention and timeline queries. Version management with diff and rollback. Side-effect-free simulation with impact analysis. AI Router integration — 12 check* methods covering all subsystems. 16 API endpoints at /api/v1/governance/. Governance Center UI (7 tabs, 7 widgets). Plugin SDK extensions (PolicyProvider, ComplianceTemplate, ApprovalRule). 450+ tests. |
 | **Data Platform** | `lib/data/` | v4.8.0 | Phase 9.8.0 — Enterprise Data Platform: 70+ modules across 11 subdirectories (Core, Providers, Adapters, Vectors, Knowledge Base, Object Storage, Cache, Search, Backups, Analytics, Migrations, Data Quality). Provider-agnostic storage abstraction with 7 database providers (PostgreSQL, MySQL, SQLite, MongoDB, Redis, Elasticsearch, DuckDB). Vector search stack: embedding → semantic → hybrid → rerank. Knowledge base with chunking, versioning, snapshots. Cache hierarchy with invalidation strategies. Search engine with full-text, semantic, hybrid search. Full backup/replication/disaster recovery. Analytics warehouse with materialized views. Data quality suite (validation, dedup, integrity, consistency). 16 API endpoints at /api/v1/data/. Data Platform Center UI (9 tabs, 8 widgets). Plugin SDK extensions (5 provider types). 600+ tests. |
 | **Runtime Platform** | `lib/runtime/` | v4.9.0 | Phase 9.9.0 — Enterprise Runtime Platform: 48 modules across 9 subsystems. Feature flags with targeting rules, progressive rollouts, A/B experiments, and audit trail. Dynamic configuration with hierarchy (override > profile > registry > source), environment profiles, and validation schemas. Secrets management with provider abstraction, rotation scheduling, version history, and access audit. Service discovery with round-robin load balancing, health monitoring, and endpoint resolution. Distributed coordination with locks, leases, leader election. Runtime policies with constraints engine, approvals, and simulation. Rollout engine supporting canary, blue/green, and progressive strategies with rollback. Kill switches, emergency controls, and safe mode. 13 API endpoints at /api/v1/runtime/. Runtime Center UI (8 tabs, 8 widgets). Plugin SDK extensions (5 provider types). RuntimeIntegration with 11 subsystem hooks. 550+ tests. |
+| **Lifecycle Platform** | `lib/lifecycle/` | v5.0.0 | Phase 10.0.0 — Project Lifecycle Platform: 17 core modules. Environment lifecycle (Dev/Preview/QA/Staging/Production + custom). Release management with semantic versioning (major/minor/patch), changelog, milestones, tags, hotfixes. Promotion pipeline with manual/governance/automatic approvals, policy and runtime validation. Snapshot system (project/workflow/config/runtime/knowledge/plugin/rollback). Project templates with 8 built-in categories + plugin-registered. Import/export (JSON/YAML/ZIP/project bundle/infrastructure bundle/template bundle). Project migration (schema/workflow/runtime/plugin/config) with validation and rollback. Project cloning. Lifecycle state machine. 10 API endpoints at /api/v1/lifecycle. Lifecycle Center UI (9 tabs, 8 widgets). Plugin SDK (ProjectTemplate, LifecycleHook, MigrationProvider, SnapshotProvider, ReleaseValidator). LifecycleIntegration with 12 subsystem hooks. 700+ tests. |
 | **Orchestrator** | `lib/orchestrator/` | Implemented | Brief → Plan IR (intent, tone, features, structure) |
 | **Planner** | `lib/planner/` | Implemented | Plan IR → Project Blueprint (pages, nav, sections, components) |
 | **Content Generator** | `lib/content-generator/` | Implemented | Blueprint + Design Strategy → Content Pack (copy, SEO, CTAs) |
@@ -819,6 +839,28 @@ Coordinator (lock → lease → leader election)
 Rollout Engine (canary → blue/green → progressive → rollback)
     ↓
 Emergency Controls (kill switch → safe mode → emergency actions)
+```
+
+### Project Lifecycle Flow (Phase 10.0.0)
+```
+Project Created → Development Environment
+    ↓
+Version Manager (semver: major.minor.patch)
+    ↓
+Release Manager (draft → release notes → milestones → tags)
+    ↓
+Release Pipeline (defined stages → automatic/manual execution)
+    ↓
+Promotion Pipeline (Dev → Preview → QA → Staging → Production)
+    ↓
+    ├── Manual Approval (optional)
+    ├── Governance Approval (if enabled)
+    ├── Policy Validation (runtime policies)
+    └── Deployment Verification
+    ↓
+Snapshot (pre-promotion → auto-snapshot → versioned)
+    ↓
+Production Release → Maintenance → Hotfix → Rollback
 ```
 
 ### AI Website Generator Pipeline (Phase 1–7.5.0)
@@ -1502,6 +1544,7 @@ All dashboards read from `GET /api/telemetry`. The shared `dashboard-api.js` mod
 | v4.7.0 | 2026-06-21 | Phase 9.7.0 — Enterprise Policy & Governance Platform: 46 modules across 10 subdirectories (Core, Policies, Rule Engine, Approvals, Compliance, Audit, Versioning, Simulation, Integration, API). Declarative Policy DSL with 16 condition operators, 8 action types, 3 enforcement modes. 72 default policies across 10 policy types (AI, Agent, Workflow, Deployment, Billing, Security, Plugin, Integration, Developer, Data). GovernanceManager orchestrator with createPolicy/evaluateAll/simulate/compliance/approvals/rollback. Multi-step approval workflows with routing rules. Compliance scanning with scoring/reports/templates. Audit engine with timeline and retention. Policy versioning with diff and rollback. Side-effect-free simulation with impact analysis. GovernanceIntegration — 12 check* methods for all subsystems (AI Routing, Agents, Workflows, Billing, Developer, Plugin, Marketplace, Integration, Security, Deployments, Evaluation, Data). Governance Center UI (7 tabs, 7 widgets). Plugin SDK extensions. 16 API endpoints. 450+ tests. |
 | v4.8.0 | 2026-06-21 | Phase 9.8.0 — Enterprise Data Platform: 70+ modules across 11 subdirectories. Provider-agnostic storage with 7 database providers (all simulation-mode compatible). Vector search stack: embedding management, semantic search, hybrid search, reranking. Knowledge base: document chunking, versioning, snapshots. Cache hierarchy with invalidation. Search engine with full-text, semantic, hybrid, index management, query optimization. Full backup strategy: snapshots, replication, retention policies, disaster recovery. Analytics warehouse: query engine, aggregation engine, materialized views. Migration management: schema versioning, seed manager. Data quality: validator, deduplicator, integrity checker, consistency checker. 16 API endpoints at /api/v1/data/. Data Platform Center UI (9 tabs, 8 widgets). Plugin SDK extensions (StorageProvider, DatabaseProvider, EmbeddingProvider, SearchProvider, BackupProvider). DataIntegration with 10 subsystem hooks. 600+ tests. |
 | v4.9.0 | 2026-06-21 | Phase 9.9.0 — Enterprise Runtime Platform: 48 modules across 9 subsystems (Core, Feature Flags, Configuration, Secrets, Service Discovery, Coordination, Policies, Rollouts, Kill Switches). Feature flags with targeting (8 operators), progressive rollouts (0-100% hash bucketing), and A/B experiments. Dynamic configuration with 5-level resolution hierarchy, environment profiles, and validation. Secrets with provider abstraction, rotation scheduling, versioning, and access audit. Service discovery with round-robin selection and health monitoring. Distributed coordination with locks (TTL), leases, and leader election. Runtime policies with constraint engine (10 operators), approvals, and change simulation. Rollout engine: canary (traffic percentage), blue/green (instant switch), progressive (phased), with full rollback. Kill switches, emergency controls with action log, and safe mode with feature whitelist. 13 API endpoints at /api/v1/runtime/. Runtime Center UI (8 tabs, 8 widgets). Plugin SDK (ConfigurationProvider, FeatureFlagProvider, SecretProvider, RuntimeHook, RolloutProvider). RuntimeIntegration with 11 subsystem hooks. 550+ tests. |
+| v5.0.0 | 2026-06-22 | Phase 10.0.0 — Project Lifecycle Platform: 17 core modules. Environment lifecycle (Dev/Preview/QA/Staging/Production + custom). Release management with semantic versioning, changelog, milestones, tags, hotfixes. Promotion pipeline with manual/governance/automatic approvals, policy validation, runtime validation, deployment verification. Snapshot system (7 types: project, workflow, config, runtime, knowledge, plugin, rollback). Project templates (8 built-in categories + plugin-registered). Import/export (JSON, YAML, ZIP, project bundle, infrastructure bundle, template bundle). Project migration (5 types) with validation and rollback. Project cloning with history. Lifecycle state machine. 10 API endpoints at /api/v1/lifecycle/. Lifecycle Center UI (9 tabs, 8 widgets). Plugin SDK extensions (5 types). LifecycleIntegration with 12 subsystem hooks. 700+ tests. |
 ---
 
 ## Historical Architecture Decisions
@@ -1608,6 +1651,14 @@ The SaaS Core is implemented in `lib/saas/` — 12 modules providing the user-fa
 | **`docs/runtime-rollouts.md`** | Rollout engine — canary, blue/green, progressive, rollback | ✅ Active — Phase 9.9.0 |
 | **`docs/runtime-policies.md`** | Runtime policies — constraints, approvals, simulation + kill switches, emergency controls, safe mode | ✅ Active — Phase 9.9.0 |
 | **`ui/control-plane/runtime.js`** | Runtime Center UI — 8 tabs (Overview, Feature Flags, Configuration, Secrets, Services, Rollouts, Runtime Policies, Emergency Controls), 8 widgets | ✅ Active — Phase 9.9.0 |
+| **`docs/project-lifecycle.md`** | Project Lifecycle Platform architecture — 17 modules, lifecycle flow, environment hierarchy, integration | ✅ Active — Phase 10.0.0 |
+| **`docs/release-management.md`** | Release management — semantic versioning, lifecycle, changelog, milestones, tags, hotfixes, pipeline | ✅ Active — Phase 10.0.0 |
+| **`docs/environment-management.md`** | Environment management — 5 built-in environments, custom, promotion flow, configuration | ✅ Active — Phase 10.0.0 |
+| **`docs/snapshot-system.md`** | Snapshot system — 7 types, create/restore/delete, versioning, rollback | ✅ Active — Phase 10.0.0 |
+| **`docs/project-templates.md`** | Project templates — registry, 8 categories, apply, plugin-registered, export | ✅ Active — Phase 10.0.0 |
+| **`docs/project-import-export.md`** | Import/export — JSON/YAML/ZIP, bundles, validation | ✅ Active — Phase 10.0.0 |
+| **`docs/migrations.md`** | Project migrations — 5 types, lifecycle, validation, rollback | ✅ Active — Phase 10.0.0 |
+| **`ui/control-plane/lifecycle.js`** | Lifecycle Center UI — 9 tabs (Overview, Environments, Releases, Promotions, Snapshots, Templates, Imports, Exports, History), 8 widgets | ✅ Active — Phase 10.0.0 |
 | `AGENTS.md` | Former agent operations manual — content distributed across all 4 canonical files | ❌ Deprecated (deleted) |
 | `CHANGELOG.md` | Former detailed version history — compressed to Version History table in this file | ❌ Deprecated (deleted) |
 | `ARCHITECTURE-SAAS.md` | Former SaaS design document — compressed to SaaS Architecture section in this file | ❌ Deprecated (deleted) |
