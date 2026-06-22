@@ -1,4 +1,4 @@
-# Architecture — Web Portfolio + Brief Maestro (v5.0.0)
+# Architecture — Web Portfolio + Brief Maestro (v5.1.0)
 
 ## System Overview
 
@@ -461,6 +461,58 @@ Lead generation and client onboarding through contact forms, AI-powered brief co
 │   ├── lifecycleMetrics.js # Metrics recording + aggregation
 │   ├── lifecycleStorage.js # Key-value persistence
 │   └── lifecycleIntegration.js # 12 subsystem integration hooks
+├── composer/             # AI Application Composition Engine (Phase 10.1.0) — 50+ modules
+│   ├── index.js            # Entry point — exports all modules + getDefaultComposer
+│   ├── composerManager.js  # Central orchestrator — 15 sub-modules composed
+│   ├── applicationComposer.js # Central composer — compose/getComposition/listCompositions
+│   ├── compositionEngine.js # Execution engine — plan/resolve/allocate/compose/validate/report
+│   ├── compositionPlanner.js # Planning — discovery/matching/resolution/allocation
+│   ├── compositionRegistry.js # Registry — register/get/unregister/list
+│   ├── compositionValidator.js # Validation — composition/blueprint validation
+│   ├── compositionStorage.js # Key-value persistence
+│   ├── compositionMetrics.js # Metrics recording + aggregation
+│   ├── compositionEvents.js # Event emitter — 13 event types
+│   ├── compositionReporter.js # Report generation
+│   ├── composerIntegration.js # 13 subsystem integration hooks
+│   ├── applicationDefinition.js # Application CRUD
+│   ├── applicationManifest.js # Manifest create/update/export
+│   ├── applicationBlueprint.js # Blueprint create/list
+│   ├── applicationCapabilities.js # Capability management
+│   ├── applicationDependencies.js # Dependency management + resolution
+│   ├── applicationTopology.js # Node/edge topology builder
+│   ├── compositionGraph.js # Graph CRUD + adjacency
+│   ├── dependencyResolver.js # Topological sort + cycle detection
+│   ├── executionPlanner.js # Execution stage planning
+│   ├── resourceAllocator.js # Resource allocation + estimation
+│   ├── serviceComposer.js # Service composition + endpoints
+│   ├── workflowComposer.js # Workflow module composition
+│   ├── agentComposer.js    # AI agent composition
+│   ├── pluginComposer.js   # Plugin composition
+│   ├── integrationComposer.js # Integration composition
+│   ├── runtimeComposer.js  # Runtime configuration composition
+│   ├── securityComposer.js # Security module composition
+│   ├── billingComposer.js  # Billing module composition
+│   ├── dataComposer.js     # Data module composition
+│   ├── governanceComposer.js # Governance module composition
+│   ├── capabilityRegistry.js # Capability registry
+│   ├── capabilityDiscovery.js # Capability discovery
+│   ├── capabilityMatcher.js # Capability matching
+│   ├── capabilityScoring.js # Capability scoring (0-1)
+│   ├── capabilityValidator.js # Capability validation
+│   ├── website.js          # Website template
+│   ├── saas.js             # SaaS template
+│   ├── crm.js              # CRM template
+│   ├── erp.js              # ERP template
+│   ├── marketplace.js      # Marketplace template
+│   ├── knowledgeBase.js    # Knowledge base template
+│   ├── automation.js       # Automation template
+│   ├── dashboard.js        # Dashboard template
+│   ├── aiAssistant.js      # AI Assistant template
+│   ├── custom.js           # Custom template
+│   ├── compositionPolicies.js # Policy engine
+│   ├── compositionConstraints.js # Constraint engine
+│   ├── compositionSimulation.js # Simulation engine
+│   └── compositionApproval.js # Approval workflow
 ├── ui/                        # Dashboard UI (Phase 7.2) + Control Plane (Phase 8.5.0)
 │   ├── dashboard/             # 15 components, 10 pages, 1 layout, entry point + CSS
 │   └── control-plane/         # Control Plane Dashboard + Cost Optimization (Phase 8.5.0/9.0.0)
@@ -760,6 +812,7 @@ These modules form the Agent Pack v1 pipeline — converting client briefs into 
 | **Data Platform** | `lib/data/` | v4.8.0 | Phase 9.8.0 — Enterprise Data Platform: 70+ modules across 11 subdirectories (Core, Providers, Adapters, Vectors, Knowledge Base, Object Storage, Cache, Search, Backups, Analytics, Migrations, Data Quality). Provider-agnostic storage abstraction with 7 database providers (PostgreSQL, MySQL, SQLite, MongoDB, Redis, Elasticsearch, DuckDB). Vector search stack: embedding → semantic → hybrid → rerank. Knowledge base with chunking, versioning, snapshots. Cache hierarchy with invalidation strategies. Search engine with full-text, semantic, hybrid search. Full backup/replication/disaster recovery. Analytics warehouse with materialized views. Data quality suite (validation, dedup, integrity, consistency). 16 API endpoints at /api/v1/data/. Data Platform Center UI (9 tabs, 8 widgets). Plugin SDK extensions (5 provider types). 600+ tests. |
 | **Runtime Platform** | `lib/runtime/` | v4.9.0 | Phase 9.9.0 — Enterprise Runtime Platform: 48 modules across 9 subsystems. Feature flags with targeting rules, progressive rollouts, A/B experiments, and audit trail. Dynamic configuration with hierarchy (override > profile > registry > source), environment profiles, and validation schemas. Secrets management with provider abstraction, rotation scheduling, version history, and access audit. Service discovery with round-robin load balancing, health monitoring, and endpoint resolution. Distributed coordination with locks, leases, leader election. Runtime policies with constraints engine, approvals, and simulation. Rollout engine supporting canary, blue/green, and progressive strategies with rollback. Kill switches, emergency controls, and safe mode. 13 API endpoints at /api/v1/runtime/. Runtime Center UI (8 tabs, 8 widgets). Plugin SDK extensions (5 provider types). RuntimeIntegration with 11 subsystem hooks. 550+ tests. |
 | **Lifecycle Platform** | `lib/lifecycle/` | v5.0.0 | Phase 10.0.0 — Project Lifecycle Platform: 17 core modules. Environment lifecycle (Dev/Preview/QA/Staging/Production + custom). Release management with semantic versioning (major/minor/patch), changelog, milestones, tags, hotfixes. Promotion pipeline with manual/governance/automatic approvals, policy and runtime validation. Snapshot system (project/workflow/config/runtime/knowledge/plugin/rollback). Project templates with 8 built-in categories + plugin-registered. Import/export (JSON/YAML/ZIP/project bundle/infrastructure bundle/template bundle). Project migration (schema/workflow/runtime/plugin/config) with validation and rollback. Project cloning. Lifecycle state machine. 10 API endpoints at /api/v1/lifecycle. Lifecycle Center UI (9 tabs, 8 widgets). Plugin SDK (ProjectTemplate, LifecycleHook, MigrationProvider, SnapshotProvider, ReleaseValidator). LifecycleIntegration with 12 subsystem hooks. 700+ tests. |
+| **Composition Platform** | `lib/composer/` | v5.1.0 | Phase 10.1.0 — AI Application Composition Engine: 50+ modules across 7 subsystems. Core: ComposerManager, ApplicationComposer, CompositionEngine, CompositionPlanner, CompositionRegistry, CompositionValidator, CompositionStorage, CompositionMetrics, CompositionEvents, CompositionReporter, ComposerIntegration. Application Model: ApplicationDefinition, ApplicationManifest, ApplicationBlueprint, ApplicationCapabilities, ApplicationDependencies, ApplicationTopology. Composition Graph: CompositionGraph, DependencyResolver, ExecutionPlanner, ResourceAllocator, ServiceComposer. Module Composers: workflow, agent, plugin, integration, runtime, security, billing, data, governance. Capability Engine: CapabilityRegistry, CapabilityDiscovery, CapabilityMatcher, CapabilityScoring, CapabilityValidator. 10 Application Templates: Website, SaaS, CRM, ERP, Marketplace, KnowledgeBase, Automation, Dashboard, AI Assistant, Custom. Composition Policies: CompositionPolicies, CompositionConstraints, CompositionSimulation, CompositionApproval. 8 API endpoints at /api/v1/composer. Application Composer Center UI (8 tabs, 8 widgets). Plugin SDK extensions (AppTemplate, CapabilityProvider, CompositionRule, GraphBuilder). ComposerIntegration with 13 subsystem hooks. 700+ tests. |
 | **Orchestrator** | `lib/orchestrator/` | Implemented | Brief → Plan IR (intent, tone, features, structure) |
 | **Planner** | `lib/planner/` | Implemented | Plan IR → Project Blueprint (pages, nav, sections, components) |
 | **Content Generator** | `lib/content-generator/` | Implemented | Blueprint + Design Strategy → Content Pack (copy, SEO, CTAs) |
@@ -861,6 +914,31 @@ Promotion Pipeline (Dev → Preview → QA → Staging → Production)
 Snapshot (pre-promotion → auto-snapshot → versioned)
     ↓
 Production Release → Maintenance → Hotfix → Rollback
+```
+
+### Application Composition Flow (Phase 10.1.0)
+```
+Blueprint Definition → Application Blueprint
+    ↓
+Composition Planner (discovery → matching → resolution → allocation)
+    ↓
+Dependency Resolution (topological sort → cycle detection → validation)
+    ↓
+    ├── Capability Discovery (registry lookup → type filtering → scoring)
+    ├── Capability Matching (requirement → capability → score 0-1)
+    └── Resource Allocation (CPU/Memory/Storage estimation)
+    ↓
+Execution Planning (stage ordering → parallel groups → dependencies)
+    ↓
+Service Composition (workflow + agent + plugin + integration + runtime + security + billing + data + governance)
+    ↓
+Composition Validation (schema → policy → constraint → compatibility)
+    ↓
+Composition Simulation (dry-run → stage results → warnings → recommendations)
+    ↓
+Approval (request → approve/reject)
+    ↓
+Export (manifest → JSON/YAML → deployment bundle)
 ```
 
 ### AI Website Generator Pipeline (Phase 1–7.5.0)
@@ -1545,6 +1623,7 @@ All dashboards read from `GET /api/telemetry`. The shared `dashboard-api.js` mod
 | v4.8.0 | 2026-06-21 | Phase 9.8.0 — Enterprise Data Platform: 70+ modules across 11 subdirectories. Provider-agnostic storage with 7 database providers (all simulation-mode compatible). Vector search stack: embedding management, semantic search, hybrid search, reranking. Knowledge base: document chunking, versioning, snapshots. Cache hierarchy with invalidation. Search engine with full-text, semantic, hybrid, index management, query optimization. Full backup strategy: snapshots, replication, retention policies, disaster recovery. Analytics warehouse: query engine, aggregation engine, materialized views. Migration management: schema versioning, seed manager. Data quality: validator, deduplicator, integrity checker, consistency checker. 16 API endpoints at /api/v1/data/. Data Platform Center UI (9 tabs, 8 widgets). Plugin SDK extensions (StorageProvider, DatabaseProvider, EmbeddingProvider, SearchProvider, BackupProvider). DataIntegration with 10 subsystem hooks. 600+ tests. |
 | v4.9.0 | 2026-06-21 | Phase 9.9.0 — Enterprise Runtime Platform: 48 modules across 9 subsystems (Core, Feature Flags, Configuration, Secrets, Service Discovery, Coordination, Policies, Rollouts, Kill Switches). Feature flags with targeting (8 operators), progressive rollouts (0-100% hash bucketing), and A/B experiments. Dynamic configuration with 5-level resolution hierarchy, environment profiles, and validation. Secrets with provider abstraction, rotation scheduling, versioning, and access audit. Service discovery with round-robin selection and health monitoring. Distributed coordination with locks (TTL), leases, and leader election. Runtime policies with constraint engine (10 operators), approvals, and change simulation. Rollout engine: canary (traffic percentage), blue/green (instant switch), progressive (phased), with full rollback. Kill switches, emergency controls with action log, and safe mode with feature whitelist. 13 API endpoints at /api/v1/runtime/. Runtime Center UI (8 tabs, 8 widgets). Plugin SDK (ConfigurationProvider, FeatureFlagProvider, SecretProvider, RuntimeHook, RolloutProvider). RuntimeIntegration with 11 subsystem hooks. 550+ tests. |
 | v5.0.0 | 2026-06-22 | Phase 10.0.0 — Project Lifecycle Platform: 17 core modules. Environment lifecycle (Dev/Preview/QA/Staging/Production + custom). Release management with semantic versioning, changelog, milestones, tags, hotfixes. Promotion pipeline with manual/governance/automatic approvals, policy validation, runtime validation, deployment verification. Snapshot system (7 types: project, workflow, config, runtime, knowledge, plugin, rollback). Project templates (8 built-in categories + plugin-registered). Import/export (JSON, YAML, ZIP, project bundle, infrastructure bundle, template bundle). Project migration (5 types) with validation and rollback. Project cloning with history. Lifecycle state machine. 10 API endpoints at /api/v1/lifecycle/. Lifecycle Center UI (9 tabs, 8 widgets). Plugin SDK extensions (5 types). LifecycleIntegration with 12 subsystem hooks. 700+ tests. |
+| v5.1.0 | 2026-06-22 | Phase 10.1.0 — AI Application Composition Engine: 50+ modules across 7 subsystems. Core composition engine with planning, execution, validation, simulation, approval. Application model (Definition, Manifest, Blueprint, Capabilities, Dependencies, Topology). Composition graph with topological dependency resolution. Module composers for workflow, agent, plugin, integration, runtime, security, billing, data, governance. Capability engine (registry, discovery, matching, scoring, validation). 10 application templates (Website, SaaS, CRM, ERP, Marketplace, KnowledgeBase, Automation, Dashboard, AI Assistant, Custom). Composition policies, constraints, simulation, approval. 8 API endpoints at /api/v1/composer/. Application Composer Center UI (8 tabs, 8 widgets). Plugin SDK extensions (4 types). ComposerIntegration with 13 subsystem hooks. 700+ tests. |
 ---
 
 ## Historical Architecture Decisions
@@ -1659,6 +1738,14 @@ The SaaS Core is implemented in `lib/saas/` — 12 modules providing the user-fa
 | **`docs/project-import-export.md`** | Import/export — JSON/YAML/ZIP, bundles, validation | ✅ Active — Phase 10.0.0 |
 | **`docs/migrations.md`** | Project migrations — 5 types, lifecycle, validation, rollback | ✅ Active — Phase 10.0.0 |
 | **`ui/control-plane/lifecycle.js`** | Lifecycle Center UI — 9 tabs (Overview, Environments, Releases, Promotions, Snapshots, Templates, Imports, Exports, History), 8 widgets | ✅ Active — Phase 10.0.0 |
+| **`docs/application-composer.md`** | Application Composer overview — 50+ modules, architecture, composition lifecycle, integration | ✅ Active — Phase 10.1.0 |
+| **`docs/composition-engine.md`** | Composition engine — core components, lifecycle, execution stages, error handling | ✅ Active — Phase 10.1.0 |
+| **`docs/capability-system.md`** | Capability system — registry, discovery, matching, scoring, validation | ✅ Active — Phase 10.1.0 |
+| **`docs/application-graph.md`** | Application graph — nodes, edges, topology, dependency resolution | ✅ Active — Phase 10.1.0 |
+| **`docs/composition-policies.md`** | Composition policies — rules, constraints, simulation, approval | ✅ Active — Phase 10.1.0 |
+| **`docs/application-templates.md`** | Application templates — 10 built-in templates, applying, customizing | ✅ Active — Phase 10.1.0 |
+| **`docs/composition-api.md`** | Composition API — 8 endpoints, request/response examples | ✅ Active — Phase 10.1.0 |
+| **`ui/control-plane/composer.js`** | Application Composer Center UI — 8 tabs, 8 widgets | ✅ Active — Phase 10.1.0 |
 | `AGENTS.md` | Former agent operations manual — content distributed across all 4 canonical files | ❌ Deprecated (deleted) |
 | `CHANGELOG.md` | Former detailed version history — compressed to Version History table in this file | ❌ Deprecated (deleted) |
 | `ARCHITECTURE-SAAS.md` | Former SaaS design document — compressed to SaaS Architecture section in this file | ❌ Deprecated (deleted) |

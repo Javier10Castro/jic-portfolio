@@ -1,0 +1,17 @@
+.composer-center { padding: 20px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+.cc-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+.cc-header h1 { margin: 0; font-size: 24px; color: #333; }
+.cc-btn { padding: 8px 16px; border: none; border-radius: 4px; cursor: pointer; font-size: 14px; }
+.cc-btn-secondary { background: #f0f0f0; color: #333; }
+.cc-btn-secondary:hover { background: #e0e0e0; }
+.cc-tabs { display: flex; gap: 4px; margin-bottom: 20px; border-bottom: 2px solid #e0e0e0; padding-bottom: 0; }
+.cc-tab { padding: 10px 20px; border: none; background: none; cursor: pointer; font-size: 14px; color: #666; border-bottom: 2px solid transparent; margin-bottom: -2px; }
+.cc-tab.active { color: #2563eb; border-bottom-color: #2563eb; font-weight: 600; }
+.cc-panel { background: #fff; border-radius: 8px; padding: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+.cc-panel h2 { margin: 0 0 12px 0; font-size: 20px; color: #333; }
+.cc-panel p { margin: 0; color: #666; line-height: 1.6; }
+.cc-widgets { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 16px; }
+.cc-widget { background: #fff; border-radius: 8px; padding: 20px; text-align: center; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+.cc-widget-icon { font-size: 32px; margin-bottom: 8px; }
+.cc-widget-value { font-size: 28px; font-weight: 700; color: #2563eb; }
+.cc-widget-label { font-size: 13px; color: #666; margin-top: 4px; }
