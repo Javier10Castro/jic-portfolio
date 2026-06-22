@@ -1,4 +1,4 @@
-# Architecture — Web Portfolio + Brief Maestro (v4.8.0)
+# Architecture — Web Portfolio + Brief Maestro (v4.9.0)
 
 ## System Overview
 
@@ -392,7 +392,56 @@ Lead generation and client onboarding through contact forms, AI-powered brief co
   │   ├── terraform/           # Terraform provider (8 resources)
   │   ├── postman/             # Postman collection
   │   └── extensions/vscode/   # VS Code extension (6 commands)
-  └── runtime/                # SaaS pipeline orchestrator
+├── runtime/               # Enterprise Runtime Platform (Phase 9.9.0) — 48 modules across 9 subsystems
+│   ├── index.js            # Entry point — 9 core classes + getDefaultRuntime
+│   ├── runtimeManager.js   # Central orchestrator — start/stop/getStatus/clear
+│   ├── runtimeRegistry.js  # Component registry — register/unregister/get/list/findByType
+│   ├── runtimeStorage.js   # Key-value persistence
+│   ├── runtimeEvents.js    # Event emitter — 16 event types
+│   ├── runtimeMetrics.js   # Metrics collection + aggregation
+│   ├── runtimeHealth.js    # Health check registration + execution
+│   ├── runtimeScheduler.js # Task scheduler — schedule/cancel/tick/pause/resume
+│   ├── runtimeHistory.js   # Audit history — record/query/stats
+│   ├── runtimeReporter.js  # Status reporting — generate/export
+│   ├── runtimeIntegration.js # 11 subsystem integration hooks
+│   ├── featureFlagManager.js # Feature flag orchestrator
+│   ├── featureFlagRegistry.js # Flag CRUD + search
+│   ├── featureFlagEvaluator.js # Flag evaluation with context
+│   ├── featureFlagTargeting.js # Targeting rules (8 operators)
+│   ├── featureFlagRollouts.js # Progressive rollouts (0-100%)
+│   ├── featureFlagExperiments.js # A/B experiment variants
+│   ├── featureFlagAudit.js # Flag change audit logging
+│   ├── configurationManager.js # Configuration orchestrator
+│   ├── configurationRegistry.js # Config CRUD with versioning
+│   ├── configurationSources.js # Source priority management
+│   ├── configurationOverrides.js # Runtime overrides
+│   ├── configurationProfiles.js # Environment profiles
+│   ├── configurationValidation.js # Schema validation
+│   ├── secretManager.js   # Secret orchestrator
+│   ├── secretProviders.js # Secret provider registry
+│   ├── secretRotation.js  # Rotation scheduling
+│   ├── secretVersioning.js # Version history
+│   ├── secretAudit.js     # Access audit
+│   ├── serviceRegistry.js # Service registration
+│   ├── serviceDiscovery.js # Service discovery (round-robin)
+│   ├── serviceHealth.js   # Health monitoring
+│   ├── serviceResolver.js # Endpoint resolution
+│   ├── distributedLocks.js # Distributed lock management
+│   ├── leaseManager.js    # Lease acquire/renew/release
+│   ├── leaderRuntime.js   # Leader election
+│   ├── coordinationEngine.js # Coordination orchestrator
+│   ├── runtimePolicies.js # Policy definitions
+│   ├── runtimeConstraints.js # Constraint engine (10 operators)
+│   ├── runtimeApprovals.js # Approval workflow
+│   ├── runtimeSimulation.js # Change simulation
+│   ├── rolloutManager.js  # Rollout lifecycle
+│   ├── canaryRollout.js   # Canary deployment
+│   ├── blueGreenRollout.js # Blue/green deployment
+│   ├── progressiveRollout.js # Phased rollout
+│   ├── rollbackManager.js # Rollback execution
+│   ├── killSwitchManager.js # Kill switch management
+│   ├── emergencyControls.js # Emergency mode
+│   └── safeMode.js        # Safe mode with feature whitelist
 ├── ui/                        # Dashboard UI (Phase 7.2) + Control Plane (Phase 8.5.0)
 │   ├── dashboard/             # 15 components, 10 pages, 1 layout, entry point + CSS
 │   └── control-plane/         # Control Plane Dashboard + Cost Optimization (Phase 8.5.0/9.0.0)
@@ -690,6 +739,7 @@ These modules form the Agent Pack v1 pipeline — converting client briefs into 
 | **Developer Platform** | `lib/developer/` | v4.5.0 | Developer Platform — SDKs, CLI, OpenAPI, Terraform Provider, GitHub Action, VS Code Extension, Postman Collection, Developer Portal, Analytics |
 | **Governance Platform** | `lib/governance/` | v4.7.0 | Phase 9.7.0 — Enterprise Policy & Governance Platform: 46 modules across 10 subdirectories. Policy DSL with declarative conditions/actions (16 operators, 8 action types, 3 enforcement modes). 72 default policies across 10 policy types. Policy lifecycle: register → compile → evaluate → execute → audit. Multi-step approval workflows with routing rules. Compliance scanning with scoring and report generation. Audit engine with retention and timeline queries. Version management with diff and rollback. Side-effect-free simulation with impact analysis. AI Router integration — 12 check* methods covering all subsystems. 16 API endpoints at /api/v1/governance/. Governance Center UI (7 tabs, 7 widgets). Plugin SDK extensions (PolicyProvider, ComplianceTemplate, ApprovalRule). 450+ tests. |
 | **Data Platform** | `lib/data/` | v4.8.0 | Phase 9.8.0 — Enterprise Data Platform: 70+ modules across 11 subdirectories (Core, Providers, Adapters, Vectors, Knowledge Base, Object Storage, Cache, Search, Backups, Analytics, Migrations, Data Quality). Provider-agnostic storage abstraction with 7 database providers (PostgreSQL, MySQL, SQLite, MongoDB, Redis, Elasticsearch, DuckDB). Vector search stack: embedding → semantic → hybrid → rerank. Knowledge base with chunking, versioning, snapshots. Cache hierarchy with invalidation strategies. Search engine with full-text, semantic, hybrid search. Full backup/replication/disaster recovery. Analytics warehouse with materialized views. Data quality suite (validation, dedup, integrity, consistency). 16 API endpoints at /api/v1/data/. Data Platform Center UI (9 tabs, 8 widgets). Plugin SDK extensions (5 provider types). 600+ tests. |
+| **Runtime Platform** | `lib/runtime/` | v4.9.0 | Phase 9.9.0 — Enterprise Runtime Platform: 48 modules across 9 subsystems. Feature flags with targeting rules, progressive rollouts, A/B experiments, and audit trail. Dynamic configuration with hierarchy (override > profile > registry > source), environment profiles, and validation schemas. Secrets management with provider abstraction, rotation scheduling, version history, and access audit. Service discovery with round-robin load balancing, health monitoring, and endpoint resolution. Distributed coordination with locks, leases, leader election. Runtime policies with constraints engine, approvals, and simulation. Rollout engine supporting canary, blue/green, and progressive strategies with rollback. Kill switches, emergency controls, and safe mode. 13 API endpoints at /api/v1/runtime/. Runtime Center UI (8 tabs, 8 widgets). Plugin SDK extensions (5 provider types). RuntimeIntegration with 11 subsystem hooks. 550+ tests. |
 | **Orchestrator** | `lib/orchestrator/` | Implemented | Brief → Plan IR (intent, tone, features, structure) |
 | **Planner** | `lib/planner/` | Implemented | Plan IR → Project Blueprint (pages, nav, sections, components) |
 | **Content Generator** | `lib/content-generator/` | Implemented | Blueprint + Design Strategy → Content Pack (copy, SEO, CTAs) |
@@ -750,6 +800,25 @@ Search Pipeline (query → full-text + semantic → optimize → results)
 Analytics (query → aggregate → materialize → report)
     ↓
 Backup/Replication (snapshot → replicate → retain → restore)
+```
+
+### Runtime Control Flow (Phase 9.9.0)
+```
+Runtime Manager (orchestration)
+    ↓
+Feature Flags (evaluate → targeting → rollout → experiment)
+    ↓
+Configuration (resolve hierarchy → override → profile → source)
+    ↓
+Secrets (get → rotate → version → audit)
+    ↓
+Service Discovery (register → discover → health check → resolve)
+    ↓
+Coordinator (lock → lease → leader election)
+    ↓
+Rollout Engine (canary → blue/green → progressive → rollback)
+    ↓
+Emergency Controls (kill switch → safe mode → emergency actions)
 ```
 
 ### AI Website Generator Pipeline (Phase 1–7.5.0)
@@ -1432,6 +1501,7 @@ All dashboards read from `GET /api/telemetry`. The shared `dashboard-api.js` mod
 | v4.5.0 | 2026-06-19 | Phase 9.5.0 — Developer Platform: 10 core modules, CLI with 15 commands, 7 language SDKs (JS/TS/Python/Go/Java/C#/PHP), OpenAPI 3.1 generator, Terraform provider with 8 resources, GitHub Action, VS Code Extension, Postman Collection, Developer Portal, event-driven analytics, 13 API endpoints, Developer Center SSR page in Control Plane UI; 350+ tests; full test suite: 1,130+ tests passing |
 | v4.7.0 | 2026-06-21 | Phase 9.7.0 — Enterprise Policy & Governance Platform: 46 modules across 10 subdirectories (Core, Policies, Rule Engine, Approvals, Compliance, Audit, Versioning, Simulation, Integration, API). Declarative Policy DSL with 16 condition operators, 8 action types, 3 enforcement modes. 72 default policies across 10 policy types (AI, Agent, Workflow, Deployment, Billing, Security, Plugin, Integration, Developer, Data). GovernanceManager orchestrator with createPolicy/evaluateAll/simulate/compliance/approvals/rollback. Multi-step approval workflows with routing rules. Compliance scanning with scoring/reports/templates. Audit engine with timeline and retention. Policy versioning with diff and rollback. Side-effect-free simulation with impact analysis. GovernanceIntegration — 12 check* methods for all subsystems (AI Routing, Agents, Workflows, Billing, Developer, Plugin, Marketplace, Integration, Security, Deployments, Evaluation, Data). Governance Center UI (7 tabs, 7 widgets). Plugin SDK extensions. 16 API endpoints. 450+ tests. |
 | v4.8.0 | 2026-06-21 | Phase 9.8.0 — Enterprise Data Platform: 70+ modules across 11 subdirectories. Provider-agnostic storage with 7 database providers (all simulation-mode compatible). Vector search stack: embedding management, semantic search, hybrid search, reranking. Knowledge base: document chunking, versioning, snapshots. Cache hierarchy with invalidation. Search engine with full-text, semantic, hybrid, index management, query optimization. Full backup strategy: snapshots, replication, retention policies, disaster recovery. Analytics warehouse: query engine, aggregation engine, materialized views. Migration management: schema versioning, seed manager. Data quality: validator, deduplicator, integrity checker, consistency checker. 16 API endpoints at /api/v1/data/. Data Platform Center UI (9 tabs, 8 widgets). Plugin SDK extensions (StorageProvider, DatabaseProvider, EmbeddingProvider, SearchProvider, BackupProvider). DataIntegration with 10 subsystem hooks. 600+ tests. |
+| v4.9.0 | 2026-06-21 | Phase 9.9.0 — Enterprise Runtime Platform: 48 modules across 9 subsystems (Core, Feature Flags, Configuration, Secrets, Service Discovery, Coordination, Policies, Rollouts, Kill Switches). Feature flags with targeting (8 operators), progressive rollouts (0-100% hash bucketing), and A/B experiments. Dynamic configuration with 5-level resolution hierarchy, environment profiles, and validation. Secrets with provider abstraction, rotation scheduling, versioning, and access audit. Service discovery with round-robin selection and health monitoring. Distributed coordination with locks (TTL), leases, and leader election. Runtime policies with constraint engine (10 operators), approvals, and change simulation. Rollout engine: canary (traffic percentage), blue/green (instant switch), progressive (phased), with full rollback. Kill switches, emergency controls with action log, and safe mode with feature whitelist. 13 API endpoints at /api/v1/runtime/. Runtime Center UI (8 tabs, 8 widgets). Plugin SDK (ConfigurationProvider, FeatureFlagProvider, SecretProvider, RuntimeHook, RolloutProvider). RuntimeIntegration with 11 subsystem hooks. 550+ tests. |
 ---
 
 ## Historical Architecture Decisions
@@ -1530,6 +1600,14 @@ The SaaS Core is implemented in `lib/saas/` — 12 modules providing the user-fa
 | **`docs/backups.md`** | Backup and recovery — snapshots, replication, retention policies, disaster recovery | ✅ Active — Phase 9.8.0 |
 | **`docs/migrations.md`** | Database migrations — schema versioning, migration runner, seed manager, rollback | ✅ Active — Phase 9.8.0 |
 | **`ui/control-plane/data.js`** | Data Platform Center UI — 9 tabs (Overview, Storage, Databases, Vector Search, Knowledge Base, Cache, Analytics, Backups, Search), 8 widgets | ✅ Active — Phase 9.8.0 |
+| **`docs/runtime-platform.md`** | Runtime Platform architecture — 48 modules, runtime flow, integration with 11 subsystems | ✅ Active — Phase 9.9.0 |
+| **`docs/feature-flags.md`** | Feature flags — lifecycle, targeting, rollouts, experiments, audit | ✅ Active — Phase 9.9.0 |
+| **`docs/runtime-configuration.md`** | Dynamic configuration — hierarchy, sources, overrides, profiles, validation | ✅ Active — Phase 9.9.0 |
+| **`docs/secrets-management.md`** | Secrets management — providers, rotation, versioning, audit | ✅ Active — Phase 9.9.0 |
+| **`docs/service-discovery.md`** | Service discovery — registry, round-robin, health, resolution | ✅ Active — Phase 9.9.0 |
+| **`docs/runtime-rollouts.md`** | Rollout engine — canary, blue/green, progressive, rollback | ✅ Active — Phase 9.9.0 |
+| **`docs/runtime-policies.md`** | Runtime policies — constraints, approvals, simulation + kill switches, emergency controls, safe mode | ✅ Active — Phase 9.9.0 |
+| **`ui/control-plane/runtime.js`** | Runtime Center UI — 8 tabs (Overview, Feature Flags, Configuration, Secrets, Services, Rollouts, Runtime Policies, Emergency Controls), 8 widgets | ✅ Active — Phase 9.9.0 |
 | `AGENTS.md` | Former agent operations manual — content distributed across all 4 canonical files | ❌ Deprecated (deleted) |
 | `CHANGELOG.md` | Former detailed version history — compressed to Version History table in this file | ❌ Deprecated (deleted) |
 | `ARCHITECTURE-SAAS.md` | Former SaaS design document — compressed to SaaS Architecture section in this file | ❌ Deprecated (deleted) |
