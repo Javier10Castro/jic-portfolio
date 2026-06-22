@@ -1,4 +1,4 @@
-# Architecture — Web Portfolio + Brief Maestro (v4.7.0)
+# Architecture — Web Portfolio + Brief Maestro (v4.8.0)
 
 ## System Overview
 
@@ -204,6 +204,115 @@ Lead generation and client onboarding through contact forms, AI-powered brief co
   │       ├── IntegrationPolicies.js # 7 policies
   │       ├── DeveloperPolicies.js # 7 policies
   │       └── DataPolicies.js     # 8 policies
+  ├── data/                   # Enterprise Data Platform (Phase 9.8.0) — 70+ modules across 11 subdirectories
+  │   ├── index.js            # Entry point — 20+ exported classes
+  │   ├── dataPlatform.js     # Central orchestrator — connect, query, backup, migrate, replicate
+  │   ├── dataManager.js      # Datasource registry
+  │   ├── storageManager.js   # Storage provider abstraction
+  │   ├── transactionManager.js # Transaction lifecycle (begin/commit/rollback)
+  │   ├── repository.js       # Generic repository pattern
+  │   ├── connectionManager.js  # Connection lifecycle
+  │   ├── dataStorage.js      # Key-value persistence layer
+  │   ├── dataEvents.js       # Event emitter (20+ event types)
+  │   ├── dataMetrics.js      # Metric recording + aggregation
+  │   ├── dataHealth.js       # Health monitoring
+  │   ├── dataEncryption.js   # Encrypt/decrypt
+  │   ├── dataCompression.js  # Compress/decompress
+  │   ├── dataRetention.js    # Retention policies
+  │   ├── dataIntegration.js  # 10 subsystem integration hooks
+  │   ├── adapterRegistry.js  # Adapter registration
+  │   ├── migrationManager.js # Migration lifecycle
+  │   ├── schemaManager.js    # Schema management
+  │   ├── backupManager.js    # Backup lifecycle
+  │   ├── restoreManager.js   # Restore operations
+  │   ├── replicationManager.js # Replication setup
+  │   ├── providers/          # 7 database providers (all simulation-mode compatible)
+  │   │   ├── postgresProvider.js
+  │   │   ├── mysqlProvider.js
+  │   │   ├── sqliteProvider.js
+  │   │   ├── mongodbProvider.js
+  │   │   ├── redisProvider.js
+  │   │   ├── elasticProvider.js
+  │   │   └── duckdbProvider.js
+  │   ├── adapters/           # Database adapters
+  │   ├── vectors/            # Vector search stack
+  │   │   ├── VectorManager.js
+  │   │   ├── VectorStore.js
+  │   │   ├── EmbeddingStore.js
+  │   │   ├── embeddingManager.js
+  │   │   ├── embeddingProviders.js
+  │   │   ├── semanticSearch.js
+  │   │   ├── similaritySearch.js
+  │   │   ├── hybridSearch.js
+  │   │   ├── reranker.js
+  │   │   ├── IndexManager.js
+  │   │   └── providers/      # Chroma, PgVector, Pinecone, Qdrant, Weaviate
+  │   ├── knowledge/          # Knowledge base
+  │   │   ├── knowledgeBase.js
+  │   │   ├── knowledgeIndexer.js
+  │   │   ├── knowledgeRetriever.js
+  │   │   ├── knowledgeChunks.js
+  │   │   ├── knowledgeVersioning.js
+  │   │   └── knowledgeSnapshots.js
+  │   ├── object-storage/     # Object storage layer
+  │   │   ├── objectStorage.js
+  │   │   ├── blobStorage.js
+  │   │   ├── fileStorage.js
+  │   │   ├── assetManager.js
+  │   │   └── cdnManager.js
+  │   ├── cache/              # Cache layer
+  │   │   ├── cacheManager.js
+  │   │   ├── memoryCache.js
+  │   │   ├── redisCache.js
+  │   │   ├── cachePolicies.js
+  │   │   ├── cacheInvalidation.js
+  │   │   └── DistributedCache.js
+  │   ├── search/             # Search engine
+  │   │   ├── searchEngine.js
+  │   │   ├── fullTextSearch.js
+  │   │   ├── indexManager.js
+  │   │   ├── queryOptimizer.js
+  │   │   ├── semanticSearch.js
+  │   │   └── hybridSearch.js
+  │   ├── backups/            # Backup management
+  │   │   ├── backupManager.js
+  │   │   ├── snapshotManager.js
+  │   │   ├── restoreManager.js
+  │   │   ├── replicationManager.js
+  │   │   ├── retentionPolicies.js
+  │   │   ├── FullBackup.js
+  │   │   ├── IncrementalBackup.js
+  │   │   ├── BackupScheduler.js
+  │   │   └── DisasterRecovery.js
+  │   ├── analytics/          # Analytics
+  │   │   ├── analyticsWarehouse.js
+  │   │   ├── queryEngine.js
+  │   │   ├── aggregationEngine.js
+  │   │   ├── metricsStore.js
+  │   │   └── materializedViews.js
+  │   ├── migrations/         # Migration management
+  │   │   ├── migrationManager.js
+  │   │   ├── schemaManager.js
+  │   │   ├── schemaVersioning.js
+  │   │   ├── seedManager.js
+  │   │   ├── MigrationGenerator.js
+  │   │   ├── MigrationHistory.js
+  │   │   ├── MigrationRunner.js
+  │   │   ├── Rollback.js
+  │   │   └── Seeder.js
+  │   ├── replication/        # Replication
+  │   ├── quality/            # Data quality
+  │   │   ├── validator.js
+  │   │   ├── deduplicator.js
+  │   │   ├── integrityChecker.js
+  │   │   └── consistencyChecker.js
+  │   └── storage/            # Cloud storage providers
+  │       ├── StorageManager.js
+  │       ├── S3Provider.js
+  │       ├── AzureBlobProvider.js
+  │       ├── GoogleCloudStorageProvider.js
+  │       ├── MinIOProvider.js
+  │       └── LocalStorageProvider.js
   ├── billing/                 # Billing & Subscription Platform (Phase 9.2.0)
   │   ├── index.js             # Entry point — exports + getDefaultEngine + createEngine
   │   ├── billingManager.js    # Central orchestrator — 30+ sub-module references
@@ -580,6 +689,7 @@ These modules form the Agent Pack v1 pipeline — converting client briefs into 
 | **Integration Hub** | `lib/integrations/` | v4.4.0 | Enterprise Integration Hub — OAuth, Webhooks, Sync Engine, 20+ providers |
 | **Developer Platform** | `lib/developer/` | v4.5.0 | Developer Platform — SDKs, CLI, OpenAPI, Terraform Provider, GitHub Action, VS Code Extension, Postman Collection, Developer Portal, Analytics |
 | **Governance Platform** | `lib/governance/` | v4.7.0 | Phase 9.7.0 — Enterprise Policy & Governance Platform: 46 modules across 10 subdirectories. Policy DSL with declarative conditions/actions (16 operators, 8 action types, 3 enforcement modes). 72 default policies across 10 policy types. Policy lifecycle: register → compile → evaluate → execute → audit. Multi-step approval workflows with routing rules. Compliance scanning with scoring and report generation. Audit engine with retention and timeline queries. Version management with diff and rollback. Side-effect-free simulation with impact analysis. AI Router integration — 12 check* methods covering all subsystems. 16 API endpoints at /api/v1/governance/. Governance Center UI (7 tabs, 7 widgets). Plugin SDK extensions (PolicyProvider, ComplianceTemplate, ApprovalRule). 450+ tests. |
+| **Data Platform** | `lib/data/` | v4.8.0 | Phase 9.8.0 — Enterprise Data Platform: 70+ modules across 11 subdirectories (Core, Providers, Adapters, Vectors, Knowledge Base, Object Storage, Cache, Search, Backups, Analytics, Migrations, Data Quality). Provider-agnostic storage abstraction with 7 database providers (PostgreSQL, MySQL, SQLite, MongoDB, Redis, Elasticsearch, DuckDB). Vector search stack: embedding → semantic → hybrid → rerank. Knowledge base with chunking, versioning, snapshots. Cache hierarchy with invalidation strategies. Search engine with full-text, semantic, hybrid search. Full backup/replication/disaster recovery. Analytics warehouse with materialized views. Data quality suite (validation, dedup, integrity, consistency). 16 API endpoints at /api/v1/data/. Data Platform Center UI (9 tabs, 8 widgets). Plugin SDK extensions (5 provider types). 600+ tests. |
 | **Orchestrator** | `lib/orchestrator/` | Implemented | Brief → Plan IR (intent, tone, features, structure) |
 | **Planner** | `lib/planner/` | Implemented | Plan IR → Project Blueprint (pages, nav, sections, components) |
 | **Content Generator** | `lib/content-generator/` | Implemented | Blueprint + Design Strategy → Content Pack (copy, SEO, CTAs) |
@@ -619,6 +729,27 @@ PolicyEvaluator (16 condition operators × dot-notation field resolution)
 PolicyExecutor (hard=deny, soft=warn, audit=log, require_approval)
     ↓
 AuditEngine.record() + ComplianceScanner.check() + PolicyReporter.generate()
+```
+
+### Data Platform Pipeline (Phase 9.8.0)
+```
+Storage Request (any engine)
+    ↓
+DataPlatform → StorageManager / Provider
+    ↓
+Provider Layer (PostgreSQL/MySQL/MongoDB/Redis/Elastic/DuckDB/S3/Azure/GCS/Local)
+    ↓
+Cache Layer (memory → redis → distributed → invalidation)
+    ↓
+Vector Pipeline (embed → index → semantic → hybrid → rerank)
+    ↓
+Knowledge Pipeline (document → chunk → index → version → snapshot)
+    ↓
+Search Pipeline (query → full-text + semantic → optimize → results)
+    ↓
+Analytics (query → aggregate → materialize → report)
+    ↓
+Backup/Replication (snapshot → replicate → retain → restore)
 ```
 
 ### AI Website Generator Pipeline (Phase 1–7.5.0)
@@ -1300,6 +1431,7 @@ All dashboards read from `GET /api/telemetry`. The shared `dashboard-api.js` mod
 | v4.4.0 | 2026-06 | Enterprise Integration Hub — OAuth, Webhooks, Sync Engine, 20+ providers |
 | v4.5.0 | 2026-06-19 | Phase 9.5.0 — Developer Platform: 10 core modules, CLI with 15 commands, 7 language SDKs (JS/TS/Python/Go/Java/C#/PHP), OpenAPI 3.1 generator, Terraform provider with 8 resources, GitHub Action, VS Code Extension, Postman Collection, Developer Portal, event-driven analytics, 13 API endpoints, Developer Center SSR page in Control Plane UI; 350+ tests; full test suite: 1,130+ tests passing |
 | v4.7.0 | 2026-06-21 | Phase 9.7.0 — Enterprise Policy & Governance Platform: 46 modules across 10 subdirectories (Core, Policies, Rule Engine, Approvals, Compliance, Audit, Versioning, Simulation, Integration, API). Declarative Policy DSL with 16 condition operators, 8 action types, 3 enforcement modes. 72 default policies across 10 policy types (AI, Agent, Workflow, Deployment, Billing, Security, Plugin, Integration, Developer, Data). GovernanceManager orchestrator with createPolicy/evaluateAll/simulate/compliance/approvals/rollback. Multi-step approval workflows with routing rules. Compliance scanning with scoring/reports/templates. Audit engine with timeline and retention. Policy versioning with diff and rollback. Side-effect-free simulation with impact analysis. GovernanceIntegration — 12 check* methods for all subsystems (AI Routing, Agents, Workflows, Billing, Developer, Plugin, Marketplace, Integration, Security, Deployments, Evaluation, Data). Governance Center UI (7 tabs, 7 widgets). Plugin SDK extensions. 16 API endpoints. 450+ tests. |
+| v4.8.0 | 2026-06-21 | Phase 9.8.0 — Enterprise Data Platform: 70+ modules across 11 subdirectories. Provider-agnostic storage with 7 database providers (all simulation-mode compatible). Vector search stack: embedding management, semantic search, hybrid search, reranking. Knowledge base: document chunking, versioning, snapshots. Cache hierarchy with invalidation. Search engine with full-text, semantic, hybrid, index management, query optimization. Full backup strategy: snapshots, replication, retention policies, disaster recovery. Analytics warehouse: query engine, aggregation engine, materialized views. Migration management: schema versioning, seed manager. Data quality: validator, deduplicator, integrity checker, consistency checker. 16 API endpoints at /api/v1/data/. Data Platform Center UI (9 tabs, 8 widgets). Plugin SDK extensions (StorageProvider, DatabaseProvider, EmbeddingProvider, SearchProvider, BackupProvider). DataIntegration with 10 subsystem hooks. 600+ tests. |
 ---
 
 ## Historical Architecture Decisions
@@ -1389,7 +1521,15 @@ The SaaS Core is implemented in `lib/saas/` — 12 modules providing the user-fa
 | **`docs/approvals.md`** | Approval workflows — workflow lifecycle, routing rules, multi-step definitions, integration | ✅ Active — Phase 9.7.0 |
 | **`docs/policy-language.md`** | Policy DSL reference — JSON schema, conditions (16 operators), actions (8 types), enforcement, severity, tags, examples | ✅ Active — Phase 9.7.0 |
 | **`docs/policy-simulator.md`** | Policy simulation — simulation engine, runner, impact analysis, scenarios, batch runs | ✅ Active — Phase 9.7.0 |
-| **`ui/control-plane/governance.js`** | Governance Center UI — 7 tabs (Overview, Policies, Compliance, Approvals, Audit, Simulation, Reports), 7 widgets, approve/reject, simulation, compliance scan | ✅ Active — Phase 9.7.0 |
+| **`docs/data-platform.md`** | Data Platform architecture — 70+ modules, storage abstraction, provider-agnostic design, 7 database providers, vector search, knowledge base, cache hierarchy, backup strategy | ✅ Active — Phase 9.8.0 |
+| **`docs/vector-search.md`** | Vector Search — embedding pipeline, semantic search, hybrid search, reranking, similarity algorithms, provider support | ✅ Active — Phase 9.8.0 |
+| **`docs/knowledge-base.md`** | Knowledge Base — document lifecycle, chunking strategy, retrieval, versioning, snapshots | ✅ Active — Phase 9.8.0 |
+| **`docs/storage.md`** | Storage abstraction — StorageManager, blob/file/object storage, asset management, CDN, cloud providers | ✅ Active — Phase 9.8.0 |
+| **`docs/cache.md`** | Cache architecture — memory/Redis/distributed cache, policies, invalidation strategies | ✅ Active — Phase 9.8.0 |
+| **`docs/search-engine.md`** | Search engine — full-text, semantic, hybrid search, index management, query optimization | ✅ Active — Phase 9.8.0 |
+| **`docs/backups.md`** | Backup and recovery — snapshots, replication, retention policies, disaster recovery | ✅ Active — Phase 9.8.0 |
+| **`docs/migrations.md`** | Database migrations — schema versioning, migration runner, seed manager, rollback | ✅ Active — Phase 9.8.0 |
+| **`ui/control-plane/data.js`** | Data Platform Center UI — 9 tabs (Overview, Storage, Databases, Vector Search, Knowledge Base, Cache, Analytics, Backups, Search), 8 widgets | ✅ Active — Phase 9.8.0 |
 | `AGENTS.md` | Former agent operations manual — content distributed across all 4 canonical files | ❌ Deprecated (deleted) |
 | `CHANGELOG.md` | Former detailed version history — compressed to Version History table in this file | ❌ Deprecated (deleted) |
 | `ARCHITECTURE-SAAS.md` | Former SaaS design document — compressed to SaaS Architecture section in this file | ❌ Deprecated (deleted) |
