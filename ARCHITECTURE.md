@@ -1,4 +1,4 @@
-# Architecture — Web Portfolio + Brief Maestro + Platform UI (v6.0.0)
+# Architecture — Web Portfolio + Brief Maestro + Platform UI (v6.1.0)
 
 ## System Overview
 

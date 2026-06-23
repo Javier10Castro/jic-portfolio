@@ -1,10 +1,11 @@
 'use client';
 
+import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Sparkles, Send, FlaskConical, Database, Code, TestTube, Shield, Globe, Zap, CheckCircle, Rocket } from 'lucide-react';
+import { Sparkles, Send, FlaskConical, Database, Code, TestTube, Shield, Globe, Zap, CheckCircle, Rocket, MessageSquarePlus } from 'lucide-react';
 
 const pipelineStages = [
   { step: 1, name: 'Idea Validation', icon: FlaskConical, description: 'AI analyzes your concept for feasibility and market potential.' },
@@ -34,16 +35,23 @@ const buildStatusVariant: Record<string, 'success' | 'warning' | 'destructive' |
 };
 
 export default function StudioPage() {
+  const router = useRouter();
   return (
     <div className="space-y-6">
-      <div>
-        <div className="flex items-center gap-2">
-          <Sparkles className="h-6 w-6 text-blue-600" />
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">AI Product Studio</h1>
+      <div className="flex items-start justify-between">
+        <div>
+          <div className="flex items-center gap-2">
+            <Sparkles className="h-6 w-6 text-blue-600" />
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">AI Product Studio</h1>
+          </div>
+          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+            Build full-stack products from a single prompt using our 10-stage AI pipeline.
+          </p>
         </div>
-        <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-          Build full-stack products from a single prompt using our 10-stage AI pipeline.
-        </p>
+        <Button onClick={() => router.push('/studio/chat')} size="lg" className="gap-2 ml-4 shrink-0">
+          <MessageSquarePlus className="h-5 w-5" />
+          Start Conversation
+        </Button>
       </div>
 
       <Card>
