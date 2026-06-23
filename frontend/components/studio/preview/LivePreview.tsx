@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import { usePreviewStore } from '@/store/previewStore';
 import { Monitor, Tablet, Smartphone, RotateCw, ExternalLink, Loader2 } from 'lucide-react';
 import { cn } from '@/utils/cn';
@@ -14,11 +15,10 @@ const deviceButtons = [
 export default function LivePreview() {
   const preview = usePreviewStore((s) => s.preview);
   const setDevice = usePreviewStore((s) => s.setDevice);
-  const setPreviewStatus = usePreviewStore((s) => s.setPreviewStatus);
+  const [refreshKey, setRefreshKey] = useState(0);
 
   const handleRefresh = () => {
-    setPreviewStatus('loading');
-    setTimeout(() => setPreviewStatus('ready'), 500);
+    setRefreshKey((k) => k + 1);
   };
 
   return (
@@ -81,6 +81,7 @@ export default function LivePreview() {
         {(preview.status === 'ready' || preview.status === 'loading') && preview.html && (
           <DeviceFrame device={preview.device}>
             <iframe
+              key={refreshKey}
               srcDoc={preview.html}
               className="w-full h-64 bg-white"
               title="Live Preview"
@@ -90,6 +91,7 @@ export default function LivePreview() {
         {preview.status === 'ready' && preview.url && !preview.html && (
           <DeviceFrame device={preview.device}>
             <iframe
+              key={refreshKey}
               src={preview.url}
               className="w-full h-64 bg-white"
               title="Live Preview"

@@ -1,32 +1,152 @@
 'use client';
 
-import { useCallback } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import { useConversationStore } from '@/store/conversationStore';
-import { usePipelineStore } from '@/store/pipelineStore';
+import { usePipelineStore,  } from '@/store/pipelineStore';
 import { useSummaryStore } from '@/store/summaryStore';
 import { useDeploymentStore } from '@/store/deploymentStore';
-import { Message, MissingField } from '@/types/conversation';
-import { StudioStage } from '@/types/studio';
+import { usePreviewStore } from '@/store/previewStore';
+import { Message } from '@/types/conversation';
+import type { PageSummary, FeatureSummary } from '@/types/summary';
 import api from '@/services/api';
+import { eventService, getAuthToken } from '@/services';
 
 export function useConversation() {
   const store = useConversationStore();
-  const { startPipeline, advanceStage, completeStage, addLog } = usePipelineStore();
+  const {
+    startPipeline, advanceStage, completeStage, failStage,
+    addLog: addPipelineLog, setStageProgress, resetPipeline,
+  } = usePipelineStore();
   const { setSummary } = useSummaryStore();
-  const { setStatus: setDeployStatus, addLog: addDeployLog } = useDeploymentStore();
+  const {
+    setStatus: setDeployStatus, setUrl: setDeployUrl,
+    addLog: addDeployLog, addToHistory,
+  } = useDeploymentStore();
+  const { setPreviewUrl, setPreviewStatus, setError: setPreviewError } = usePreviewStore();
 
   const activeConv = store.getActiveConversation();
+  const isGenerating = store.isGenerating;
+  const isStreaming = store.isStreaming;
   const messages = activeConv?.messages || [];
+  const sseDisposed = useRef(false);
+  const pipelineSubscription = useRef<(() => void) | null>(null);
+  const deploymentSubscription = useRef<(() => void) | null>(null);
 
-  const startNewConversation = useCallback((title?: string) => {
-    const id = store.createConversation(title);
-    const greeting: Omit<Message, 'id' | 'timestamp'> = {
-      role: 'assistant',
-      content: "Hello! I'm your AI product builder. Tell me about the project you'd like to build. Describe your idea in a few sentences, and I'll help you turn it into a real application.",
-      type: 'text',
+  useEffect(() => {
+    return () => {
+      sseDisposed.current = true;
+      pipelineSubscription.current?.();
+      deploymentSubscription.current?.();
+      pipelineSubscription.current = null;
+      deploymentSubscription.current = null;
     };
-    store.addMessage(id, greeting);
-    return id;
+  }, []);
+
+  const subscribePipeline = useCallback((pipelineId: string) => {
+    pipelineSubscription.current?.();
+    const token = getAuthToken();
+    if (!token) return;
+
+    eventService.connect(token);
+
+    const unsubStatus = eventService.on('pipeline.status', (event) => {
+      if (sseDisposed.current) return;
+      const payload = event.payload as Record<string, string> | undefined;
+      if (!payload) return;
+
+      if (payload.status === 'running') {
+        advanceStage(payload.currentStage as never);
+      } else if (payload.status === 'completed') {
+        completeStage(payload.currentStage as never);
+      } else if (payload.status === 'failed') {
+        failStage(payload.currentStage as never, payload.error || 'Unknown error');
+      }
+    });
+
+    const unsubLog = eventService.on('pipeline.log', (event) => {
+      if (sseDisposed.current) return;
+      const payload = event.payload as Record<string, string | number> | undefined;
+      if (!payload || !payload.stage) return;
+      addPipelineLog({
+        level: (payload.level as 'info' | 'warn' | 'error') || 'info',
+        message: String(payload.message || ''),
+        stage: String(payload.stage),
+      });
+    });
+
+    const unsubProgress = eventService.on('pipeline.progress', (event) => {
+      if (sseDisposed.current) return;
+      const payload = event.payload as Record<string, string | number> | undefined;
+      if (!payload || !payload.stage || typeof payload.progress !== 'number') return;
+      setStageProgress(String(payload.stage) as never, payload.progress);
+    });
+
+    pipelineSubscription.current = () => {
+      unsubStatus();
+      unsubLog();
+      unsubProgress();
+    };
+  }, [advanceStage, completeStage, failStage, addPipelineLog, setStageProgress]);
+
+  const subscribeDeployment = useCallback((deploymentId: string) => {
+    deploymentSubscription.current?.();
+    const token = getAuthToken();
+    if (!token) return;
+
+    eventService.connect(token);
+
+    const unsubStatus = eventService.on('deployment.status', (event) => {
+      if (sseDisposed.current) return;
+      const payload = event.payload as Record<string, string> | undefined;
+      if (!payload) return;
+      setDeployStatus(payload.status as never);
+      if (payload.url) {
+        setDeployUrl(payload.url);
+        setPreviewUrl(payload.url);
+      }
+    });
+
+    const unsubLog = eventService.on('deployment.log', (event) => {
+      if (sseDisposed.current) return;
+      const payload = event.payload as Record<string, string | number> | undefined;
+      if (!payload) return;
+      addDeployLog({
+        level: (payload.level as 'info' | 'warn' | 'error') || 'info',
+        message: String(payload.message || ''),
+      });
+    });
+
+    deploymentSubscription.current = () => {
+      unsubStatus();
+      unsubLog();
+    };
+  }, [setDeployStatus, setDeployUrl, setPreviewUrl, addDeployLog]);
+
+  const startNewConversation = useCallback(async (title?: string) => {
+    try {
+      const res = await api.createConversation({ title });
+      const id = (res as unknown as Record<string, unknown>).data
+        ? ((res as unknown as Record<string, unknown>).data as Record<string, unknown>).id as string
+        : (res as unknown as Record<string, unknown>).id as string || store.createConversation(title);
+
+      const greeting: Omit<Message, 'id' | 'timestamp'> = {
+        role: 'assistant',
+        content: "Hello! I'm your AI product builder. Tell me about the project you'd like to build. Describe your idea in a few sentences, and I'll help you turn it into a real application.",
+        type: 'text',
+      };
+      store.addMessage(id, greeting);
+      store.setActiveConversation(id);
+      return id;
+    } catch {
+      const id = store.createConversation(title);
+      const greeting: Omit<Message, 'id' | 'timestamp'> = {
+        role: 'assistant',
+        content: "Hello! I'm your AI product builder. Tell me about the project you'd like to build.",
+        type: 'text',
+      };
+      store.addMessage(id, greeting);
+      return id;
+    }
   }, [store]);
 
   const sendMessage = useCallback(async (text: string) => {
@@ -47,39 +167,84 @@ export function useConversation() {
 
     store.setStreaming(true);
 
-    const responseText = simulateResponse(text, activeConv?.context);
-    const words = responseText.split(' ');
-    for (let i = 0; i < words.length; i++) {
-      await new Promise((r) => setTimeout(r, 30));
-      store.appendToMessage(convId, assistantMsgId, (i > 0 ? ' ' : '') + words[i]);
+    try {
+      const res = await api.sendMessage(convId, text);
+      const data = (res as unknown as Record<string, unknown>).data as Record<string, unknown> | undefined;
+      const responseContent = data?.content as string || data?.response as string || '';
+      const words = responseContent.split(' ');
+      for (let i = 0; i < words.length; i++) {
+        if (sseDisposed.current) break;
+        store.appendToMessage(convId, assistantMsgId, (i > 0 ? ' ' : '') + words[i]);
+        await new Promise((r) => setTimeout(r, 15));
+      }
+
+      store.updateMessage(convId, assistantMsgId, { streaming: false });
+
+      if (data?.context) {
+        store.updateContext(convId, (data.context as Record<string, unknown>));
+      }
+    } catch {
+      store.updateMessage(convId, assistantMsgId, {
+        content: "I'm sorry, I encountered an issue processing your message. Please try again.",
+        streaming: false,
+      });
+    } finally {
+      store.setStreaming(false);
+      store.setGenerating(false);
     }
 
-    store.updateMessage(convId, assistantMsgId, { streaming: false });
-    store.setStreaming(false);
-    store.setGenerating(false);
+    try {
+      const questionsRes = await api.generateQuestions(convId);
+      const questionsData = (questionsRes as unknown as Record<string, unknown>).data as Record<string, unknown> | undefined;
+      if (questionsData?.missingFields) {
+        store.setMissingFields(convId, (questionsData.missingFields as never[]));
+      }
+    } catch {
+      // questions are best-effort
+    }
+  }, [store]);
 
-    store.updateContext(convId, {
-      progress: Math.min((activeConv?.context.progress || 0) + 10, 100),
-    });
-  }, [store, activeConv]);
-
-  const answerQuestion = useCallback((field: string, value: string | string[] | boolean, missingField: MissingField) => {
+  const answerQuestion = useCallback(async (_field: string, value: string | string[] | boolean) => {
     const convId = store.activeConversationId;
     if (!convId) return;
 
-    store.addMessage(convId, {
-      role: 'user',
-      content: typeof value === 'string' ? value : JSON.stringify(value),
-      type: 'answer',
-    });
+    const answerText = typeof value === 'string' ? value : JSON.stringify(value);
+    store.addMessage(convId, { role: 'user', content: answerText, type: 'answer' });
 
-    store.addMessage(convId, {
-      role: 'assistant',
-      content: `Got it! I've recorded the ${missingField.label}.`,
-      type: 'text',
-    });
+    store.setGenerating(true);
 
-    store.updateContext(convId, { missingFields: [] });
+    try {
+      const res = await api.sendMessage(convId, answerText);
+      const data = (res as unknown as Record<string, unknown>).data as Record<string, unknown> | undefined;
+      const responseContent = data?.content as string || `Got it! I've recorded your answer.`;
+
+      store.addMessage(convId, {
+        role: 'assistant',
+        content: responseContent,
+        type: 'text',
+      });
+
+      if (data?.context) {
+        store.updateContext(convId, (data.context as Record<string, unknown>));
+      }
+
+      const questionsRes = await api.generateQuestions(convId);
+      const questionsData = (questionsRes as unknown as Record<string, unknown>).data as Record<string, unknown> | undefined;
+      if (questionsData?.missingFields) {
+        store.setMissingFields(convId, (questionsData.missingFields as never[]));
+      } else {
+        store.updateContext(convId, { missingFields: [] });
+      }
+    } catch {
+      store.addMessage(convId, {
+        role: 'assistant',
+        content: `Got it! I've recorded your answer.`,
+        type: 'text',
+      });
+      store.updateContext(convId, { missingFields: [] });
+    } finally {
+      store.setGenerating(false);
+    }
   }, [store]);
 
   const generateProject = useCallback(async () => {
@@ -90,90 +255,137 @@ export function useConversation() {
     store.addMessage(convId, { role: 'assistant', content: 'Starting the build pipeline...', type: 'system' });
 
     try {
-      const projectId = `proj_${Date.now()}`;
+      const pipeRes = await api.runPipeline(convId);
+      const pipeData = (pipeRes as unknown as Record<string, unknown>).data as Record<string, unknown> | undefined;
+      const pipelineId = pipeData?.pipelineId as string || pipeData?.id as string || `pipeline_${Date.now()}`;
+      const projectId = pipeData?.projectId as string || `proj_${Date.now()}`;
+      const stagesData = (pipeData?.stages as Record<string, unknown>[]) || [];
+
       startPipeline(projectId);
 
-      const pipelineStages: StudioStage[] = ['architecture', 'composer', 'generator', 'evaluation', 'deployment', 'workspace'];
-
-      for (const stage of pipelineStages) {
-        advanceStage(stage);
-        addLog({ level: 'info', message: `Starting ${stage} stage...`, stage });
-
-        await new Promise((r) => setTimeout(r, 1500));
-
-        completeStage(stage);
-        addLog({ level: 'info', message: `${stage} stage completed successfully`, stage });
+      if (stagesData.length > 0) {
+        stagesData.forEach((s) => {
+          const stageName = s.name as string;
+          if (s.status === 'running') advanceStage(stageName as never);
+          else if (s.status === 'completed') {
+            advanceStage(stageName as never);
+            completeStage(stageName as never);
+          }
+          if (typeof s.progress === 'number') setStageProgress(stageName as never, s.progress);
+        });
       }
 
-      setSummary({
-        name: activeConv?.context.brand.name || 'My Project',
-        pages: activeConv?.context.pages || [],
-        features: [],
-        colorPalette: activeConv?.context.brand.colors || ['#2563eb', '#ffffff'],
-        typography: activeConv?.context.brand.typography || 'Inter',
-        deploymentTarget: 'vercel',
-        estimatedCost: 0,
-        estimatedTokens: 15000,
-        estimatedTime: 120,
-      });
+      subscribePipeline(pipelineId);
+
+      try {
+        const summaryRes = await api.getPipelineStatus(pipelineId);
+        const summaryData = (summaryRes as unknown as Record<string, unknown>).data as Record<string, unknown> | undefined;
+        if (summaryData) {
+          const rawPages = summaryData.pages as Array<Record<string, string>> | undefined;
+          const pages: PageSummary[] = rawPages
+            ? rawPages.map((p) => ({ name: p.name || '', route: p.route }))
+            : (activeConv?.context?.pages || []).map((p) => ({ name: p.name, route: p.route, description: p.description }));
+          const rawFeatures = summaryData.features as Array<Record<string, unknown>> | undefined;
+          const features: FeatureSummary[] = rawFeatures
+            ? rawFeatures.map((f) => ({ name: f.name as string || '', description: f.description as string || '', included: f.included as boolean ?? true }))
+            : [];
+          setSummary({
+            name: (summaryData.projectName as string) || (activeConv?.context?.brand?.name as string) || 'My Project',
+            pages,
+            features,
+            colorPalette: (summaryData.colors as string[]) || (activeConv?.context?.brand?.colors as string[]) || ['#2563eb', '#ffffff'],
+            typography: (summaryData.typography as string) || (activeConv?.context?.brand?.typography as string) || 'Inter',
+            deploymentTarget: (summaryData.deploymentTarget as 'vercel' | 'netlify' | 'aws') || 'vercel',
+            estimatedCost: (summaryData.estimatedCost as number) || 0,
+            estimatedTokens: (summaryData.estimatedTokens as number) || 15000,
+            estimatedTime: (summaryData.estimatedTime as number) || 120,
+          });
+        }
+      } catch {
+        const fallbackPages: PageSummary[] = (activeConv?.context?.pages || []).map((p) => ({ name: p.name, route: p.route, description: p.description }));
+        setSummary({
+          name: (activeConv?.context?.brand?.name as string) || 'My Project',
+          pages: fallbackPages,
+          features: [],
+          colorPalette: (activeConv?.context?.brand?.colors as string[]) || ['#2563eb', '#ffffff'],
+          typography: (activeConv?.context?.brand?.typography as string) || 'Inter',
+          deploymentTarget: 'vercel',
+          estimatedCost: 0,
+          estimatedTokens: 15000,
+          estimatedTime: 120,
+        });
+      }
 
       store.addMessage(convId, {
         role: 'assistant',
-        content: `✅ Build complete! Your project "${activeConv?.context.brand.name || 'My Project'}" has been generated. You can now preview and deploy it.`,
+        content: `✅ Build pipeline started! Your project is being generated. You can monitor progress in the pipeline view.`,
         type: 'system',
       });
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Build failed';
+      failStage('generator' as never, msg);
       store.addMessage(convId, { role: 'assistant', content: `❌ ${msg}`, type: 'error' });
     } finally {
       store.setGenerating(false);
     }
-  }, [store, activeConv, startPipeline, advanceStage, completeStage, addLog, setSummary]);
+  }, [store, activeConv, startPipeline, advanceStage, completeStage, failStage, setStageProgress, addPipelineLog, setSummary, subscribePipeline]);
 
   const deployProject = useCallback(async () => {
+    const convId = store.activeConversationId;
+    if (!convId) return;
+
+    const pipelineState = usePipelineStore.getState().pipeline;
+    const projectId = activeConv?.projectId || pipelineState?.projectId || `proj_${Date.now()}`;
     setDeployStatus('deploying');
     addDeployLog({ level: 'info', message: 'Starting deployment...' });
-    await new Promise((r) => setTimeout(r, 2000));
-    addDeployLog({ level: 'info', message: 'Deployment successful!' });
-    setDeployStatus('deployed');
-  }, [setDeployStatus, addDeployLog]);
+
+    try {
+      const depRes = await api.createDeployment({ projectId });
+      const depData = (depRes as unknown as Record<string, unknown>).data as Record<string, unknown> | undefined;
+      const deploymentId = depData?.deploymentId as string || depData?.id as string;
+      const deploymentUrl = depData?.url as string || '';
+
+      if (deploymentUrl) {
+        setDeployUrl(deploymentUrl);
+        setPreviewUrl(deploymentUrl);
+        setPreviewStatus('ready');
+      }
+
+      if (deploymentId) {
+        subscribeDeployment(deploymentId);
+      }
+
+      addDeployLog({ level: 'info', message: 'Deployment created successfully.' });
+
+      if (depData) {
+        addToHistory({
+          id: deploymentId || `dep_${Date.now()}`,
+          version: depData.version as string || '1.0.0',
+          timestamp: new Date().toISOString(),
+          status: 'deployed',
+          url: deploymentUrl,
+        } as never);
+      }
+
+      setDeployStatus('deployed');
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Deployment failed';
+      setDeployStatus('failed');
+      setPreviewError(msg);
+      addDeployLog({ level: 'error', message: msg });
+    }
+  }, [store, activeConv, setDeployStatus, setDeployUrl, addDeployLog, addToHistory, setPreviewUrl, setPreviewStatus, setPreviewError, subscribeDeployment]);
 
   return {
     ...store,
     messages,
     activeConv,
+    isGenerating,
+    isStreaming,
     startNewConversation,
     sendMessage,
     answerQuestion,
     generateProject,
     deployProject,
   };
-}
-
-const responses: Record<string, string> = {
-  website: "Great, a website! Let me help you build it.\n\nTo start, could you tell me:\n- What is the main purpose of this website?\n- Who is your target audience?\n- Do you have any brand guidelines or preferences?",
-  app: "An application — excellent! Let's explore the details.\n\nI'll need to understand:\n- What problem does your app solve?\n- Who will use it?\n- What platforms do you need (web, mobile, both)?",
-  ecommerce: "An e-commerce site! Let me help you set up your online store.\n\nI need to know:\n- What products will you sell?\n- Do you need payment processing?\n- How many products approximately?",
-  landing: "A landing page — perfect for capturing leads!\n\nLet me understand:\n- What is your offer or product?\n- What action do you want visitors to take?\n- Do you have brand colors and logo?",
-  portfolio: "A portfolio site! Let's showcase your work.\n\nTell me about:\n- What type of work do you showcase?\n- How many projects?\n- Do you need a blog section?",
-  blog: "A blog — great for content! Let me help set it up.\n\nI need to know:\n- What topics will you cover?\n- How often will you post?\n- Do you need comments or newsletter?",
-  default: "Thanks for sharing! Let me ask a few questions to better understand your project.\n\n- What is the primary goal of this project?\n- Do you have any design preferences?\n- What timeline are you working with?",
-};
-
-function simulateResponse(text: string, context?: { brand?: { name?: string } }): string {
-  const lower = text.toLowerCase();
-  let response = responses.default;
-
-  if (lower.includes('website') || lower.includes('site') || lower.includes('web')) response = responses.website;
-  else if (lower.includes('app') || lower.includes('application') || lower.includes('mobile')) response = responses.app;
-  else if (lower.includes('ecommerce') || lower.includes('shop') || lower.includes('store') || lower.includes('sell')) response = responses.ecommerce;
-  else if (lower.includes('landing') || lower.includes('lead')) response = responses.landing;
-  else if (lower.includes('portfolio') || lower.includes('showcase')) response = responses.portfolio;
-  else if (lower.includes('blog') || lower.includes('article') || lower.includes('post')) response = responses.blog;
-
-  if (context?.brand?.name) {
-    response = `Working on "${context.brand.name}". ${response}`;
-  }
-
-  return response;
 }

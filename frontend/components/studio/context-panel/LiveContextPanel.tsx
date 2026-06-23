@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useConversationStore } from '@/store/conversationStore';
+import { useConversation } from '@/hooks/use-conversation';
 import { ChevronDown, ChevronRight, Target, Database, Building2, FileText, ListTodo, HelpCircle, Paperclip, BarChart3 } from 'lucide-react';
 import { cn } from '@/utils/cn';
 import IntentDisplay from './IntentDisplay';
@@ -20,6 +21,7 @@ interface SectionConfig {
 
 export default function LiveContextPanel() {
   const conversation = useConversationStore((s) => s.getActiveConversation());
+  const { answerQuestion } = useConversation();
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
   const context = conversation?.context;
 
@@ -79,8 +81,8 @@ export default function LiveContextPanel() {
         return (
           <MissingFields
             fields={fields}
-            onAnswer={(field, value, missingField) => {
-              // Placeholder: update context or answer
+            onAnswer={(field, value) => {
+              answerQuestion(field, value);
             }}
           />
         );

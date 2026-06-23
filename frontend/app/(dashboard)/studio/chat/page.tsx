@@ -78,7 +78,7 @@ export default function StudioChatPage() {
       <div className="flex-1 overflow-hidden flex flex-col">
         <ChatWindow messages={messages}>
           {showSummary && <ProjectSummary />}
-          {showDeployment && <DeploymentPanel />}
+          {showDeployment && <DeploymentPanel onDeploy={deployProject} />}
           {showPreview && <LivePreview />}
         </ChatWindow>
 

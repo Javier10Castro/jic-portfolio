@@ -1,9 +1,13 @@
 'use client';
 
 import { useDeploymentStore } from '@/store/deploymentStore';
-import { Rocket, RotateCcw, ExternalLink } from 'lucide-react';
+import { Rocket, RotateCcw, ExternalLink, Loader2 } from 'lucide-react';
 import { cn } from '@/utils/cn';
 import DeploymentLog from './DeploymentLog';
+
+interface DeploymentPanelProps {
+  onDeploy?: () => void;
+}
 
 const envOptions = [
   { value: 'development' as const, label: 'Dev' },
@@ -19,16 +23,13 @@ const statusLabels: Record<string, string> = {
   failed: 'Failed',
 };
 
-export default function DeploymentPanel() {
+export default function DeploymentPanel({ onDeploy }: DeploymentPanelProps) {
   const deployment = useDeploymentStore((s) => s.deployment);
-  const setStatus = useDeploymentStore((s) => s.setStatus);
   const setEnvironment = useDeploymentStore((s) => s.setEnvironment);
   const rollback = useDeploymentStore((s) => s.rollback);
 
   const handleDeploy = () => {
-    setStatus('building');
-    setTimeout(() => setStatus('deploying'), 1000);
-    setTimeout(() => setStatus('deployed'), 2500);
+    onDeploy?.();
   };
 
   return (

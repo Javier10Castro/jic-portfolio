@@ -12,6 +12,7 @@ interface PipelineStoreState {
   setStageProgress: (stage: StudioStage, progress: number) => void;
   addLog: (log: Omit<PipelineLog, 'id' | 'timestamp'>) => void;
   retryStage: (stage: StudioStage) => void;
+  setPipelineFromApi: (pipelineData: PipelineState) => void;
   resetPipeline: () => void;
   getCurrentStage: () => PipelineStageState | null;
 }
@@ -123,6 +124,8 @@ export const usePipelineStore = create<PipelineStoreState>()((set, get) => ({
       );
       return { pipeline: { ...state.pipeline, stages, status: 'running' as PipelineStatus } };
     }),
+
+  setPipelineFromApi: (pipelineData: PipelineState) => set({ pipeline: pipelineData }),
 
   resetPipeline: () => set({ pipeline: null }),
 

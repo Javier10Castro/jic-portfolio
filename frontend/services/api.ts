@@ -227,6 +227,112 @@ class ApiClient {
   async getDeployments(params?: Record<string, string | number | boolean | undefined>): Promise<ApiResponse<unknown[]>> {
     return this.get('/deployments', params);
   }
+
+  // === CONVERSATION API ===
+  async listConversations(params?: Record<string, string | number | boolean | undefined>): Promise<ApiResponse<unknown[]>> {
+    return this.get('/conversations', params);
+  }
+
+  async createConversation(data: { title?: string; projectId?: string }): Promise<ApiResponse<unknown>> {
+    return this.post('/conversations', data);
+  }
+
+  async getConversation(id: string): Promise<ApiResponse<unknown>> {
+    return this.get(`/conversations/${id}`);
+  }
+
+  async deleteConversation(id: string): Promise<ApiResponse<unknown>> {
+    return this.delete(`/conversations/${id}`);
+  }
+
+  async sendMessage(conversationId: string, content: string): Promise<ApiResponse<unknown>> {
+    return this.post(`/conversations/${conversationId}/messages`, { content });
+  }
+
+  async generateQuestions(conversationId: string): Promise<ApiResponse<unknown>> {
+    return this.post(`/conversations/${conversationId}/questions`);
+  }
+
+  async buildContext(conversationId: string): Promise<ApiResponse<unknown>> {
+    return this.post(`/conversations/${conversationId}/context`);
+  }
+
+  // === CONTEXT API ===
+  async getContext(conversationId: string): Promise<ApiResponse<unknown>> {
+    return this.get(`/context/${conversationId}`);
+  }
+
+  async rebuildContext(conversationId: string): Promise<ApiResponse<unknown>> {
+    return this.post(`/context/${conversationId}/rebuild`);
+  }
+
+  // === PIPELINE API ===
+  async runPipeline(conversationId: string): Promise<ApiResponse<unknown>> {
+    return this.post('/pipeline/run', { conversationId });
+  }
+
+  async runProjectPipeline(projectId: string): Promise<ApiResponse<unknown>> {
+    return this.post(`/pipeline/project/${projectId}/run`);
+  }
+
+  async getPipeline(id: string): Promise<ApiResponse<unknown>> {
+    return this.get(`/pipeline/${id}`);
+  }
+
+  async getPipelineStatus(id: string): Promise<ApiResponse<unknown>> {
+    return this.get(`/pipeline/${id}/status`);
+  }
+
+  async cancelPipeline(id: string): Promise<ApiResponse<unknown>> {
+    return this.post(`/pipeline/${id}/cancel`);
+  }
+
+  async resumePipeline(id: string): Promise<ApiResponse<unknown>> {
+    return this.post(`/pipeline/${id}/resume`);
+  }
+
+  async retryPipeline(id: string): Promise<ApiResponse<unknown>> {
+    return this.post(`/pipeline/${id}/retry`);
+  }
+
+  // === PLANNER API ===
+  async generatePlanner(data: { conversationId: string; context?: Record<string, unknown> }): Promise<ApiResponse<unknown>> {
+    return this.post('/planner/generate', data);
+  }
+
+  // === GENERATION API ===
+  async generate(data: { pipelineId: string; stage: string; context?: Record<string, unknown> }): Promise<ApiResponse<unknown>> {
+    return this.post('/generate', data);
+  }
+
+  async generateHTML(data: { projectId: string; design?: Record<string, unknown> }): Promise<ApiResponse<unknown>> {
+    return this.post('/generate/html', data);
+  }
+
+  async generateDesign(data: { projectId: string; context?: Record<string, unknown> }): Promise<ApiResponse<unknown>> {
+    return this.post('/generate/design', data);
+  }
+
+  async generateContent(data: { projectId: string; pages?: string[] }): Promise<ApiResponse<unknown>> {
+    return this.post('/generate/content', data);
+  }
+
+  // === DEPLOYMENT API ===
+  async createDeployment(data: { projectId: string; environment?: string }): Promise<ApiResponse<unknown>> {
+    return this.post('/deploy', data);
+  }
+
+  async listDeployments(params?: Record<string, string | number | boolean | undefined>): Promise<ApiResponse<unknown[]>> {
+    return this.get('/deployments', params);
+  }
+
+  async getDeployment(id: string): Promise<ApiResponse<unknown>> {
+    return this.get(`/deployments/${id}`);
+  }
+
+  async rollbackDeployment(id: string): Promise<ApiResponse<unknown>> {
+    return this.post(`/deployments/${id}/rollback`);
+  }
 }
 
 export const api = new ApiClient();
