@@ -1,4 +1,4 @@
-# Architecture — Web Portfolio + Brief Maestro (v5.3.0)
+# Architecture — Web Portfolio + Brief Maestro (v5.4.0)
 
 ## System Overview
 
@@ -595,6 +595,53 @@ Lead generation and client onboarding through contact forms, AI-powered brief co
 │   ├── roadmapBuilder.js # Multi-phase roadmap building
 │   ├── releaseRecommendations.js # Release prioritization
 │   └── architectureTimeline.js # Milestone timeline management
+├── knowledge/             # Organizational Knowledge Engine (Phase 10.4.0) — 46 modules
+│   ├── index.js           # Entry point — 47 exports + getDefaultKnowledgeManager
+│   ├── knowledgeManager.js # Central orchestrator — 46 sub-modules
+│   ├── knowledgeEngine.js # Knowledge ingestion engine
+│   ├── knowledgeStorage.js # Key-value persistence
+│   ├── knowledgeRegistry.js # Knowledge entry registry
+│   ├── knowledgeEvents.js  # Event emitter — 18 event types
+│   ├── knowledgeMetrics.js # Metrics recording + aggregation
+│   ├── knowledgeReporter.js # Report generation
+│   ├── knowledgeGraph.js   # Graph-based knowledge store
+│   ├── entityRegistry.js   # Entity registration + lookup
+│   ├── relationshipManager.js # Relationship definition + query
+│   ├── graphTraversal.js   # BFS/DFS/path traversal
+│   ├── graphQueries.js     # Subgraph/component queries
+│   ├── graphVersioning.js  # Snapshots + diff
+│   ├── architectureKnowledge.js # Architecture knowledge capture
+│   ├── workflowKnowledge.js # Workflow knowledge capture
+│   ├── deploymentKnowledge.js # Deployment knowledge capture
+│   ├── runtimeKnowledge.js  # Runtime knowledge capture
+│   ├── securityKnowledge.js # Security knowledge capture
+│   ├── billingKnowledge.js  # Billing knowledge capture
+│   ├── governanceKnowledge.js # Governance knowledge capture
+│   ├── evaluationKnowledge.js # Evaluation knowledge capture
+│   ├── telemetryKnowledge.js # Telemetry knowledge capture
+│   ├── incidentKnowledge.js # Incident knowledge capture
+│   ├── pluginKnowledge.js   # Plugin knowledge capture
+│   ├── integrationKnowledge.js # Integration knowledge capture
+│   ├── patternDiscovery.js  # Pattern discovery
+│   ├── patternMining.js     # Frequency-based pattern mining
+│   ├── bestPracticeExtractor.js # Best practice extraction
+│   ├── antiPatternDetector.js # Anti-pattern detection
+│   ├── successFactors.js    # Success factor identification
+│   ├── failurePatterns.js   # Failure pattern recording
+│   ├── recommendationEngine.js # Recommendation generation
+│   ├── contextMatcher.js    # Context similarity matching
+│   ├── similarProjectFinder.js # Project similarity search
+│   ├── architectureRecommendations.js # Architecture suggestions
+│   ├── workflowRecommendations.js # Workflow optimization suggestions
+│   ├── optimizationRecommendations.js # Performance/cost suggestions
+│   ├── caseRegistry.js      # Problem-solution case storage
+│   ├── caseRetriever.js     # Case retrieval by text similarity
+│   ├── caseSimilarity.js    # Weighted similarity comparison
+│   ├── caseRanking.js       # Multi-criteria ranking
+│   ├── lessonManager.js     # Lesson CRUD + lifecycle
+│   ├── lessonExtractor.js   # Auto-extraction from text
+│   ├── lessonValidator.js   # Completeness validation
+│   └── lessonPublisher.js   # Publishing + channels
 ├── ui/                        # Dashboard UI (Phase 7.2) + Control Plane (Phase 8.5.0)
 │   ├── dashboard/             # 15 components, 10 pages, 1 layout, entry point + CSS
 │   └── control-plane/         # Control Plane Dashboard + Cost Optimization (Phase 8.5.0/9.0.0)
@@ -897,6 +944,7 @@ These modules form the Agent Pack v1 pipeline — converting client briefs into 
 | **Composition Platform** | `lib/composer/` | v5.1.0 | Phase 10.1.0 — AI Application Composition Engine: 50+ modules across 7 subsystems. Core: ComposerManager, ApplicationComposer, CompositionEngine, CompositionPlanner, CompositionRegistry, CompositionValidator, CompositionStorage, CompositionMetrics, CompositionEvents, CompositionReporter, ComposerIntegration. Application Model: ApplicationDefinition, ApplicationManifest, ApplicationBlueprint, ApplicationCapabilities, ApplicationDependencies, ApplicationTopology. Composition Graph: CompositionGraph, DependencyResolver, ExecutionPlanner, ResourceAllocator, ServiceComposer. Module Composers: workflow, agent, plugin, integration, runtime, security, billing, data, governance. Capability Engine: CapabilityRegistry, CapabilityDiscovery, CapabilityMatcher, CapabilityScoring, CapabilityValidator. 10 Application Templates: Website, SaaS, CRM, ERP, Marketplace, KnowledgeBase, Automation, Dashboard, AI Assistant, Custom. Composition Policies: CompositionPolicies, CompositionConstraints, CompositionSimulation, CompositionApproval. 8 API endpoints at /api/v1/composer. Application Composer Center UI (8 tabs, 8 widgets). Plugin SDK extensions (AppTemplate, CapabilityProvider, CompositionRule, GraphBuilder). ComposerIntegration with 13 subsystem hooks. 700+ tests. |
 | **Architecture Platform** | `lib/architecture/` | v5.2.0 | Phase 10.2.0 — AI Solution Architect Engine: 39 modules across 6 subsystems. Core: ArchitectureManager, SolutionArchitect, ArchitecturePlanner, ArchitectureValidator, ArchitectureStorage, ArchitectureEvents, ArchitectureMetrics, ArchitectureReporter, ArchitectureIntegration. Solution Design: SolutionDefinition, SolutionBlueprint, SystemTopology, BoundedContexts, DomainModel, CapabilityMap, DependencyMap. Architecture Analysis: RequirementsAnalyzer, ConstraintAnalyzer, RiskAnalyzer, TradeoffAnalyzer, QualityAttributeAnalyzer. 8 Default Architecture Patterns: Layered, Hexagonal, Event Driven, Microservices, Modular Monolith, Serverless, Pipeline, AI Native. Pattern system: PatternRegistry, PatternSelector, PatternEvaluator, PatternScoring. Decision Records: DecisionManager, DecisionLog, ArchitectureDecisionRecord, Alternatives, Rationale. 7 Quality Attributes: Availability, Security, Performance, Scalability, Maintainability, Cost, Operability. 8 API endpoints at /api/v1/architecture. Architecture Center UI (8 tabs, 8 widgets). Plugin SDK extensions (ArchitecturePattern, QualityAnalyzer, DecisionValidator, TopologyBuilder, BlueprintExporter). 750+ tests. |
 | **Evolution Platform** | `lib/evolution/` | v5.3.0 | Phase 10.3.0 — AI Solution Evolution Engine: 39 modules across 7 subsystems. Core: EvolutionManager, SolutionEvolution, EvolutionPlanner, EvolutionEngine, EvolutionStorage, EvolutionEvents (13 event types), EvolutionMetrics, EvolutionReporter. 10 Analyzers: Architecture, Dependency, Complexity, Performance, Security, Cost, Maintainability, TechnicalDebt, Scalability, Availability. 5 Planners: Improvement, Migration, Refactor, Optimization, Upgrade. Refactor Engine: ModuleSplit, ModuleMerge, DependencyCleanup, ArchitectureRefactor, WorkflowOptimization, AgentOptimization. Technical Debt: DebtRegistry, DebtPrioritizer, DebtScoring, DebtReporter. Evolution Policies: EvolutionPolicies, EvolutionConstraints, EvolutionSimulation, EvolutionValidator. Roadmap Generator: RoadmapBuilder, ReleaseRecommendations, ArchitectureTimeline. 8 API endpoints at /api/v1/evolution. Evolution Center UI (8 tabs, 8 widgets). Plugin SDK extensions (EvolutionAnalyzer, OptimizationPlanner, RefactorStrategy, DebtAnalyzer, RoadmapGenerator). 800+ tests. |
+| **Knowledge Platform** | `lib/knowledge/` | v5.4.0 | Phase 10.4.0 — Organizational Knowledge Engine: 46 modules across 7 subsystems. Core: KnowledgeManager (46-sub-module orchestrator), KnowledgeEngine, KnowledgeStorage, KnowledgeRegistry, KnowledgeEvents (18 event types), KnowledgeMetrics, KnowledgeReporter. Knowledge Graph: KnowledgeGraph, EntityRegistry, RelationshipManager, GraphTraversal (BFS/DFS/path), GraphQueries (subgraph, components), GraphVersioning (snapshots/diff). Knowledge Sources (12): Architecture, Workflow, Deployment, Runtime, Security, Billing, Governance, Evaluation, Telemetry, Incident, Plugin, Integration. Pattern Discovery: PatternDiscovery, PatternMining (frequency analysis), BestPracticeExtractor, AntiPatternDetector, SuccessFactors, FailurePatterns. Recommendation Engine: RecommendationEngine, ContextMatcher (word overlap), SimilarProjectFinder, Architecture/Workflow/Optimization Recommendations. Case-Based Reasoning: CaseRegistry, CaseRetriever, CaseSimilarity (weighted scoring), CaseRanking (multi-criteria). Lessons Learned: LessonManager, LessonExtractor (text pattern extraction), LessonValidator, LessonPublisher. 8 API endpoints at /api/v1/knowledge. Knowledge Center UI (8 tabs, 8 widgets). Plugin SDK extensions (KnowledgeProvider, KnowledgeExtractor, GraphEnricher, RecommendationProvider, PatternAnalyzer). 900+ tests. |
 | **Orchestrator** | `lib/orchestrator/` | Implemented | Brief → Plan IR (intent, tone, features, structure) |
 | **Planner** | `lib/planner/` | Implemented | Plan IR → Project Blueprint (pages, nav, sections, components) |
 | **Content Generator** | `lib/content-generator/` | Implemented | Blueprint + Design Strategy → Content Pack (copy, SEO, CTAs) |
@@ -923,7 +971,7 @@ Scaffold Engine (physical files on disk)
 ```
 **Note**: This pipeline is for the Agent Pack project generation system. The contact/brief email system (`api/sendBrief`, `api/sendContact`) operates independently and does not use this pipeline.
 
-### AI Application Composition & Evolution Pipeline (Phase 10.1.0–10.3.0)
+### AI Application Composition & Evolution Pipeline (Phase 10.1.0–10.4.0)
 ```
 Conversation (user requirements)
     ↓
@@ -934,7 +982,6 @@ Questions (contextual clarification)
 Context (enriched requirements with domain context)
     ↓
 Solution Architect (architecture-first planning layer)
-    ↓
     ├── Requirements Analysis
     ├── Constraint Analysis
     ├── Risk Analysis
@@ -943,6 +990,13 @@ Solution Architect (architecture-first planning layer)
     ├── Pattern Selection (8 patterns)
     ├── Decision Records (proposed → accepted/superseded)
     └── Blueprint Generation
+    ↓
+Knowledge Engine (organizational learning & knowledge graph)
+    ├── Knowledge Graph (entities, relationships, versioning)
+    ├── Pattern Discovery (mining, best practices, anti-patterns)
+    ├── Recommendation Engine (context-based suggestions)
+    ├── Case-Based Reasoning (similar cases & ranking)
+    └── Lessons Learned (extraction, validation, publishing)
     ↓
 Composer (assembles applications from platform capabilities)
     ↓
@@ -1749,6 +1803,7 @@ All dashboards read from `GET /api/telemetry`. The shared `dashboard-api.js` mod
 | v5.1.0 | 2026-06-22 | Phase 10.1.0 — AI Application Composition Engine: 50+ modules across 7 subsystems. Core composition engine with planning, execution, validation, simulation, approval. Application model (Definition, Manifest, Blueprint, Capabilities, Dependencies, Topology). Composition graph with topological dependency resolution. Module composers for workflow, agent, plugin, integration, runtime, security, billing, data, governance. Capability engine (registry, discovery, matching, scoring, validation). 10 application templates (Website, SaaS, CRM, ERP, Marketplace, KnowledgeBase, Automation, Dashboard, AI Assistant, Custom). Composition policies, constraints, simulation, approval. 8 API endpoints at /api/v1/composer/. Application Composer Center UI (8 tabs, 8 widgets). Plugin SDK extensions (4 types). ComposerIntegration with 13 subsystem hooks. 700+ tests. |
 | v5.2.0 | 2026-06-22 | Phase 10.2.0 — AI Solution Architect Engine: 39 modules across 6 subsystems. Architecture-first planning layer that designs complete software solutions before composition. Core (ArchitectureManager, SolutionArchitect, Planner, Validator, Storage, Events, Metrics, Reporter). Solution Design (Definition, Blueprint, SystemTopology, BoundedContexts, DomainModel, CapabilityMap, DependencyMap). Architecture Analysis (Requirements, Constraints, Risk, Tradeoff, Quality Attribute). 8 Default Architecture Patterns (Layered, Hexagonal, Event Driven, Microservices, Modular Monolith, Serverless, Pipeline, AI Native). Pattern system with scoring and comparison. Decision Records with full ADR lifecycle (proposed, accepted, deprecated, superseded), alternatives, and rationale. 7 Quality Attributes (Availability, Security, Performance, Scalability, Maintainability, Cost, Operability). 8 API endpoints at /api/v1/architecture/. Architecture Center UI (8 tabs, 8 widgets). Plugin SDK extensions (5 types). 750+ tests. |
 | v5.3.0 | 2026-06-22 | Phase 10.3.0 — AI Solution Evolution Engine: 39 modules across 7 subsystems. Continuous architecture improvement engine that evaluates, plans, and optimizes existing solutions. 10 Analyzers (Architecture, Dependency, Complexity, Performance, Security, Cost, Maintainability, TechnicalDebt, Scalability, Availability). 5 Planners (Improvement, Migration, Refactor, Optimization, Upgrade). Refactor Engine (ModuleSplit, ModuleMerge, DependencyCleanup, ArchitectureRefactor, WorkflowOptimization, AgentOptimization). Technical Debt system (Registry, Prioritizer, Scoring, Reporter). Evolution Policies (Policies, Constraints, Simulation, Validator). Roadmap Generator (Builder, ReleaseRecommendations, ArchitectureTimeline). 8 API endpoints at /api/v1/evolution/. Evolution Center UI (8 tabs, 8 widgets). Plugin SDK extensions (5 types). 800+ tests. |
+| v5.4.0 | 2026-06-22 | Phase 10.4.0 — Organizational Knowledge Engine: 46 modules across 7 subsystems. Platform-wide learning system that captures structured knowledge from every project, architecture decision, deployment, workflow, evaluation, incident, and optimization. Knowledge Graph with entity registry, relationship management, BFS/DFS traversal, queries, and versioning. 12 Knowledge Sources (Architecture, Workflow, Deployment, Runtime, Security, Billing, Governance, Evaluation, Telemetry, Incident, Plugin, Integration). Pattern Discovery with frequency mining, best practice extraction, anti-pattern detection, success/failure analysis. Recommendation Engine with context matching, project similarity, and domain-specific recommenders. Case-Based Reasoning with weighted similarity scoring and multi-criteria ranking. Lessons Learned with text extraction, validation, and publishing. 8 API endpoints at /api/v1/knowledge/. Knowledge Center UI (8 tabs, 8 widgets). Plugin SDK extensions (5 types). 900+ tests. |
 ---
 
 ## Historical Architecture Decisions
@@ -1887,6 +1942,14 @@ The SaaS Core is implemented in `lib/saas/` — 12 modules providing the user-fa
 | **`docs/architecture-health.md`** | Architecture health — 10 analyzers, scoring, health dashboard | ✅ Active — Phase 10.3.0 |
 | **`docs/evolution-api.md`** | Evolution API — 8 endpoints, request/response examples | ✅ Active — Phase 10.3.0 |
 | **`ui/control-plane/evolution.js`** | Evolution Center UI — 8 tabs (Overview, Architecture Health, Technical Debt, Optimization, Roadmaps, Recommendations, Simulation, History), 8 widgets | ✅ Active — Phase 10.3.0 |
+| **`docs/knowledge-engine.md`** | Knowledge Engine — architecture, ingestion pipeline, enterprise knowledge model | ✅ Active — Phase 10.4.0 |
+| **`docs/knowledge-graph.md`** | Knowledge Graph — entity registry, relationships, traversal, queries, versioning | ✅ Active — Phase 10.4.0 |
+| **`docs/pattern-discovery.md`** | Pattern Discovery — mining, best practices, anti-patterns, success/failure patterns | ✅ Active — Phase 10.4.0 |
+| **`docs/case-based-reasoning.md`** | Case-Based Reasoning — registry, retrieval, similarity, ranking | ✅ Active — Phase 10.4.0 |
+| **`docs/lessons-learned.md`** | Lessons Learned — lifecycle, extraction, validation, publishing | ✅ Active — Phase 10.4.0 |
+| **`docs/recommendation-engine.md`** | Recommendation Engine — context matching, similar projects, domain-specific recommenders | ✅ Active — Phase 10.4.0 |
+| **`docs/knowledge-api.md`** | Knowledge API — 8 endpoints, request/response examples, integration table | ✅ Active — Phase 10.4.0 |
+| **`ui/control-plane/knowledge.js`** | Knowledge Center UI — 8 tabs (Overview, Knowledge Graph, Patterns, Recommendations, Lessons Learned, Best Practices, Similar Projects, Search), 8 widgets | ✅ Active — Phase 10.4.0 |
 | `AGENTS.md` | Former agent operations manual — content distributed across all 4 canonical files | ❌ Deprecated (deleted) |
 | `CHANGELOG.md` | Former detailed version history — compressed to Version History table in this file | ❌ Deprecated (deleted) |
 | `ARCHITECTURE-SAAS.md` | Former SaaS design document — compressed to SaaS Architecture section in this file | ❌ Deprecated (deleted) |
