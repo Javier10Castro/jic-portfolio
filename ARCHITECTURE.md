@@ -1,4 +1,4 @@
-# Architecture — Web Portfolio + Brief Maestro (v5.4.0)
+# Architecture — Web Portfolio + Brief Maestro (v5.5.0)
 
 ## System Overview
 
@@ -595,6 +595,7 @@ Lead generation and client onboarding through contact forms, AI-powered brief co
 │   ├── roadmapBuilder.js # Multi-phase roadmap building
 │   ├── releaseRecommendations.js # Release prioritization
 │   └── architectureTimeline.js # Milestone timeline management
+├── studio/                # AI Product Studio (Phase 10.5.0) — 7 orchestration modules
 ├── knowledge/             # Organizational Knowledge Engine (Phase 10.4.0) — 46 modules
 │   ├── index.js           # Entry point — 47 exports + getDefaultKnowledgeManager
 │   ├── knowledgeManager.js # Central orchestrator — 46 sub-modules
@@ -642,8 +643,9 @@ Lead generation and client onboarding through contact forms, AI-powered brief co
 │   ├── lessonExtractor.js   # Auto-extraction from text
 │   ├── lessonValidator.js   # Completeness validation
 │   └── lessonPublisher.js   # Publishing + channels
-├── ui/                        # Dashboard UI (Phase 7.2) + Control Plane (Phase 8.5.0)
+├── ui/                        # Dashboard UI (Phase 7.2) + Control Plane (Phase 8.5.0) + Studio (Phase 10.5.0)
 │   ├── dashboard/             # 15 components, 10 pages, 1 layout, entry point + CSS
+│   ├── studio/                # AI Product Studio (Phase 10.5.0) — 9 pages, 10 components, 1 CSS
 │   └── control-plane/         # Control Plane Dashboard + Cost Optimization (Phase 8.5.0/9.0.0)
 │       ├── index.js           # SSR page renderer with 6 widgets
 │       ├── controlPlane.css   # Widget styles, SSE indicator, severity badges, timeline
@@ -945,6 +947,7 @@ These modules form the Agent Pack v1 pipeline — converting client briefs into 
 | **Architecture Platform** | `lib/architecture/` | v5.2.0 | Phase 10.2.0 — AI Solution Architect Engine: 39 modules across 6 subsystems. Core: ArchitectureManager, SolutionArchitect, ArchitecturePlanner, ArchitectureValidator, ArchitectureStorage, ArchitectureEvents, ArchitectureMetrics, ArchitectureReporter, ArchitectureIntegration. Solution Design: SolutionDefinition, SolutionBlueprint, SystemTopology, BoundedContexts, DomainModel, CapabilityMap, DependencyMap. Architecture Analysis: RequirementsAnalyzer, ConstraintAnalyzer, RiskAnalyzer, TradeoffAnalyzer, QualityAttributeAnalyzer. 8 Default Architecture Patterns: Layered, Hexagonal, Event Driven, Microservices, Modular Monolith, Serverless, Pipeline, AI Native. Pattern system: PatternRegistry, PatternSelector, PatternEvaluator, PatternScoring. Decision Records: DecisionManager, DecisionLog, ArchitectureDecisionRecord, Alternatives, Rationale. 7 Quality Attributes: Availability, Security, Performance, Scalability, Maintainability, Cost, Operability. 8 API endpoints at /api/v1/architecture. Architecture Center UI (8 tabs, 8 widgets). Plugin SDK extensions (ArchitecturePattern, QualityAnalyzer, DecisionValidator, TopologyBuilder, BlueprintExporter). 750+ tests. |
 | **Evolution Platform** | `lib/evolution/` | v5.3.0 | Phase 10.3.0 — AI Solution Evolution Engine: 39 modules across 7 subsystems. Core: EvolutionManager, SolutionEvolution, EvolutionPlanner, EvolutionEngine, EvolutionStorage, EvolutionEvents (13 event types), EvolutionMetrics, EvolutionReporter. 10 Analyzers: Architecture, Dependency, Complexity, Performance, Security, Cost, Maintainability, TechnicalDebt, Scalability, Availability. 5 Planners: Improvement, Migration, Refactor, Optimization, Upgrade. Refactor Engine: ModuleSplit, ModuleMerge, DependencyCleanup, ArchitectureRefactor, WorkflowOptimization, AgentOptimization. Technical Debt: DebtRegistry, DebtPrioritizer, DebtScoring, DebtReporter. Evolution Policies: EvolutionPolicies, EvolutionConstraints, EvolutionSimulation, EvolutionValidator. Roadmap Generator: RoadmapBuilder, ReleaseRecommendations, ArchitectureTimeline. 8 API endpoints at /api/v1/evolution. Evolution Center UI (8 tabs, 8 widgets). Plugin SDK extensions (EvolutionAnalyzer, OptimizationPlanner, RefactorStrategy, DebtAnalyzer, RoadmapGenerator). 800+ tests. |
 | **Knowledge Platform** | `lib/knowledge/` | v5.4.0 | Phase 10.4.0 — Organizational Knowledge Engine: 46 modules across 7 subsystems. Core: KnowledgeManager (46-sub-module orchestrator), KnowledgeEngine, KnowledgeStorage, KnowledgeRegistry, KnowledgeEvents (18 event types), KnowledgeMetrics, KnowledgeReporter. Knowledge Graph: KnowledgeGraph, EntityRegistry, RelationshipManager, GraphTraversal (BFS/DFS/path), GraphQueries (subgraph, components), GraphVersioning (snapshots/diff). Knowledge Sources (12): Architecture, Workflow, Deployment, Runtime, Security, Billing, Governance, Evaluation, Telemetry, Incident, Plugin, Integration. Pattern Discovery: PatternDiscovery, PatternMining (frequency analysis), BestPracticeExtractor, AntiPatternDetector, SuccessFactors, FailurePatterns. Recommendation Engine: RecommendationEngine, ContextMatcher (word overlap), SimilarProjectFinder, Architecture/Workflow/Optimization Recommendations. Case-Based Reasoning: CaseRegistry, CaseRetriever, CaseSimilarity (weighted scoring), CaseRanking (multi-criteria). Lessons Learned: LessonManager, LessonExtractor (text pattern extraction), LessonValidator, LessonPublisher. 8 API endpoints at /api/v1/knowledge. Knowledge Center UI (8 tabs, 8 widgets). Plugin SDK extensions (KnowledgeProvider, KnowledgeExtractor, GraphEnricher, RecommendationProvider, PatternAnalyzer). 900+ tests. |
+| **Studio Platform** | `lib/studio/` | v5.5.0 | Phase 10.5.0 — AI Product Studio: 7 orchestration modules (StudioManager, BuildPipeline with 10-stage state machine, ProjectManager, WorkspaceManager, StudioEvents, StudioStorage, StudioMetrics). No new engines — coordinates all existing engines from a single UI. 8 API endpoints at /api/studio/. Studio UI (9 pages, 10 components). 4 docs. |
 | **Orchestrator** | `lib/orchestrator/` | Implemented | Brief → Plan IR (intent, tone, features, structure) |
 | **Planner** | `lib/planner/` | Implemented | Plan IR → Project Blueprint (pages, nav, sections, components) |
 | **Content Generator** | `lib/content-generator/` | Implemented | Blueprint + Design Strategy → Content Pack (copy, SEO, CTAs) |
@@ -971,7 +974,7 @@ Scaffold Engine (physical files on disk)
 ```
 **Note**: This pipeline is for the Agent Pack project generation system. The contact/brief email system (`api/sendBrief`, `api/sendContact`) operates independently and does not use this pipeline.
 
-### AI Application Composition & Evolution Pipeline (Phase 10.1.0–10.4.0)
+### AI Application Composition & Evolution Pipeline (Phase 10.1.0–10.5.0)
 ```
 Conversation (user requirements)
     ↓
@@ -1014,6 +1017,18 @@ Evolution Engine (continuous architecture improvement)
     └── Release Recommendations
     ↓
 Lifecycle (project release & deployment pipeline)
+    ↓
+Studio (Phase 10.5.0 — unified UI orchestrating the full pipeline)
+    ├── Conversation
+    ├── Questions
+    ├── Context
+    ├── Solution Architect
+    ├── Knowledge Engine
+    ├── Composer
+    ├── Generator
+    ├── Evaluation
+    ├── Deployment
+    └── Workspace
 ```
 
 ### Governance Policy Pipeline (Phase 9.7.0)
@@ -1804,6 +1819,7 @@ All dashboards read from `GET /api/telemetry`. The shared `dashboard-api.js` mod
 | v5.2.0 | 2026-06-22 | Phase 10.2.0 — AI Solution Architect Engine: 39 modules across 6 subsystems. Architecture-first planning layer that designs complete software solutions before composition. Core (ArchitectureManager, SolutionArchitect, Planner, Validator, Storage, Events, Metrics, Reporter). Solution Design (Definition, Blueprint, SystemTopology, BoundedContexts, DomainModel, CapabilityMap, DependencyMap). Architecture Analysis (Requirements, Constraints, Risk, Tradeoff, Quality Attribute). 8 Default Architecture Patterns (Layered, Hexagonal, Event Driven, Microservices, Modular Monolith, Serverless, Pipeline, AI Native). Pattern system with scoring and comparison. Decision Records with full ADR lifecycle (proposed, accepted, deprecated, superseded), alternatives, and rationale. 7 Quality Attributes (Availability, Security, Performance, Scalability, Maintainability, Cost, Operability). 8 API endpoints at /api/v1/architecture/. Architecture Center UI (8 tabs, 8 widgets). Plugin SDK extensions (5 types). 750+ tests. |
 | v5.3.0 | 2026-06-22 | Phase 10.3.0 — AI Solution Evolution Engine: 39 modules across 7 subsystems. Continuous architecture improvement engine that evaluates, plans, and optimizes existing solutions. 10 Analyzers (Architecture, Dependency, Complexity, Performance, Security, Cost, Maintainability, TechnicalDebt, Scalability, Availability). 5 Planners (Improvement, Migration, Refactor, Optimization, Upgrade). Refactor Engine (ModuleSplit, ModuleMerge, DependencyCleanup, ArchitectureRefactor, WorkflowOptimization, AgentOptimization). Technical Debt system (Registry, Prioritizer, Scoring, Reporter). Evolution Policies (Policies, Constraints, Simulation, Validator). Roadmap Generator (Builder, ReleaseRecommendations, ArchitectureTimeline). 8 API endpoints at /api/v1/evolution/. Evolution Center UI (8 tabs, 8 widgets). Plugin SDK extensions (5 types). 800+ tests. |
 | v5.4.0 | 2026-06-22 | Phase 10.4.0 — Organizational Knowledge Engine: 46 modules across 7 subsystems. Platform-wide learning system that captures structured knowledge from every project, architecture decision, deployment, workflow, evaluation, incident, and optimization. Knowledge Graph with entity registry, relationship management, BFS/DFS traversal, queries, and versioning. 12 Knowledge Sources (Architecture, Workflow, Deployment, Runtime, Security, Billing, Governance, Evaluation, Telemetry, Incident, Plugin, Integration). Pattern Discovery with frequency mining, best practice extraction, anti-pattern detection, success/failure analysis. Recommendation Engine with context matching, project similarity, and domain-specific recommenders. Case-Based Reasoning with weighted similarity scoring and multi-criteria ranking. Lessons Learned with text extraction, validation, and publishing. 8 API endpoints at /api/v1/knowledge/. Knowledge Center UI (8 tabs, 8 widgets). Plugin SDK extensions (5 types). 900+ tests. |
+| v5.5.0 | 2026-06-22 | Phase 10.5.0 — AI Product Studio: 7 orchestration modules (StudioManager, BuildPipeline with 10-stage state machine, ProjectManager, WorkspaceManager, StudioEvents, StudioStorage, StudioMetrics). Interface layer that coordinates all existing engines (Conversation, Questions, Context, Solution Architect, Knowledge, Composer, Generator, Evaluation, Deployment, Lifecycle) from one unified UI. 8 API endpoints at /api/studio/. Studio UI (9 pages: Dashboard, Create, Pipeline, Editor, Preview, Archives, Templates, Settings, Analytics; 10 UI components). 4 docs. 500+ tests. |
 ---
 
 ## Historical Architecture Decisions
@@ -1950,6 +1966,12 @@ The SaaS Core is implemented in `lib/saas/` — 12 modules providing the user-fa
 | **`docs/recommendation-engine.md`** | Recommendation Engine — context matching, similar projects, domain-specific recommenders | ✅ Active — Phase 10.4.0 |
 | **`docs/knowledge-api.md`** | Knowledge API — 8 endpoints, request/response examples, integration table | ✅ Active — Phase 10.4.0 |
 | **`ui/control-plane/knowledge.js`** | Knowledge Center UI — 8 tabs (Overview, Knowledge Graph, Patterns, Recommendations, Lessons Learned, Best Practices, Similar Projects, Search), 8 widgets | ✅ Active — Phase 10.4.0 |
+| **`docs/ai-product-studio.md`** | AI Product Studio architecture — pipeline overview, 10 stages, events, API endpoints, UI pages, metrics | ✅ Active — Phase 10.5.0 |
+| **`docs/studio-pipeline.md`** | Build Pipeline reference — state machine, stage lifecycle, progress calculation, manual controls | ✅ Active — Phase 10.5.0 |
+| **`docs/studio-api.md`** | Studio API reference — all 8 endpoints, request/response examples, error codes | ✅ Active — Phase 10.5.0 |
+| **`docs/studio-ui.md`** | Studio UI guide — page descriptions, component reference, data flow, architecture | ✅ Active — Phase 10.5.0 |
+| **`ui/studio/studio.js`** | Studio main page — 9-tab router, dashboard metrics, project list | ✅ Active — Phase 10.5.0 |
+| **`ui/studio/studio.css`** | Studio styles — all pages and components | ✅ Active — Phase 10.5.0 |
 | `AGENTS.md` | Former agent operations manual — content distributed across all 4 canonical files | ❌ Deprecated (deleted) |
 | `CHANGELOG.md` | Former detailed version history — compressed to Version History table in this file | ❌ Deprecated (deleted) |
 | `ARCHITECTURE-SAAS.md` | Former SaaS design document — compressed to SaaS Architecture section in this file | ❌ Deprecated (deleted) |
