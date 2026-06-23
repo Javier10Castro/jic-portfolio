@@ -1,4 +1,4 @@
-# Architecture — Web Portfolio + Brief Maestro (v5.5.0)
+# Architecture — Web Portfolio + Brief Maestro + Platform UI (v6.0.0)
 
 ## System Overview
 
@@ -1977,6 +1977,68 @@ The SaaS Core is implemented in `lib/saas/` — 12 modules providing the user-fa
 | `ARCHITECTURE-SAAS.md` | Former SaaS design document — compressed to SaaS Architecture section in this file | ❌ Deprecated (deleted) |
 | `docs/CONTEXT.md` | Former Ingestion Boundary description — merged into Execution Model section in this file | ❌ Deprecated (deleted) |
 | `docs/archive/` | Historical audit reports — all content superseded by canonical docs | ❌ Deprecated (deleted) |
+
+---
+
+---
+
+## Frontend Layer (v6.0.0)
+
+### Platform UI
+
+A Next.js 16 application (`frontend/`) serving as the unified user interface for the Platform API.
+
+### Technology
+
+| Component | Technology | Purpose |
+|---|---|---|
+| Framework | Next.js 16 (App Router) | SSR/SSG, routing |
+| Language | TypeScript 5 | Type safety |
+| Styling | TailwindCSS v4 | Utility-first CSS |
+| State | Zustand | Client state (5 stores) |
+| Server State | TanStack React Query | API data caching |
+| HTTP | Axios | API client with retry/refresh |
+| Icons | Lucide React | Icon library |
+| Theme | next-themes | Dark/light/system |
+| UI Primitives | Radix UI | Accessible components |
+| Testing | Vitest + Testing Library | Unit tests |
+
+### Architecture
+
+```
+Landing Page → Auth → Dashboard → Studio → ... → Control Plane
+```
+
+Route groups separate concerns:
+- **Public**: Landing, Login, Register, Forgot Password
+- **Protected**: Dashboard, Projects, Studio, Workflows, Deployments, Agents, Plugins, Integrations, Settings, Profile
+
+### State Flow
+
+```
+User → Component → Zustand Store → API Client (Axios) → Platform API Backend
+                                                    ↕
+                                            Token Refresh / Retry
+```
+
+### Key Design Decisions
+
+1. **No backend modification** — Frontend consumes existing Platform API endpoints
+2. **Route groups** — `(auth)` and `(dashboard)` groups separate public/protected routes
+3. **Middleware auth** — middleware.ts checks auth cookie; layout.tsx validates session
+4. **Persistent auth** — Session stored in Zustand with localStorage persistence
+5. **Design system** — Custom components using `class-variance-authority` for variant management
+6. **Theme** — next-themes with class-based dark mode, persisted to localStorage
+7. **Responsive** — Mobile-first with sidebar collapse at tablet breakpoints
+8. **SEO** — Metadata, OpenGraph, robots.txt, manifest.json
+
+### Future Considerations
+
+1. Dynamic imports for code splitting (large pages)
+2. Framer Motion for page transitions and micro-animations
+3. React Query for real-time data synchronization
+4. i18n for multi-language support
+5. E2E testing with Playwright or Cypress
 
 ---
 
