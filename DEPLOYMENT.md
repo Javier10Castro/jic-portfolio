@@ -5,8 +5,8 @@
 - **Host**: Vercel (Hobby plan)
 - **Runtime**: Node.js 22.11.0
 - **Static files**: Served from `public/` directory
-- **Serverless functions**: `api/` directory (auto-detected, no `vercel.json`)
-- **Function slots**: 12 total — 3 used (sendBrief, sendContact, telemetry)
+- **Serverless functions**: `api/` directory (auto-detected)
+- **Function slots**: 12 total — 4 used (sendBrief, sendContact, telemetry, platform-api)
 
 ## Deployment Methods
 
@@ -101,6 +101,73 @@ See `ARCHITECTURE.md` (Execution Model) for the canonical definitions of rate li
 ## Production Monitoring
 
 Health endpoints, lifecycle logs, trace events, and coverage reports are documented in `ARCHITECTURE.md` (Telemetry & Observability section).
+
+## API Routing Architecture
+
+The Platform API (`lib/api/`) is served through a single Express app exported from `api/platform-api.js`.
+
+### Route Path Resolution
+
+```
+Browser / Client
+    │
+    ▼
+https://example.com/api/v1/studio/health
+    │
+    ▼ (rewrite via vercel.json)
+Vercel routing layer
+    Rewrite: /api/v1/(.*) → /api/platform-api
+    URL preserved in browser: /api/v1/studio/health
+    │
+    ▼
+api/platform-api.js (Express app)
+    Middleware: strips /api/platform-api prefix if present
+    │
+    ▼
+Express internal: /api/v1/studio/health
+    app.use('/api/v1', apiRouter)
+    │
+    ▼
+Route: router.get('/studio/health', handler)
+```
+
+### Configuration
+
+- `vercel.json` — rewrites `/api/v1/*` to the Express function
+- `api/platform-api.js` — Vercel entrypoint; strips function prefix, exports Express app
+- `lib/api/server.js` — mounts API router at `/api/v1` prefix
+- `lib/api/router.js` — registers all subsystem route files on the API router
+
+### Route Registration
+
+Each subsystem route file registers paths relative to the subsystem prefix. For example, Studio routes register `/studio`, `/studio/project`, etc. The full URL path is built as:
+
+```
+/api/v1 + /studio/health  →  /api/v1/studio/health
+/api/v1 + /studio/project →  /api/v1/studio/project
+```
+
+### Debugging Routes
+
+At startup, the Express app logs the full route table:
+
+```
+[API] 35 routes (prefix=/api/v1)
+[API]   GET /api/v1/health
+[API]   GET /api/v1/studio/health
+[API]   POST /api/v1/studio/project
+...
+```
+
+Check Vercel deployment logs via `vercel logs` to verify routes are registered.
+
+### Common Issues
+
+| Symptom | Cause | Fix |
+|---|---|---|
+| `404` on `/api/v1/studio` | Vercel doesn't route path to Express | Verify `vercel.json` exists with rewrite rule |
+| `404` on all `/api/v1/*` | Vercel function path mismatch | Check `api/platform-api.js` url-stripping middleware |
+| Routes missing in startup log | Express router not built | Check `buildRouter()` in `lib/api/router.js` |
 
 ### Vercel CLI Logs
 ```powershell

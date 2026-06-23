@@ -1157,6 +1157,7 @@ describe('Studio Core', function() {
     it('should export getController', function() {
       const ctrl = controller.getController();
       assert(ctrl.getStatus);
+      assert(ctrl.health);
       assert(ctrl.createProject);
       assert(ctrl.getProject);
       assert(ctrl.getBuildStatus);
@@ -1164,6 +1165,21 @@ describe('Studio Core', function() {
       assert(ctrl.listProjects);
       assert(ctrl.advanceStage);
       assert(ctrl.completeStage);
+    });
+    it('health should return healthy status', function() {
+      const ctrl = controller.getController();
+      const req = {};
+      let resData = null;
+      const res = {
+        status: () => res,
+        json: (d) => { resData = d; }
+      };
+      ctrl.health(req, res);
+      assert(resData);
+      assert.strictEqual(resData.success, true);
+      assert.strictEqual(resData.data.healthy, true);
+      assert(resData.data.initialized);
+      assert(resData.data.submodules);
     });
     it('getStatus should return status object', function() {
       const ctrl = controller.getController();
@@ -1299,9 +1315,10 @@ describe('Studio Core', function() {
       };
       const controller = require('../lib/api/controllers/studioController').getController();
       registerStudioRoutes(mockRouter, controller);
-      assert.strictEqual(routes.length, 8);
+      assert.strictEqual(routes.length, 9);
       const paths = routes.map(r => r.path);
       assert(paths.includes('/studio'));
+      assert(paths.includes('/studio/health'));
       assert(paths.includes('/studio/project'));
       assert(paths.includes('/studio/project/:projectId'));
       assert(paths.includes('/studio/project/:projectId/build'));
