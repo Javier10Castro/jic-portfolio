@@ -1,4 +1,4 @@
-# Architecture — Web Portfolio + Brief Maestro (v5.1.0)
+# Architecture — Web Portfolio + Brief Maestro (v5.2.0)
 
 ## System Overview
 
@@ -512,7 +512,47 @@ Lead generation and client onboarding through contact forms, AI-powered brief co
 │   ├── compositionPolicies.js # Policy engine
 │   ├── compositionConstraints.js # Constraint engine
 │   ├── compositionSimulation.js # Simulation engine
-│   └── compositionApproval.js # Approval workflow
+│       └── compositionApproval.js # Approval workflow
+├── architecture/              # AI Solution Architect Engine (Phase 10.2.0) — 39 modules
+│   ├── index.js               # Entry point — exports 38 modules + getDefaultArchitect
+│   ├── architectureManager.js # Central orchestrator — 15 sub-modules composed
+│   ├── solutionArchitect.js   # Solution design — design/getDesign/listDesigns
+│   ├── architecturePlanner.js # Planning — createPlan/getPlan/listPlans
+│   ├── architectureValidator.js # Validation — architecture/blueprint/pattern validation
+│   ├── architectureStorage.js # Key-value persistence
+│   ├── architectureMetrics.js # Metrics recording + aggregation
+│   ├── architectureEvents.js # Event emitter — 13 event types
+│   ├── architectureReporter.js # Report generation
+│   ├── architectureIntegration.js # Subsystem integration hooks
+│   ├── solutionDefinition.js # Solution CRUD
+│   ├── solutionBlueprint.js # Blueprint generate/export
+│   ├── systemTopology.js # Node/edge/layered topology builder
+│   ├── boundedContexts.js # Bounded context management
+│   ├── domainModel.js # Domain model management
+│   ├── capabilityMap.js # Capability mapping
+│   ├── dependencyMap.js # Dependency mapping
+│   ├── requirementsAnalyzer.js # Requirements analysis
+│   ├── constraintAnalyzer.js # Constraint analysis
+│   ├── riskAnalyzer.js # Risk analysis
+│   ├── tradeoffAnalyzer.js # Tradeoff analysis
+│   ├── qualityAttributeAnalyzer.js # Quality attribute analysis
+│   ├── patternRegistry.js # Pattern CRUD
+│   ├── patternSelector.js # Pattern selection
+│   ├── patternEvaluator.js # Pattern evaluation
+│   ├── patternScoring.js # Weighted pattern scoring with comparison
+│   ├── defaultPatterns.js # 8 patterns: Layered, Hexagonal, Event Driven, Microservices, Modular Monolith, Serverless, Pipeline, AI Native
+│   ├── decisionManager.js # Decision management — make/get/reject
+│   ├── decisionLog.js # Decision logging
+│   ├── architectureDecisionRecord.js # ADR lifecycle: proposed → accepted → deprecated → superseded
+│   ├── alternatives.js # Alternative tracking
+│   ├── rationale.js # Rationale management
+│   ├── availability.js # Availability quality attribute
+│   ├── security.js # Security quality attribute
+│   ├── performance.js # Performance quality attribute
+│   ├── scalability.js # Scalability quality attribute
+│   ├── maintainability.js # Maintainability quality attribute
+│   ├── cost.js # Cost quality attribute
+│   └── operability.js # Operability quality attribute
 ├── ui/                        # Dashboard UI (Phase 7.2) + Control Plane (Phase 8.5.0)
 │   ├── dashboard/             # 15 components, 10 pages, 1 layout, entry point + CSS
 │   └── control-plane/         # Control Plane Dashboard + Cost Optimization (Phase 8.5.0/9.0.0)
@@ -813,6 +853,7 @@ These modules form the Agent Pack v1 pipeline — converting client briefs into 
 | **Runtime Platform** | `lib/runtime/` | v4.9.0 | Phase 9.9.0 — Enterprise Runtime Platform: 48 modules across 9 subsystems. Feature flags with targeting rules, progressive rollouts, A/B experiments, and audit trail. Dynamic configuration with hierarchy (override > profile > registry > source), environment profiles, and validation schemas. Secrets management with provider abstraction, rotation scheduling, version history, and access audit. Service discovery with round-robin load balancing, health monitoring, and endpoint resolution. Distributed coordination with locks, leases, leader election. Runtime policies with constraints engine, approvals, and simulation. Rollout engine supporting canary, blue/green, and progressive strategies with rollback. Kill switches, emergency controls, and safe mode. 13 API endpoints at /api/v1/runtime/. Runtime Center UI (8 tabs, 8 widgets). Plugin SDK extensions (5 provider types). RuntimeIntegration with 11 subsystem hooks. 550+ tests. |
 | **Lifecycle Platform** | `lib/lifecycle/` | v5.0.0 | Phase 10.0.0 — Project Lifecycle Platform: 17 core modules. Environment lifecycle (Dev/Preview/QA/Staging/Production + custom). Release management with semantic versioning (major/minor/patch), changelog, milestones, tags, hotfixes. Promotion pipeline with manual/governance/automatic approvals, policy and runtime validation. Snapshot system (project/workflow/config/runtime/knowledge/plugin/rollback). Project templates with 8 built-in categories + plugin-registered. Import/export (JSON/YAML/ZIP/project bundle/infrastructure bundle/template bundle). Project migration (schema/workflow/runtime/plugin/config) with validation and rollback. Project cloning. Lifecycle state machine. 10 API endpoints at /api/v1/lifecycle. Lifecycle Center UI (9 tabs, 8 widgets). Plugin SDK (ProjectTemplate, LifecycleHook, MigrationProvider, SnapshotProvider, ReleaseValidator). LifecycleIntegration with 12 subsystem hooks. 700+ tests. |
 | **Composition Platform** | `lib/composer/` | v5.1.0 | Phase 10.1.0 — AI Application Composition Engine: 50+ modules across 7 subsystems. Core: ComposerManager, ApplicationComposer, CompositionEngine, CompositionPlanner, CompositionRegistry, CompositionValidator, CompositionStorage, CompositionMetrics, CompositionEvents, CompositionReporter, ComposerIntegration. Application Model: ApplicationDefinition, ApplicationManifest, ApplicationBlueprint, ApplicationCapabilities, ApplicationDependencies, ApplicationTopology. Composition Graph: CompositionGraph, DependencyResolver, ExecutionPlanner, ResourceAllocator, ServiceComposer. Module Composers: workflow, agent, plugin, integration, runtime, security, billing, data, governance. Capability Engine: CapabilityRegistry, CapabilityDiscovery, CapabilityMatcher, CapabilityScoring, CapabilityValidator. 10 Application Templates: Website, SaaS, CRM, ERP, Marketplace, KnowledgeBase, Automation, Dashboard, AI Assistant, Custom. Composition Policies: CompositionPolicies, CompositionConstraints, CompositionSimulation, CompositionApproval. 8 API endpoints at /api/v1/composer. Application Composer Center UI (8 tabs, 8 widgets). Plugin SDK extensions (AppTemplate, CapabilityProvider, CompositionRule, GraphBuilder). ComposerIntegration with 13 subsystem hooks. 700+ tests. |
+| **Architecture Platform** | `lib/architecture/` | v5.2.0 | Phase 10.2.0 — AI Solution Architect Engine: 39 modules across 6 subsystems. Core: ArchitectureManager, SolutionArchitect, ArchitecturePlanner, ArchitectureValidator, ArchitectureStorage, ArchitectureEvents, ArchitectureMetrics, ArchitectureReporter, ArchitectureIntegration. Solution Design: SolutionDefinition, SolutionBlueprint, SystemTopology, BoundedContexts, DomainModel, CapabilityMap, DependencyMap. Architecture Analysis: RequirementsAnalyzer, ConstraintAnalyzer, RiskAnalyzer, TradeoffAnalyzer, QualityAttributeAnalyzer. 8 Default Architecture Patterns: Layered, Hexagonal, Event Driven, Microservices, Modular Monolith, Serverless, Pipeline, AI Native. Pattern system: PatternRegistry, PatternSelector, PatternEvaluator, PatternScoring. Decision Records: DecisionManager, DecisionLog, ArchitectureDecisionRecord, Alternatives, Rationale. 7 Quality Attributes: Availability, Security, Performance, Scalability, Maintainability, Cost, Operability. 8 API endpoints at /api/v1/architecture. Architecture Center UI (8 tabs, 8 widgets). Plugin SDK extensions (ArchitecturePattern, QualityAnalyzer, DecisionValidator, TopologyBuilder, BlueprintExporter). 750+ tests. |
 | **Orchestrator** | `lib/orchestrator/` | Implemented | Brief → Plan IR (intent, tone, features, structure) |
 | **Planner** | `lib/planner/` | Implemented | Plan IR → Project Blueprint (pages, nav, sections, components) |
 | **Content Generator** | `lib/content-generator/` | Implemented | Blueprint + Design Strategy → Content Pack (copy, SEO, CTAs) |
@@ -838,6 +879,32 @@ Scaffold Engine (physical files on disk)
     Deployment Engine (provider abstraction → Vercel/GitHub → versioning + rollback)
 ```
 **Note**: This pipeline is for the Agent Pack project generation system. The contact/brief email system (`api/sendBrief`, `api/sendContact`) operates independently and does not use this pipeline.
+
+### AI Application Composition Pipeline (Phase 10.1.0–10.2.0)
+```
+Conversation (user requirements)
+    ↓
+Intent (parsed intent from conversation)
+    ↓
+Questions (contextual clarification)
+    ↓
+Context (enriched requirements with domain context)
+    ↓
+Solution Architect (architecture-first planning layer)
+    ↓
+    ├── Requirements Analysis
+    ├── Constraint Analysis
+    ├── Risk Analysis
+    ├── Tradeoff Analysis
+    ├── Quality Attribute Analysis
+    ├── Pattern Selection (8 patterns)
+    ├── Decision Records (proposed → accepted/superseded)
+    └── Blueprint Generation
+    ↓
+Composer (assembles applications from platform capabilities)
+    ↓
+Generator (produces deployable artifacts)
+```
 
 ### Governance Policy Pipeline (Phase 9.7.0)
 ```
@@ -1624,6 +1691,7 @@ All dashboards read from `GET /api/telemetry`. The shared `dashboard-api.js` mod
 | v4.9.0 | 2026-06-21 | Phase 9.9.0 — Enterprise Runtime Platform: 48 modules across 9 subsystems (Core, Feature Flags, Configuration, Secrets, Service Discovery, Coordination, Policies, Rollouts, Kill Switches). Feature flags with targeting (8 operators), progressive rollouts (0-100% hash bucketing), and A/B experiments. Dynamic configuration with 5-level resolution hierarchy, environment profiles, and validation. Secrets with provider abstraction, rotation scheduling, versioning, and access audit. Service discovery with round-robin selection and health monitoring. Distributed coordination with locks (TTL), leases, and leader election. Runtime policies with constraint engine (10 operators), approvals, and change simulation. Rollout engine: canary (traffic percentage), blue/green (instant switch), progressive (phased), with full rollback. Kill switches, emergency controls with action log, and safe mode with feature whitelist. 13 API endpoints at /api/v1/runtime/. Runtime Center UI (8 tabs, 8 widgets). Plugin SDK (ConfigurationProvider, FeatureFlagProvider, SecretProvider, RuntimeHook, RolloutProvider). RuntimeIntegration with 11 subsystem hooks. 550+ tests. |
 | v5.0.0 | 2026-06-22 | Phase 10.0.0 — Project Lifecycle Platform: 17 core modules. Environment lifecycle (Dev/Preview/QA/Staging/Production + custom). Release management with semantic versioning, changelog, milestones, tags, hotfixes. Promotion pipeline with manual/governance/automatic approvals, policy validation, runtime validation, deployment verification. Snapshot system (7 types: project, workflow, config, runtime, knowledge, plugin, rollback). Project templates (8 built-in categories + plugin-registered). Import/export (JSON, YAML, ZIP, project bundle, infrastructure bundle, template bundle). Project migration (5 types) with validation and rollback. Project cloning with history. Lifecycle state machine. 10 API endpoints at /api/v1/lifecycle/. Lifecycle Center UI (9 tabs, 8 widgets). Plugin SDK extensions (5 types). LifecycleIntegration with 12 subsystem hooks. 700+ tests. |
 | v5.1.0 | 2026-06-22 | Phase 10.1.0 — AI Application Composition Engine: 50+ modules across 7 subsystems. Core composition engine with planning, execution, validation, simulation, approval. Application model (Definition, Manifest, Blueprint, Capabilities, Dependencies, Topology). Composition graph with topological dependency resolution. Module composers for workflow, agent, plugin, integration, runtime, security, billing, data, governance. Capability engine (registry, discovery, matching, scoring, validation). 10 application templates (Website, SaaS, CRM, ERP, Marketplace, KnowledgeBase, Automation, Dashboard, AI Assistant, Custom). Composition policies, constraints, simulation, approval. 8 API endpoints at /api/v1/composer/. Application Composer Center UI (8 tabs, 8 widgets). Plugin SDK extensions (4 types). ComposerIntegration with 13 subsystem hooks. 700+ tests. |
+| v5.2.0 | 2026-06-22 | Phase 10.2.0 — AI Solution Architect Engine: 39 modules across 6 subsystems. Architecture-first planning layer that designs complete software solutions before composition. Core (ArchitectureManager, SolutionArchitect, Planner, Validator, Storage, Events, Metrics, Reporter). Solution Design (Definition, Blueprint, SystemTopology, BoundedContexts, DomainModel, CapabilityMap, DependencyMap). Architecture Analysis (Requirements, Constraints, Risk, Tradeoff, Quality Attribute). 8 Default Architecture Patterns (Layered, Hexagonal, Event Driven, Microservices, Modular Monolith, Serverless, Pipeline, AI Native). Pattern system with scoring and comparison. Decision Records with full ADR lifecycle (proposed, accepted, deprecated, superseded), alternatives, and rationale. 7 Quality Attributes (Availability, Security, Performance, Scalability, Maintainability, Cost, Operability). 8 API endpoints at /api/v1/architecture/. Architecture Center UI (8 tabs, 8 widgets). Plugin SDK extensions (5 types). 750+ tests. |
 ---
 
 ## Historical Architecture Decisions
@@ -1746,6 +1814,14 @@ The SaaS Core is implemented in `lib/saas/` — 12 modules providing the user-fa
 | **`docs/application-templates.md`** | Application templates — 10 built-in templates, applying, customizing | ✅ Active — Phase 10.1.0 |
 | **`docs/composition-api.md`** | Composition API — 8 endpoints, request/response examples | ✅ Active — Phase 10.1.0 |
 | **`ui/control-plane/composer.js`** | Application Composer Center UI — 8 tabs, 8 widgets | ✅ Active — Phase 10.1.0 |
+| **`docs/solution-architect.md`** | Solution Architect — overview, lifecycle, core components, pipeline integration | ✅ Active — Phase 10.2.0 |
+| **`docs/architecture-patterns.md`** | Architecture patterns — 8 default patterns, selection, scoring, evaluation | ✅ Active — Phase 10.2.0 |
+| **`docs/decision-records.md`** | Decision records — ADR format, lifecycle, alternatives, rationale | ✅ Active — Phase 10.2.0 |
+| **`docs/quality-attributes.md`** | Quality attributes — 7 attributes, analysis methodology, tradeoff matrix | ✅ Active — Phase 10.2.0 |
+| **`docs/system-topology.md`** | System topology — 7 graph types, component/service/dependency/agent/workflow/infrastructure/layered | ✅ Active — Phase 10.2.0 |
+| **`docs/tradeoff-analysis.md`** | Tradeoff analysis — requirements, constraint, risk analysis framework | ✅ Active — Phase 10.2.0 |
+| **`docs/architecture-api.md`** | Architecture API — 8 endpoints, request/response examples | ✅ Active — Phase 10.2.0 |
+| **`ui/control-plane/architecture.js`** | Architecture Center UI — 8 tabs, 8 widgets | ✅ Active — Phase 10.2.0 |
 | `AGENTS.md` | Former agent operations manual — content distributed across all 4 canonical files | ❌ Deprecated (deleted) |
 | `CHANGELOG.md` | Former detailed version history — compressed to Version History table in this file | ❌ Deprecated (deleted) |
 | `ARCHITECTURE-SAAS.md` | Former SaaS design document — compressed to SaaS Architecture section in this file | ❌ Deprecated (deleted) |
