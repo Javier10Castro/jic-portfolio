@@ -3,12 +3,15 @@
 import { useConversationStore } from '@/store/conversationStore';
 import ConversationList from '@/components/studio/conversation/ConversationList';
 import LiveContextPanel from '@/components/studio/context-panel/LiveContextPanel';
+import StudioDiagnosticsPanel from '@/components/studio/diagnostics/StudioDiagnosticsPanel';
+import { useStudioRecovery } from '@/hooks/use-studio-recovery';
 import { useIsTablet } from '@/hooks/use-media-query';
 import { cn } from '@/utils/cn';
 import { X } from 'lucide-react';
 import { useState } from 'react';
 
 export default function StudioChatLayout({ children }: { children: React.ReactNode }) {
+  useStudioRecovery();
   const activeConversationId = useConversationStore((s) => s.activeConversationId);
   const isTablet = useIsTablet();
   const [showLeft, setShowLeft] = useState(true);
@@ -78,6 +81,7 @@ export default function StudioChatLayout({ children }: { children: React.ReactNo
           <LiveContextPanel />
         </div>
       )}
+      <StudioDiagnosticsPanel />
     </div>
   );
 }

@@ -1,4 +1,4 @@
-# Architecture — Web Portfolio + Brief Maestro + Platform UI (v6.1.0)
+# Architecture — Web Portfolio + Brief Maestro + Platform UI (v6.3.0)
 
 ## System Overview
 
@@ -1820,6 +1820,10 @@ All dashboards read from `GET /api/telemetry`. The shared `dashboard-api.js` mod
 | v5.3.0 | 2026-06-22 | Phase 10.3.0 — AI Solution Evolution Engine: 39 modules across 7 subsystems. Continuous architecture improvement engine that evaluates, plans, and optimizes existing solutions. 10 Analyzers (Architecture, Dependency, Complexity, Performance, Security, Cost, Maintainability, TechnicalDebt, Scalability, Availability). 5 Planners (Improvement, Migration, Refactor, Optimization, Upgrade). Refactor Engine (ModuleSplit, ModuleMerge, DependencyCleanup, ArchitectureRefactor, WorkflowOptimization, AgentOptimization). Technical Debt system (Registry, Prioritizer, Scoring, Reporter). Evolution Policies (Policies, Constraints, Simulation, Validator). Roadmap Generator (Builder, ReleaseRecommendations, ArchitectureTimeline). 8 API endpoints at /api/v1/evolution/. Evolution Center UI (8 tabs, 8 widgets). Plugin SDK extensions (5 types). 800+ tests. |
 | v5.4.0 | 2026-06-22 | Phase 10.4.0 — Organizational Knowledge Engine: 46 modules across 7 subsystems. Platform-wide learning system that captures structured knowledge from every project, architecture decision, deployment, workflow, evaluation, incident, and optimization. Knowledge Graph with entity registry, relationship management, BFS/DFS traversal, queries, and versioning. 12 Knowledge Sources (Architecture, Workflow, Deployment, Runtime, Security, Billing, Governance, Evaluation, Telemetry, Incident, Plugin, Integration). Pattern Discovery with frequency mining, best practice extraction, anti-pattern detection, success/failure analysis. Recommendation Engine with context matching, project similarity, and domain-specific recommenders. Case-Based Reasoning with weighted similarity scoring and multi-criteria ranking. Lessons Learned with text extraction, validation, and publishing. 8 API endpoints at /api/v1/knowledge/. Knowledge Center UI (8 tabs, 8 widgets). Plugin SDK extensions (5 types). 900+ tests. |
 | v5.5.0 | 2026-06-22 | Phase 10.5.0 — AI Product Studio: 7 orchestration modules (StudioManager, BuildPipeline with 10-stage state machine, ProjectManager, WorkspaceManager, StudioEvents, StudioStorage, StudioMetrics). Interface layer that coordinates all existing engines (Conversation, Questions, Context, Solution Architect, Knowledge, Composer, Generator, Evaluation, Deployment, Lifecycle) from one unified UI. 8 API endpoints at /api/studio/. Studio UI (9 pages: Dashboard, Create, Pipeline, Editor, Preview, Archives, Templates, Settings, Analytics; 10 UI components). 4 docs. 500+ tests. |
+| v6.0.0 | 2026-06-23 | Phase 11.0 — Platform Frontend Foundation: Next.js 16 App Router with TypeScript, TailwindCSS v4. 16 routes, 15 design system components, 5 Zustand stores, Axios API client with retry/refresh, auth flow, landing page, SEO. 43 tests. |
+| v6.1.0 | 2026-06-23 | Phase 11.1 — Conversational AI Product Studio Experience: 3-column responsive chat layout, 17 conversation components, 7 context panel components, 3 pipeline components, 2 preview components, 2 deployment components, 5 Zustand stores, streaming response, dynamic question engine with 10 input types. 46 tests (89 total). |
+| v6.2.0 | 2026-06-23 | Phase 6.2 — Functional end-to-end Studio integration: 25 API methods, SSE event subscription service, real API orchestration (conversation, context, pipeline, deployment), rewrote hook to replace all simulated responses. Backend: SSE events route, auth query param support. |
+| v6.3.0 | 2026-06-23 | Phase 6.3 — Product Stabilization & End-to-End Hardening: SyncManager with 5 store adapters, state reconciliation, validation. SSE resiliency (heartbeat, exponential backoff reconnect, dedup, out-of-order detection, stale rejection). Recovery system (snapshot, hydrate, resume across refresh/close). Offline detection + auto-recovery. Observability service. Developer diagnostics panel. 5 deterministic E2E test scenarios. |
 ---
 
 ## Historical Architecture Decisions
@@ -2032,11 +2036,53 @@ User → Component → Zustand Store → API Client (Axios) → Platform API Bac
 7. **Responsive** — Mobile-first with sidebar collapse at tablet breakpoints
 8. **SEO** — Metadata, OpenGraph, robots.txt, manifest.json
 
+### Studio Stabilization Layer (v6.3.0)
+
+The Studio Stabilization Layer provides production-grade reliability through:
+
+**Synchronization Layer** (`lib/sync/`):
+- `sync-engine.ts` — `SyncManager` class with store adapters, state reconciliation, validation, periodic auto-sync (30s)
+- `store-sync.ts` — Adapters for all 5 Zustand stores (conversation, pipeline, preview, deployment, summary)
+- `offline.ts` — `OfflineDetector` with browser online/offline events + auto-reconnect
+- `observability.ts` — `ObservabilityService` tracking pipeline/generation/deployment durations, SSE events, API latency
+
+**SSE Resiliency** (`services/events.ts`):
+- Heartbeat detection (45s timeout, 5s check interval)
+- Exponential backoff reconnect (1s → 30s, max 20 attempts)
+- `Last-Event-ID` support for session resume
+- Duplicate event prevention (Set<string>, cap 1000)
+- Out-of-order event detection (sequence per source)
+- Stale event rejection (>60s threshold)
+
+**Recovery System** (`hooks/use-studio-recovery.ts`):
+- RecoverySnapshot serialized to sessionStorage on every state change
+- On page load: hydrate from cache → sync with backend → restore active conversation
+- Pipeline recovery across browser refresh/close
+- SSE auto-reconnect on network restore
+- 1-hour snapshot expiry
+
+**Developer Diagnostics** (`components/studio/diagnostics/StudioDiagnosticsPanel.tsx`):
+- Shows stores/sync/SSE/perf status
+- Manual sync/reconnect/persist/hydrate buttons
+- Validation error display (duplicate IDs, orphaned refs, invalid transitions)
+- Visible only in development mode
+
+**State Flow with Stabilization:**
+
+```
+User → Component → Zustand Store → SyncManager → API Client → Platform API
+                              ↕                    ↕
+                      PersistentCache         SSE Events
+                      (sessionStorage)     (EventSource)
+                              ↕                    ↕
+                      useStudioRecovery     EventSubscriptionService
+```
+
 ### Future Considerations
 
 1. Dynamic imports for code splitting (large pages)
 2. Framer Motion for page transitions and micro-animations
-3. React Query for real-time data synchronization
+3. WebSocket fallback for SSE
 4. i18n for multi-language support
 5. E2E testing with Playwright or Cypress
 

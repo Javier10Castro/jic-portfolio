@@ -10,6 +10,8 @@ import { Message } from '@/types/conversation';
 import type { PageSummary, FeatureSummary } from '@/types/summary';
 import api from '@/services/api';
 import { eventService, getAuthToken } from '@/services';
+import { observability } from '@/lib/sync/observability';
+import { syncEngine } from '@/lib/sync/sync-engine';
 
 export function useConversation() {
   const store = useConversationStore();
@@ -122,7 +124,13 @@ export function useConversation() {
     };
   }, [setDeployStatus, setDeployUrl, setPreviewUrl, addDeployLog]);
 
+  useEffect(() => {
+    const unsub = eventService.on('*', () => {});
+    return unsub;
+  }, []);
+
   const startNewConversation = useCallback(async (title?: string) => {
+    observability.startMark('createConversation');
     try {
       const res = await api.createConversation({ title });
       const id = (res as unknown as Record<string, unknown>).data
@@ -136,6 +144,8 @@ export function useConversation() {
       };
       store.addMessage(id, greeting);
       store.setActiveConversation(id);
+      observability.endMark('createConversation');
+      syncEngine.invalidate('conversation');
       return id;
     } catch {
       const id = store.createConversation(title);
@@ -166,6 +176,7 @@ export function useConversation() {
     } as Message);
 
     store.setStreaming(true);
+    observability.startMark('sendMessage');
 
     try {
       const res = await api.sendMessage(convId, text);
@@ -191,6 +202,7 @@ export function useConversation() {
     } finally {
       store.setStreaming(false);
       store.setGenerating(false);
+      observability.endMark('sendMessage');
     }
 
     try {
@@ -253,6 +265,7 @@ export function useConversation() {
 
     store.setGenerating(true);
     store.addMessage(convId, { role: 'assistant', content: 'Starting the build pipeline...', type: 'system' });
+    observability.startMark('generateProject');
 
     try {
       const pipeRes = await api.runPipeline(convId);
@@ -321,6 +334,8 @@ export function useConversation() {
         content: `✅ Build pipeline started! Your project is being generated. You can monitor progress in the pipeline view.`,
         type: 'system',
       });
+      observability.endMark('generateProject');
+      syncEngine.persist();
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Build failed';
       failStage('generator' as never, msg);
@@ -338,6 +353,7 @@ export function useConversation() {
     const projectId = activeConv?.projectId || pipelineState?.projectId || `proj_${Date.now()}`;
     setDeployStatus('deploying');
     addDeployLog({ level: 'info', message: 'Starting deployment...' });
+    observability.startMark('deployProject');
 
     try {
       const depRes = await api.createDeployment({ projectId });
@@ -368,6 +384,8 @@ export function useConversation() {
       }
 
       setDeployStatus('deployed');
+      observability.endMark('deployProject');
+      syncEngine.persist();
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Deployment failed';
       setDeployStatus('failed');
