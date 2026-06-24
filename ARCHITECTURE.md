@@ -1,4 +1,4 @@
-# Architecture — Web Portfolio + Brief Maestro + Platform UI (v6.4.0)
+# Architecture — Web Portfolio + Brief Maestro + Platform UI (v6.5.0)
 
 ## System Overview
 
@@ -686,7 +686,11 @@ Lead generation and client onboarding through contact forms, AI-powered brief co
 │   ├── billing-platform.md    # Billing & Subscription Platform architecture (Phase 9.2.0)
 │   ├── studio-orchestrator.md # Studio Orchestrator architecture (Phase 6.4)
 │   ├── live-build.md          # Live Build Pipeline architecture (Phase 6.4)
-│   └── frontend-event-flow.md # Frontend Event Flow & SSE integration (Phase 6.4)
+│   ├── frontend-event-flow.md # Frontend Event Flow & SSE integration (Phase 6.4)
+│   ├── live-workspace.md      # Live AI Workspace architecture (Phase 6.5)
+│   ├── artifact-editor.md     # Artifact Editor architecture (Phase 6.5)
+│   ├── version-history.md     # Version History architecture (Phase 6.5)
+│   └── prompt-inspector.md    # Prompt Inspector architecture (Phase 6.5)
 ├── scripts/                   # CLI tools and test scripts
 ├── package.json
 ├── ARCHITECTURE.md            # This file — single source of truth
