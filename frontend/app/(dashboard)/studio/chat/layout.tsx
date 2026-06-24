@@ -1,14 +1,16 @@
 'use client';
 
+import { useState, useEffect, useCallback } from 'react';
 import { useConversationStore } from '@/store/conversationStore';
 import ConversationList from '@/components/studio/conversation/ConversationList';
 import LiveContextPanel from '@/components/studio/context-panel/LiveContextPanel';
 import StudioDiagnosticsPanel from '@/components/studio/diagnostics/StudioDiagnosticsPanel';
+import StudioToast from '@/components/studio/toast/StudioToast';
 import { useStudioRecovery } from '@/hooks/use-studio-recovery';
+import { studioNotifications, type StudioNotification } from '@/lib/sync/notifications';
 import { useIsTablet } from '@/hooks/use-media-query';
 import { cn } from '@/utils/cn';
 import { X } from 'lucide-react';
-import { useState } from 'react';
 
 export default function StudioChatLayout({ children }: { children: React.ReactNode }) {
   useStudioRecovery();
@@ -16,6 +18,18 @@ export default function StudioChatLayout({ children }: { children: React.ReactNo
   const isTablet = useIsTablet();
   const [showLeft, setShowLeft] = useState(true);
   const [showRight, setShowRight] = useState(false);
+  const [toasts, setToasts] = useState<StudioNotification[]>([]);
+
+  useEffect(() => {
+    const unsub = studioNotifications.onNotification((n) => {
+      setToasts((prev) => [n, ...prev].slice(0, 5));
+    });
+    return unsub;
+  }, []);
+
+  const dismissToast = useCallback((id: string) => {
+    setToasts((prev) => prev.filter((t) => t.id !== id));
+  }, []);
 
   return (
     <div className="flex h-[calc(100vh-4rem)] -m-6">
@@ -81,6 +95,7 @@ export default function StudioChatLayout({ children }: { children: React.ReactNo
           <LiveContextPanel />
         </div>
       )}
+      <StudioToast notifications={toasts} onDismiss={dismissToast} />
       <StudioDiagnosticsPanel />
     </div>
   );

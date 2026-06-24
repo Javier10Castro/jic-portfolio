@@ -83,7 +83,7 @@ export const usePipelineStore = create<PipelineStoreState>()((set, get) => ({
     set((state) => {
       if (!state.pipeline) return state;
       const stages = state.pipeline.stages.map((s) =>
-        s.name === stage ? { ...s, status: 'failed' as const } : s
+        s.name === stage ? { ...s, status: 'failed' as const, error } : s
       );
       return { pipeline: { ...state.pipeline, stages, status: 'failed' as PipelineStatus } };
     }),
